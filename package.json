@@ -12,7 +12,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@pkmn/data": "^0.0.1"
+    "@pkmn/data": "file:../ps/data"
   },
   "devDependencies": {
     "@pkmn/eslint-config": "^0.2.3",

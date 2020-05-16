@@ -1,0 +1,11 @@
+export const abs = Math.abs;
+export const min = Math.min;
+export const max = Math.max;
+export const ceil = Math.ceil;
+export const floor = Math.floor;
+export const round = Math.round;
+export const pokeRound = (n: number) =>  n % 1 > 0.5 ? ceil(n) : floor(n);
+export const clamp = (a: number, n: number, b: number) => min(max(floor(n), a), b);
+export const trunc = (n: number, bits = 0) => bits ? (n >>> 0) % (2 ** bits) : n >>> 0;
+export const chainMod = (o: number, n: number) => round(trunc(o * n) + 0x800) >> 12;
+export const applyMod = (v: number, mod: number) => pokeRound(trunc(v * mod) / 0x1000);
