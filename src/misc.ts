@@ -1,7 +1,9 @@
+// TODO obviously rename this file...
+
 export type TerrainName =
   'Electric' | 'Grassy' | 'Psychic' | 'Misty';
 
-export const TERRAINS: {[id: string]: TerrainName} = {
+export const Terrains: {[id: string]: TerrainName} = {
   electric: 'Electric', electricterrain: 'Electric',
   grassy: 'Grassy', grassyterrain: 'Grassy',
   psychic: 'Psychic', psychicterrain: 'Psychic',
@@ -12,7 +14,7 @@ export type WeatherName =
   'Sand' | 'Sun' | 'Rain' | 'Hail' |
   'Harsh Sunshine' | 'Heavy Rain' | 'Strong Winds';
 
-export const WEATHERS: {[id: string]: WeatherName} = {
+export const Weathers: {[id: string]: WeatherName} = {
   sand: 'Sand',  sandstorm: 'Sand',
   sun: 'Sun', sunnyday: 'Sun',
   rain: 'Rain', raindance: 'Rain',
@@ -27,7 +29,7 @@ export type PseudoWeatherName =
   'Mud Sport' | 'Water Sport' |
   'Trick Room' | 'Magic Room' | 'Wonder Room';
 
- export const PSEUDO_WEATHERS: {[id: string]: PseudoWeatherName} = {
+ export const PseudoWeathers: {[id: string]: PseudoWeatherName} = {
    gravity: 'Gravity',
    fairylock: 'Fairy Lock',
    iondeluge: 'Ion Deluge',

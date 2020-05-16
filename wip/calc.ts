@@ -65,7 +65,7 @@ export function calculate(
 // Wrap outside Pokemon into internal Pokemon that
 // outside pokemon.item -> pokemon.item = {name, onModifySpe } etc
 
-// p1.pokemon.item.onModifySpe() ->
+// p1.pokemon.item.onModifySpe?.() ->
 
 
 /// Want to have chlorophyll also signal that terrain or

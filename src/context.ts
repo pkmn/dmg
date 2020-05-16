@@ -4,6 +4,12 @@ import {Generation, GameType, ID, StatusName, GenderName, Specie, TypeName, Stat
 import {SideID, Handler, Items, Abilities } from './mechanics';
 import {Silhouette} from './silhouette';
 
+// import {Handler} from './handler';
+
+// export const Moves: {[id: string]: Partial<Handler>} = {
+
+// };
+
 export class Context {
   readonly gameType: GameType;
   readonly gen: Generation;
