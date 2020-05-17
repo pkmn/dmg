@@ -1,15 +1,13 @@
+/* eslint consistent-return: "off " */
+
 import {Handler} from './handler';
 
 export const Moves: {[id: string]: Partial<Handler>} = {
-  // acrobatics: {
-  //   basePowerCallback(pokemon, target, move) {
-  //     if (!pokemon.item) {
-  //       this.debug("Power doubled for no item");
-  //       return move.basePower * 2;
-  //     }
-  //     return move.basePower;
-  //   },
-  // },
+  acrobatics: {
+    basePowerCallback({p1, move}) {
+      return p1.pokemon.item ? move.basePower : move.basePower * 2;
+    },
+  },
   // acupressure: {
   //   onHit(target) {
   //     const stats = [];

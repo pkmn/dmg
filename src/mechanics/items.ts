@@ -1,18 +1,8 @@
+/* eslint consistent-return: "off " */
+
 import {Handler} from './handler';
 
 export const Items: {[id: string]: Partial<Handler>} = {
-  // abomasite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
-  // absolite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
   // absorbbulb: {
   //   onDamagingHit(damage, target, source, move) {
   //     if (move.type === 'Water') {
@@ -32,18 +22,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //     if (effect.id === 'intimidate') {
   //       target.useItem();
   //     }
-  //   },
-  // },
-  // aerodactylite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
-  // aggronite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
   //   },
   // },
   // aguavberry: {
@@ -84,24 +62,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //     }
   //   },
   // },
-  // alakazite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
-  // altarianite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
-  // ampharosite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
   // apicotberry: {
   //   onUpdate(pokemon) {
   //     if (pokemon.hp <= pokemon.maxhp / 4 || (pokemon.hp <= pokemon.maxhp / 2 && pokemon.hasAbility('gluttony'))) {
@@ -136,12 +96,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //     }
   //   },
   // },
-  // audinite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
   // babiriberry: {
   //   onSourceModifyDamage(damage, source, target, move) {
   //     if (move.type === 'Steel' && target.getMoveHitData(move).typeMod > 0) {
@@ -155,18 +109,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //     }
   //   },
   //   onEat() { },
-  // },
-  // banettite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
-  // beedrillite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
   // },
   // berryjuice: {
   //   onUpdate(pokemon) {
@@ -217,18 +159,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //     }
   //   },
   // },
-  // blastoisinite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
-  // blazikenite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
   // blueorb: {
   //   onSwitchIn(pokemon) {
   //     if (pokemon.isActive && pokemon.baseSpecies.name === 'Kyogre') {
@@ -274,12 +204,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //     return true;
   //   },
   // },
-  // cameruptite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
   // cellbattery: {
   //   onDamagingHit(damage, target, source, move) {
   //     if (move.type === 'Electric') {
@@ -292,18 +216,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //     if (move && move.type === 'Fire') {
   //       return this.chainModify([0x1333, 0x1000]);
   //     }
-  //   },
-  // },
-  // charizarditex: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
-  // charizarditey: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
   //   },
   // },
   // chartiberry: {
@@ -498,12 +410,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //     this.debug('attract intercepted: ' + target + ' from ' + source);
   //     if (!source || source === target) { return; }
   //     if (!source.volatiles.attract) { source.addVolatile('attract', target); }
-  //   },
-  // },
-  // diancite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
   //   },
   // },
   // dousedrive: {
@@ -813,12 +719,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //     return Math.round(priority) - 0.1;
   //   },
   // },
-  // galladite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
   // ganlonberry: {
   //   onUpdate(pokemon) {
   //     if (pokemon.hp <= pokemon.maxhp / 4 || (pokemon.hp <= pokemon.maxhp / 2 && pokemon.hasAbility('gluttony'))) {
@@ -827,24 +727,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //   },
   //   onEat(pokemon) {
   //     this.boost({def: 1});
-  //   },
-  // },
-  // garchompite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
-  // gardevoirite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
-  // gengarite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
   //   },
   // },
   // ghostgem: {
@@ -860,12 +742,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //     if ((source && source.baseSpecies.num === 773) || pokemon.baseSpecies.num === 773) {
   //       return false;
   //     }
-  //     return true;
-  //   },
-  // },
-  // glalitite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
   //     return true;
   //   },
   // },
@@ -928,12 +804,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //     return true;
   //   },
   // },
-  // gyaradosite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
   // habanberry: {
   //   onSourceModifyDamage(damage, source, target, move) {
   //     if (move.type === 'Dragon' && target.getMoveHitData(move).typeMod > 0) {
@@ -953,18 +823,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //     if (move && move.type === 'Rock') {
   //       return this.chainModify([0x1333, 0x1000]);
   //     }
-  //   },
-  // },
-  // heracronite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
-  // houndoominite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
   //   },
   // },
   // iapapaberry: {
@@ -1097,12 +955,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //     this.boost({def: 1});
   //   },
   // },
-  // kangaskhanite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
   // kingsrock: {
   //   onModifyMove(move) {
   //     if (move.category !== "Status") {
@@ -1130,18 +982,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //   },
   //   onEat(pokemon) {
   //     pokemon.addVolatile('focusenergy');
-  //   },
-  // },
-  // latiasite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
-  // latiosite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
   //   },
   // },
   // laxincense: {
@@ -1216,18 +1056,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //     }
   //   },
   // },
-  // lopunnite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
-  // lucarionite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
   // luckypunch: {
   //   onModifyCritRatio(critRatio, user) {
   //     if (user.baseSpecies.name === 'Chansey') {
@@ -1297,12 +1125,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //     if (this.activeMove.id !== 'knockoff' && this.activeMove.id !== 'thief' && this.activeMove.id !== 'covet') { return false; }
   //   },
   // },
-  // manectite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
   // marangaberry: {
   //   onAfterMoveSecondary(target, source, move) {
   //     if (move.category === 'Special') {
@@ -1311,12 +1133,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //   },
   //   onEat(pokemon) {
   //     this.boost({spd: 1});
-  //   },
-  // },
-  // mawilite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
   //   },
   // },
   // meadowplate: {
@@ -1329,12 +1145,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //     if ((source && source.baseSpecies.num === 493) || pokemon.baseSpecies.num === 493) {
   //       return false;
   //     }
-  //     return true;
-  //   },
-  // },
-  // medichamite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
   //     return true;
   //   },
   // },
@@ -1369,12 +1179,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //         return;
   //       }
   //     }
-  //   },
-  // },
-  // metagrossite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
   //   },
   // },
   // metalcoat: {
@@ -1417,18 +1221,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //       const numConsecutive = this.effectData.numConsecutive > 5 ? 5 : this.effectData.numConsecutive;
   //       return this.chainModify([dmgMod[numConsecutive], 0x1000]);
   //     },
-  //   },
-  // },
-  // mewtwonitex: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
-  // mewtwonitey: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
   //   },
   // },
   // micleberry: {
@@ -1605,18 +1397,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //   },
   //   onEat(pokemon) {
   //     this.boost({spa: 1});
-  //   },
-  // },
-  // pidgeotite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
-  // pinsirite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
   //   },
   // },
   // pixieplate: {
@@ -1934,12 +1714,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //     return true;
   //   },
   // },
-  // sablenite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
   // safetygoggles: {
   //   onImmunity(type, pokemon) {
   //     if (type === 'sandstorm' || type === 'hail' || type === 'powder') { return false; }
@@ -1961,24 +1735,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //     this.boost({spe: 1});
   //   },
   // },
-  // salamencite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
-  // sceptilite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
-  // scizorite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
   // scopelens: {
   //   onModifyCritRatio(critRatio) {
   //     return critRatio + 1;
@@ -1996,12 +1752,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //     if (move && move.type === 'Flying') {
   //       return this.chainModify([0x1333, 0x1000]);
   //     }
-  //   },
-  // },
-  // sharpedonite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
   //   },
   // },
   // shedshell: {
@@ -2075,12 +1825,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //     if ((source && source.baseSpecies.num === 493) || pokemon.baseSpecies.num === 493) {
   //       return false;
   //     }
-  //     return true;
-  //   },
-  // },
-  // slowbronite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
   //     return true;
   //   },
   // },
@@ -2161,12 +1905,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //     }
   //   },
   // },
-  // steelixite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
   // steelgem: {
   //   onSourceTryPrimaryHit(target, source, move) {
   //     if (target === source || move.category === 'Status') { return; }
@@ -2213,12 +1951,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //     if ((source && source.baseSpecies.num === 493) || pokemon.baseSpecies.num === 493) {
   //       return false;
   //     }
-  //     return true;
-  //   },
-  // },
-  // swampertite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
   //     return true;
   //   },
   // },
@@ -2273,18 +2005,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //     if (move.type === 'Psychic') {
   //       return this.chainModify([0x1333, 0x1000]);
   //     }
-  //   },
-  // },
-  // tyranitarite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
-  //   },
-  // },
-  // venusaurite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
   //   },
   // },
   // wacanberry: {
@@ -2587,12 +2307,6 @@ export const Items: {[id: string]: Partial<Handler>} = {
   //     if (pokemon.status === 'psn' || pokemon.status === 'tox') {
   //       pokemon.cureStatus();
   //     }
-  //   },
-  // },
-  // crucibellite: {
-  //   onTakeItem(item, source) {
-  //     if (item.megaEvolves === source.baseSpecies.baseSpecies) { return false; }
-  //     return true;
   //   },
   // },
 };

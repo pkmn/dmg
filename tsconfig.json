@@ -10,7 +10,7 @@
     "module": "commonjs",
     "noEmitOnError": true,
     "noFallthroughCasesInSwitch": true,
-    "noImplicitReturns": true,
+    "noImplicitReturns": false,
     "sourceMap": true,
     "outDir": "build",
     "strict": true,

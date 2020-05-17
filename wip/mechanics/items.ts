@@ -13,7 +13,7 @@ const Common: {[id: string]: {
 };
 
 export const Items: {[id: string]: {
-  onModifySpe?: (gen: Generation, p1: Side, p2: Side, field: Field) => number;
+  onModifySpe?: (context: Context) => number;
 }} = {
   choicescarf: {
     onModifySpe() {
@@ -33,7 +33,7 @@ export const Items: {[id: string]: {
   powerlens: Common.evitem,
   powerweight: Common.evitem,
   quickpowder: {
-    onModifySpe(gen, p1) {
+    onModifySpe({p1}) {
       return p1.pokemon.species.id === 'ditto' ? 0x2000 : 0x1000;
     }
   },

@@ -1,4 +1,9 @@
+/* eslint consistent-return: "off " */
+
 import {Handler} from './handler';
+import {min, max} from '../math';
+
+
 
 export const Abilities: {[id: string]: Partial<Handler>} = {
   // adaptability: {
@@ -1138,25 +1143,27 @@ export const Abilities: {[id: string]: Partial<Handler>} = {
   //     return false;
   //   },
   // },
-  // intimidate: {
-  //   onStart(pokemon) {
-  //     let activated = false;
-  //     for (const target of pokemon.side.foe.active) {
-  //       if (!target || !this.isAdjacent(target, pokemon)) { continue; }
-  //       if (!activated) {
-  //         this.add('-ability', pokemon, 'Intimidate', 'boost');
-  //         activated = true;
-  //       }
-  //       if (target.volatiles['substitute']) {
-  //         this.add('-immune', target);
-  //       } else if (target.hasAbility(['Inner Focus', 'Oblivious', 'Own Tempo', 'Scrappy'])) {
-  //         this.add('-immune', target, `[from] ability: ${target.getAbility().name}`);
-  //       } else {
-  //         this.boost({atk: -1}, target, pokemon, null, true);
-  //       }
-  //     }
-  //   },
-  // },
+  intimidate: {
+    apply({gen,  p2}) {
+      const ability = p2.pokemon.ability;
+      const blocked =
+        p2.pokemon.volatiles['substitute'] ||
+        ['clearbody', 'whitesmoke', 'hypercutter', 'fullmetalbody'].includes(ability!) ||
+        (gen.num === 8 && ['innerfocus', 'owntempo', 'oblivious', 'scrappy'].includes(ability!));
+      if (blocked) return;
+
+      applyBoost(p2.pokemon, 'atk', -1);
+
+      const simple = ability === 'simple';
+
+      if (p2.pokemon.item === 'adrenalineorb') {
+        p2.pokemon.item = undefined;
+        p2.pokemon
+      }
+
+      }
+    },
+  },
   // intrepidsword: {
   //   onStart(pokemon) {
   //     this.boost({atk: 1}, pokemon);

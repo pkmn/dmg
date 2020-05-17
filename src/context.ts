@@ -1,14 +1,11 @@
 import {extend} from './tools';
 import {State} from "./state";
 import {Generation, GameType, ID, StatusName, GenderName, Specie, TypeName, StatsTable, BoostsTable} from '@pkmn/data';
-import {SideID, Handler, Items, Abilities } from './mechanics';
+import {Handler, Items, Abilities } from './mechanics';
 import {Silhouette} from './silhouette';
+import {Writable} from './types';
 
-// import {Handler} from './handler';
-
-// export const Moves: {[id: string]: Partial<Handler>} = {
-
-// };
+export type Player = 'p1' | 'p2';
 
 export class Context {
   readonly gameType: GameType;
@@ -18,6 +15,7 @@ export class Context {
   readonly move: Context.Move;
   readonly field: Context.Field;
 
+  readonly perspective: Player;
   readonly relevant: Silhouette;
 
   static fromState(state: State) {
@@ -32,6 +30,7 @@ export class Context {
     move: State.Move,
     field: State.Field
   ) {
+    this.perspective = 'p1';
     this.relevant = new Silhouette();
 
     this.gameType = gameType;
@@ -40,6 +39,15 @@ export class Context {
     this.p2 = new Context.Side(p2, this.relevant);
     this.move = move, // FIXME
     this.field = new Context.Field(field, this.relevant);
+  }
+
+  as(player: Player) {
+    if (this.perspective !== player) {
+      const self = this as Writable<Context>;
+      [self.p1, self.p2] = [self.p2, self.p1];
+      const relevant = this.relevant as Writable<Silhouette>;
+      [relevant.p1, relevant.p2] = [relevant.p2, relevant.p1];
+    }
   }
 }
 
@@ -54,14 +62,6 @@ export namespace Context {
     constructor(field: State.Field, relevant: Silhouette) {
       extend(this, field);
       this.relevant = relevant;
-    }
-
-    hasWeather(...weathers: ID[]) {
-      return !!(this.weather && weathers.includes(this.weather));
-    }
-
-    hasTerrain(...terrains: ID[]) {
-      return !!(this.terrain && terrains.includes(this.terrain));
     }
   }
 
@@ -91,7 +91,7 @@ export namespace Context {
     }
   }
 
-  class Pokemon {
+  export class Pokemon {
     species: Specie;
     level: number;
     weighthg: number;
@@ -153,9 +153,9 @@ export namespace Context {
         for (const n in handler) {
           const fn = handler[n as keyof Handler] as Omit<Handler, 'apply'> | undefined;
           if (fn && n !== 'apply') {
-            this.item[n as Exclude<keyof Handler, 'apply'>] = (s: SideID, c: Context) => {
-              const r = (fn as any)(s, c);
-              if (r) this.relevant[s].pokemon.item = true;
+            this.item[n as Exclude<keyof Handler, 'apply'>] = (c: Context) => {
+              const r = (fn as any)(c);
+              if (r) this.relevant.p1.pokemon.item = true;
               return r;
             };
           }
@@ -169,33 +169,14 @@ export namespace Context {
         for (const n in handler) {
           const fn = handler[n as keyof Handler] as Omit<Handler, 'apply'> | undefined;
           if (fn && n !== 'apply') {
-            this.ability[n as Exclude<keyof Handler, 'apply'>] = (s: SideID, c: Context) => {
-              const r = (fn as any)(s, c);
-              if (r) this.relevant[s].pokemon.ability = true;
+            this.ability[n as Exclude<keyof Handler, 'apply'>] = (c: Context) => {
+              const r = (fn as any)(c);
+              if (r) this.relevant.p1.pokemon.ability = true;
               return r;
             };
           }
         }
       }
-    }
-
-    hasAbility(...abilities: ID[]) {
-      return !!(this.ability && abilities.includes(this.ability.id));
-    }
-
-    hasItem(...items: ID[]) {
-      return !!(this.item && items.includes(this.item.id));
-    }
-
-    hasStatus(...statuses: StatusName[]) {
-      return !!(this.status && statuses.includes(this.status));
-    }
-
-    hasType(...types: TypeName[]) {
-      for (const type of types) {
-        if (this.types.includes(type)) return true;
-      }
-      return false;
     }
   }
 }

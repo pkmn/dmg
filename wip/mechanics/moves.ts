@@ -2,6 +2,9 @@ import {Generation} from '@pkmn/data';
 import {Side, Field} from '../interface';
 import {trunc, computeModifiedWeight, computeModifiedSpeed} from '../calc';
 
+import {Context} from '../../src/context';
+
+
 
 const Common: {[id: string]: {
   basePowerCallback?: (gen: Generation, p1: Side, p2: Side, field: Field) => number;
