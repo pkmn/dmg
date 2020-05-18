@@ -17,5 +17,5 @@ WIP Pokémon multi-generational damage calculator
 
 - [pret](https://github.com/pret) - disassembly of Gens 1-3
 - [Pokémon Showdown!](https://github.com/smogon/pokemon-showdown) - Guangcong Luo (Zarel) and contributors
-- [SadisticMystic's Long Form Damage Calculator](https://docs.google.com/spreadsheets/d/14XBTYYRp1OK5epQzB3SF2ccdSkuA6Jv7UlRQi66pxkY/edit#gid=1621823916)
+- [Long Form Damage Calculator](https://docs.google.com/spreadsheets/d/14XBTYYRp1OK5epQzB3SF2ccdSkuA6Jv7UlRQi66pxkY/edit#gid=1621823916) by SadisticMystic
 - [`@smogon/calc`](https://github.com/smogon/damage-calc) - Honko, Austin and contributors

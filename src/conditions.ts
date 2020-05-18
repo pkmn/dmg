@@ -1,5 +1,7 @@
 import {GenerationNum, toID, ID, StatusName, Generation} from '@pkmn/data';
 
+export type Player = 'p1' | 'p2';
+
 export type ConditionName =
   WeatherName | TerrainName | PseudoWeatherName |
   SideConditionName |
@@ -48,29 +50,29 @@ const ALIASES: {[id: string]: string}  = {
 export function getCondition(
   gen: Generation,
   name: string
-): [ConditionName, ConditionKind] | undefined {
+): [ConditionName, ConditionKind, (Player | 'field')?] | undefined {
   let id = toID(name);
   id = ALIASES[id] as ID || id;
 
-  let condition: [ConditionName, GenerationNum];
+  let condition: [ConditionName, GenerationNum, Player?];
 
   // Field Conditions
   if ((condition = Weathers[id]) && condition[1] >= gen.num) {
-    return [condition[0], 'Weather'];
+    return [condition[0], 'Weather', 'field'];
   } else if ((condition = Terrains[id]) && condition[1] >= gen.num) {
-    return [condition[0], 'Terrain'];
+    return [condition[0], 'Terrain', 'field'];
   } else if ((condition = PseudoWeathers[id]) && condition[1] >= gen.num) {
-    return [condition[0], 'Pseudo Weather'];
+    return [condition[0], 'Pseudo Weather', 'field'];
   }
 
   // Side Conditions
   if ((condition = SideConditions[id]) && condition[1] >= gen.num) {
-    return [condition[0], 'Pseudo Weather'];
+    return [condition[0], 'Side Condition', condition[2]!];
   }
 
   // Pokemon Conditions
   if ((condition = Volatiles[id]) && condition[1] >= gen.num) {
-    return [condition[0], 'Volatile Status'];
+    return [condition[0], 'Volatile Status', condition[2]!];
   } else if (id in Statuses) {
     return [id as StatusName, 'Status'];
   }
@@ -120,7 +122,7 @@ export type PseudoWeatherName =
    trickroom: ['Trick Room', 4],
    magicroom: ['Magic Room', 5],
    wonderroom: ['Wonder Room', 5],
-  // NOTE: Before Gen 6 these were treated as volatiles
+  // Before Gen 6 these were treated as volatiles
    mudsport: ['Mud Sport', 6],
    watersport: ['Water Sport', 6],
  };
@@ -134,24 +136,25 @@ export type PseudoWeatherName =
   'Steelsurge' | 'Volcalith' | 'Wildfire' |
   'Crafty Shield' | 'Lucky Chant' | 'Mist' | 'Sticky Web';
 
- export const SideConditions: {[id: string]: [SideConditionName, GenerationNum]} = {
+ export const SideConditions: {[id: string]: [SideConditionName, GenerationNum, Player?]} = {
   tailwind: ['Tailwind', 4],
-  stealthrock: ['Stealth Rock', 4],
-  spikes: ['Spikes', 2],
-  toxicspikes: ['Toxic Spikes', 4],
+  stealthrock: ['Stealth Rock', 4, 'p2'],
+  spikes: ['Spikes', 2, 'p2'],
   auroraveil: ['Aurora Veil', 7],
-  safeguard: ['Safeguard', 2],
-  wideguard: ['Wide Guard', 5],
-  quickguard: ['Quick Guard', 5],
-  steelsurge: ['Steelsurge', 8],
-  volcalith: ['Volcalith', 8],
-  wildfire: ['Wildfire', 8],
-  craftyshield: ['Crafty Shield', 6],
-  mist: ['Mist', 6],
+  steelsurge: ['Steelsurge', 8, 'p2'],
+  volcalith: ['Volcalith', 8, 'p2'],
+  wildfire: ['Wildfire', 8, 'p2'],
   sitckyweb: ['Sticky Web', 6],
-  // NOTE: Before Gen 6 these were treated as a volatiles
+  // Before Gen 6 these were treated as a volatiles
   lightscreen: ['Light Screen', 2],
   reflect: ['Reflect', 2],
+  // Not really relevant for damage
+  toxicspikes: ['Toxic Spikes', 4, 'p2'],
+  safeguard: ['Safeguard', 2, 'p2'],
+  wideguard: ['Wide Guard', 5, 'p2'],
+  quickguard: ['Quick Guard', 5, 'p2'],
+  craftyshield: ['Crafty Shield', 6],
+  mist: ['Mist', 6],
  };
 
 // Volatile Status
@@ -164,46 +167,47 @@ export type VolatileStatusName =
   'Miracle Eye' | 'Minimize' | 'Obstruct' | 'Octolock' | 'Roost' | 'Smack Down' | 'Spiky Shield' |
   'Stockpile' | 'Tar Shot' | 'Uproar' | 'Light Screen' | 'Reflect' | 'Mud Sport' | 'Water Sport';
 
-export const Volatiles: {[id: string]: [VolatileStatusName, GenerationNum]} = {
-  slowstart: ['Slow Start', 4],
+export const Volatiles: {[id: string]: [VolatileStatusName, GenerationNum, Player?]} = {
+  slowstart: ['Slow Start', 4, 'p1'],
   unburden: ['Unburden', 4],
   zenmode: ['Zen Mode', 5],
-  flashfire: ['Flash Fire', 3],
-  parentalbond: ['Parental Bond', 6],
+  flashfire: ['Flash Fire', 3, 'p1'],
+  parentalbond: ['Parental Bond', 6, 'p1'],
   charge: ['Charge', 3],
-  leechseed: ['Leech Seed', 1],
-  beakblast: ['Beak Blast', 7],
+  leechseed: ['Leech Seed', 1, 'p2'],
   stall: ['Stall', 3],
   gastroacid: ['Gastro Acid', 4],
-  aquaring: ['Aqua Ring', 4],
-  magnetrise: ['Magnet Rise', 4],
+  aquaring: ['Aqua Ring', 4, 'p2'],
+  magnetrise: ['Magnet Rise', 4, 'p2'],
   autotomize: ['Autotomize', 5],
-  curse: ['Curse', 2],
-  banefulbunker: ['Baneful Bunker', 7],
-  defensecurl: ['Defense Curl', 2],
-  protect: ['Protect', 2],
-  electrify: ['Electrify', 6],
-  foresight: ['Foresight', 2],
-  helpinghand: ['Helping Hand', 3],
-  ingrain: ['Ingrain', 3],
-  kingsshield: ["King's Shield", 6],
-  maxguard: ['Max Guard', 8],
+  curse: ['Curse', 2, 'p2'],
+  banefulbunker: ['Baneful Bunker', 7, 'p2'],
+  defensecurl: ['Defense Curl', 2, 'p1'],
+  protect: ['Protect', 2, 'p2'],
+  electrify: ['Electrify', 6, 'p1'],
+  foresight: ['Foresight', 2, 'p1'],
+  helpinghand: ['Helping Hand', 3, 'p1'],
+  ingrain: ['Ingrain', 3, 'p2'],
+  kingsshield: ["King's Shield", 6, 'p2'],
+  maxguard: ['Max Guard', 8, 'p2'],
   dynamax: ['Dynamax', 8],
-  miracleeye: ['Miracle Eye', 4],
-  minimize: ['Minimize', 1],
-  obstruct: ['Obstruct', 8],
-  octolock: ['Octolock', 8],
-  roost: ['Roost', 4],
-  smackdown: ['Smack Down', 5],
-  spikyshield: ['Spiky Shield', 6],
-  stockpile: ['Stockpile', 3],
-  tarshot: ['Tar Shot', 3],
-  uproar: ['Uproar', 3],
-  // NOTE: These changed to Pseudo Weathers and Side Conditions respectively in later generations
+  miracleeye: ['Miracle Eye', 4, 'p2'],
+  minimize: ['Minimize', 1, 'p1'],
+  obstruct: ['Obstruct', 8, 'p2'],
+  roost: ['Roost', 4, 'p2'],
+  smackdown: ['Smack Down', 5, 'p2'],
+  spikyshield: ['Spiky Shield', 6, 'p2'],
+  stockpile: ['Stockpile', 3, 'p1'],
+  tarshot: ['Tar Shot', 3, 'p2'],
+  //These changed to Pseudo Weathers and Side Conditions respectively in later generations
   mudsport: ['Mud Sport', 3],
   watersport: ['Water Sport', 3],
   lightscreen: ['Light Screen', 1],
   reflect: ['Reflect', 1],
+  // Noe really relevant for damage
+  beakblast: ['Beak Blast', 7, 'p1'],
+  octolock: ['Octolock', 8, 'p2'],
+  uproar: ['Uproar', 3, 'p1'],
 };
 
 // Status

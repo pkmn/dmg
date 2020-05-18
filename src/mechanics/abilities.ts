@@ -1,9 +1,6 @@
 /* eslint consistent-return: "off " */
 
 import {Handler} from './handler';
-import {min, max} from '../math';
-
-
 
 export const Abilities: {[id: string]: Partial<Handler>} = {
   // adaptability: {
@@ -1143,6 +1140,7 @@ export const Abilities: {[id: string]: Partial<Handler>} = {
   //     return false;
   //   },
   // },
+  /*
   intimidate: {
     apply({gen,  p2}) {
       const ability = p2.pokemon.ability;
@@ -1164,6 +1162,7 @@ export const Abilities: {[id: string]: Partial<Handler>} = {
       }
     },
   },
+  */
   // intrepidsword: {
   //   onStart(pokemon) {
   //     this.boost({atk: 1}, pokemon);

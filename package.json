@@ -15,6 +15,7 @@
     "@pkmn/data": "file:../ps/data"
   },
   "devDependencies": {
+    "@pkmn/dex": "file:../ps/dex",
     "@pkmn/eslint-config": "^0.2.3",
     "@types/jest": "^25.2.2",
     "@types/node": "^14.0.1",

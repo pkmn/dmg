@@ -10,6 +10,7 @@ import {
   StatusName,
   TypeName,
 } from '@pkmn/data';
+import {Handler} from './mechanics/handler';
 
 
 export class State {
@@ -65,8 +66,8 @@ export namespace State {
     level: number;
     weighthg: number;
 
-    item?: ID;
-    ability?: ID;
+    item?: {id: ID} & Partial<Handler>;
+    ability?: {id: ID} & Partial<Handler>;
     gender?: GenderName;
     happiness?: number;
 
@@ -91,7 +92,7 @@ export namespace State {
     fainted?: boolean;
   }
 
-  export interface Move extends DMove {
+  export interface Move extends DMove, Partial<Handler> {
     crit?: boolean;
     hits?: number;
     magnitude?: number;
