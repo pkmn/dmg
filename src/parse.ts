@@ -1,4 +1,5 @@
-import { toID, Generations, GenerationNum, ID, Generation, NatureName } from '@pkmn/data';
+import { toID, Generations, GenerationNum, ID, Generation, NatureName, GameType } from '@pkmn/data';
+import {getCondition, WeatherName, TerrainName} from './conditions';
 
 import {State} from './state';
 import {decodeURL} from './encode';
@@ -86,8 +87,10 @@ export function parse(gens: Generations, s: string, strict = false) {
   if (phrase && !parsed && strict) {
     throw new Error(`Unable to parse phrase: '${phrase}': ${context}`);
   }
-  // return reconcile(gens, parsed, flags, context, strict);
-  return {phrase, flags};
+
+
+  // return build(gens, parsed, flags, context, strict);
+  return {phrase, flags} as unknown as State; // FIXME
 }
 
 function parsePhrase(s: string) {
@@ -121,18 +124,77 @@ function parsePhrase(s: string) {
   return phrase;
 }
 
-function reconcile(
+function build(
   gens: Generations,
   phrase: Phrase | undefined,
   flags: Flags,
   context: string,
   strict: boolean
 ) {
-  if (flags.gen && isNaN(Number(flags.gen) )|| Number(flags.gen) > 8 || Number(flags.gen) < 1) {
-    throw new Error(`Invalid generation '${flags.gen}': ${context}`);
+  let g: GenerationNum = 8;
+  if (flags.gen) {
+    const n = Number(flags.gen);
+    if (isNaN(n) || n < 1 || n > 8) {
+      if (strict) throw new Error(`Invalid generation '${flags.gen}': ${context}`);
+    } else {
+      g = n as GenerationNum;
+    }
   }
-  const gen = gens.get(flags.gen ? Number(flags.gen) as GenerationNum : 8);
+
+  const gen = gens.get(g);
+
+  const invalid = (key: string, val: any) => {
+    if (strict) {
+      throw new Error(`Unsupported or invalid ${key} '${val}' for generation ${g} (${context})`);
+    }
+  };
+  // TODO conflict
+
+  let gameType: GameType = 'singles';
+  if (flags.gametype) {
+    const gt = flags.gametype;
+    if (!(gt === 'singles' || gt === 'doubles') || g <= 2 && gt === 'doubles') {
+      invalid('game type', flags.gametype);
+    } else {
+      gameType = gt;
+    }
+  }
+
+  const field = buildField(gen, flags, invalid);
+
+
+  return {gameType, gen, field} as State; // TODO
 }
+
+function buildField(
+  gen: Generation,
+  flags: Flags,
+  invalid: (key: string, val: any) => void
+) {
+  const field: State.Field = {};
+  if (flags.weather) {
+    const c = getCondition(gen, flags.weather);
+    if (!c) {
+      invalid('weather', flags.weather);
+    } else {
+      field.weather = {name: c[1] as WeatherName};
+    }
+  }
+  if (flags.terrain) {
+    const c = getCondition(gen, flags.terrain);
+    if (!c) {
+      invalid('terrain', flags.terrain);
+    } else {
+      field.terrain = {name: c[1] as TerrainName};
+    }
+  }
+
+  // TODO implicits!
+
+  return field;
+}
+
+
 
 // https://github.com/mccormicka/string-argv v0.3.0
 // MIT License Copyright 2014 Anthony McCormick

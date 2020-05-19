@@ -1,6 +1,6 @@
 /* eslint consistent-return: "off " */
 
-import {Handler} from './handler';
+import {Handler} from '.';
 
 export const Items: {[id: string]: Partial<Handler>} = {
   // absorbbulb: {

@@ -1,10 +1,14 @@
+/**
+ * Override the attributes of `obj` with `overrides`. Primarily useful for fundamental data such
+ * as Species or Move, eg: `override(gen.species.get('Pikachu'), {weighthg: 420})`.
+ */
 export function override(obj: any, overrides: any) {
   const copy = Object.create(obj.constructor.prototype);
   return extend(copy, obj, overrides);
 }
 
 // jQuery JavaScript Library v2.0.3
-// Copyright 2005, 2013 jQuery Foundation, Inc. and other contributors
+// MIT Lience Copyright 2005, 2013 jQuery Foundation, Inc. and other contributors
 const class2Type: {[c: string]: string} = {
   '[object Boolean]': 'boolean',
   '[object Number]': 'number',

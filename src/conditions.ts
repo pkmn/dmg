@@ -12,6 +12,8 @@ export type ConditionKind =
   'Side Condition' | // 'Slot Condition' |
   'Volatile Status' | 'Status';
 
+// This primarily exists to convert between Pokémon Showdown's names for these conditions
+// (though also supports shortcuts) and the names used internally by the calculator.
 const ALIASES: {[id: string]: string}  = {
   // Weather
   sandstorm: 'sand',
@@ -31,53 +33,71 @@ const ALIASES: {[id: string]: string}  = {
   gmaxvolcalith: 'volcalith',
   gmaxwildfire: 'wildfire',
   // Status
-  sleep: 'slp',
-  asleep: 'slp',
-  poison: 'psn',
-  poisoned: 'psn',
-  burn: 'brn',
-  burned: 'brn',
-  freeze: 'frz',
-  frozen: 'frz',
-  paralysis: 'par',
-  paralyzed: 'par',
-  toxic: 'tox',
-  badpoisoned: 'tox',
-  badlypoisoned: 'tox',
+  sleep: 'slp', asleep: 'slp',
+  poison: 'psn', poisoned: 'psn',
+  burn: 'brn', burned: 'brn',
+  freeze: 'frz', frozen: 'frz',
+  paralysis: 'par', paralyzed: 'par',
+  toxic: 'tox', badpoisoned: 'tox', badlypoisoned: 'tox',
 };
 
-// TODO also return the handler?
-export function getCondition(
-  gen: Generation,
-  name: string
-): [ConditionName, ConditionKind, (Player | 'field')?] | undefined {
-  let id = toID(name);
-  id = ALIASES[id] as ID || id;
+/**
+ * 'Conditions' is the umbrella term the calculator uses to refer to all of the various
+ * conditions and statuses that can affect state. There are 3 broad categories of conditions:
+ *
+ *   - Field conditions (weather, terrain, 'pseudo weather')
+ *   - Side conditions
+ *   - Pokemon conditions (status, 'volatile' statuses)
+ *
+ * There is a 4th category of 'slot' conditions which are approximately side conditions but
+ * only affect a particular slot on a given side, not the entire side (eg. Wish). There are
+ * elided as irrelevant for our purposes.
+ */
+export const Conditions = new class {
+  /**
+   * Similar to `Dex#getEffect` but restricted to conditions (so more like `Dex#getPureEffectByID`),
+   * searches for a condition named `name` in the respective `gen` and returns the canonical name,
+   * kind and optionally what its 'implict' scope is for the purposes of relevance to damage
+   * calculations. `gen` is required because certain conditions change categories across generations
+   * (Reflect/Light Screen, Mud/Water Sport), as well as to filter out conditions which were not
+   * present in the provided generation. Like with other data-getters, this function also handles
+   * resolving aliases.
+   */
+  get(
+    gen: Generation,
+    name: string
+  ): [ConditionName, ConditionKind, (Player | 'field')?] | undefined {
+    let id = toID(name);
+    id = ALIASES[id] as ID || id;
 
-  let condition: [ConditionName, GenerationNum, Player?];
+    // NOTE: The ordering we check these categories is important to ensure we find
+    // Reflect/Light Screen/Mud Sport/Water Sport in the correct category for the generation
 
-  // Field Conditions
-  if ((condition = Weathers[id]) && condition[1] >= gen.num) {
-    return [condition[0], 'Weather', 'field'];
-  } else if ((condition = Terrains[id]) && condition[1] >= gen.num) {
-    return [condition[0], 'Terrain', 'field'];
-  } else if ((condition = PseudoWeathers[id]) && condition[1] >= gen.num) {
-    return [condition[0], 'Pseudo Weather', 'field'];
+    let condition: [ConditionName, GenerationNum, Player?];
+
+    // Field Conditions
+    if ((condition = Weathers[id]) && condition[1] >= gen.num) {
+      return [condition[0], 'Weather', 'field'];
+    } else if ((condition = Terrains[id]) && condition[1] >= gen.num) {
+      return [condition[0], 'Terrain', 'field'];
+    } else if ((condition = PseudoWeathers[id]) && condition[1] >= gen.num) {
+      return [condition[0], 'Pseudo Weather', 'field'];
+    }
+
+    // Side Conditions
+    if ((condition = SideConditions[id]) && condition[1] >= gen.num) {
+      return [condition[0], 'Side Condition', condition[2]!];
+    }
+
+    // Pokemon Conditions
+    if ((condition = Volatiles[id]) && condition[1] >= gen.num) {
+      return [condition[0], 'Volatile Status', condition[2]!];
+    } else if (id in Statuses) {
+      return [id as StatusName, 'Status'];
+    }
+
+    return undefined;
   }
-
-  // Side Conditions
-  if ((condition = SideConditions[id]) && condition[1] >= gen.num) {
-    return [condition[0], 'Side Condition', condition[2]!];
-  }
-
-  // Pokemon Conditions
-  if ((condition = Volatiles[id]) && condition[1] >= gen.num) {
-    return [condition[0], 'Volatile Status', condition[2]!];
-  } else if (id in Statuses) {
-    return [id as StatusName, 'Status'];
-  }
-
-  return undefined;
 }
 
 // Weather

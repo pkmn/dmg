@@ -32,17 +32,29 @@ export namespace Relevancy {
   }
 
   export interface Pokemon {
-    weighthg?: boolean;
+    // species is always relevant
+    // level is always relevant (though sometimes elided from the output)
+    // weighthg is relevant for weight based moves, but that's covered by move base power
 
     item?: boolean
     ability?: boolean;
-    gender?: boolean;
 
     status?: boolean;
+    // statusData is covered by status: 'tox' already
     volatiles: {[id: string]: boolean};
 
+    // types are always relevant (though usually elided in output)
+    // addedType is always relevant
+
+    // hp is relevant for the defender, but is checked when calculated OHKO chance
+
+    // certain moves/condtions change which stats are relevant
     stats: Partial<Omit<StatsTable<boolean>, 'hp'>>;
 
+    // position is never relevant, it merely exists as an implementation detail
+
+    // relevant for the specific moves that make use of them
+    gender?: boolean;
     switching?: boolean
     moveLastTurnResult?: boolean;
     hurtThisTurn?: boolean;
@@ -59,6 +71,8 @@ export namespace Relevancy {
 
 export class Result {
   readonly state: DeepReadonly<State>;
+
+  readonly context: context;
   readonly relevant: Relevancy;
 
   constructor(state: DeepReadonly<State>) {

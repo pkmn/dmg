@@ -127,7 +127,6 @@ or implicitly if disambiguous.
 | `attackerItem` / `defenderItem` | the item held by the attacker / defender |
 | `attackerGender` / `defenderGender` | the gender of the attacker / defender |
 | `attackerNature` / `defenderNature` | the nature of the attacker / defender |
-| `attacker<STAT>` / `defender<STAT>` | the attacker / defender stat (eg. `attackerSpA`) |
 | `attacker<STAT>IV(s)` / `defender<STAT>IV(s)` | the IV of the attacker / defender stat (eg. `attackerSpAIV`) |
 | `attacker<STAT>DV(s)` / `defender<STAT>DV(s)` | the IV of the attacker / defender stat (eg. `attackerSpcDV`) |
 | `attacker<STAT>EV(s)` / `defender<STAT>EV(s)` | the EV of the attacker / defender stat (eg. `defenderHPEV`) |

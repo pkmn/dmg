@@ -1,6 +1,6 @@
 import {Generation} from '@pkmn/data';
 import {Side, Field} from '../interface';
-import {Context} from '../../src/context';
+import {Context} from '../../../src/context';
 
 const Common: {[id: string]: {
   onModifySpe?: (context: Context) => number;

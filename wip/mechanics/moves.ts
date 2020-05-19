@@ -2,7 +2,7 @@ import {Generation} from '@pkmn/data';
 import {Side, Field} from '../interface';
 import {trunc, computeModifiedWeight, computeModifiedSpeed} from '../calc';
 
-import {Context} from '../../src/context';
+import {Context} from '../../../src/context';
 
 
 
