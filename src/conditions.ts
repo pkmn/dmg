@@ -219,12 +219,12 @@ export const Volatiles: {[id: string]: [VolatileStatusName, GenerationNum, Playe
   spikyshield: ['Spiky Shield', 6, 'p2'],
   stockpile: ['Stockpile', 3, 'p1'],
   tarshot: ['Tar Shot', 3, 'p2'],
-  //These changed to Pseudo Weathers and Side Conditions respectively in later generations
+  // These changed to Pseudo Weathers and Side Conditions respectively in later generations
   mudsport: ['Mud Sport', 3],
   watersport: ['Water Sport', 3],
   lightscreen: ['Light Screen', 1],
   reflect: ['Reflect', 1],
-  // Noe really relevant for damage
+  // Not really relevant for damage
   beakblast: ['Beak Blast', 7, 'p1'],
   octolock: ['Octolock', 8, 'p2'],
   uproar: ['Uproar', 3, 'p1'],

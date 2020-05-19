@@ -1,6 +1,6 @@
 /* eslint consistent-return: "off " */
 
-import {Handler} from './handler';
+import {Handler} from '.';
 
 export const Abilities: {[id: string]: Partial<Handler>} = {
   // adaptability: {

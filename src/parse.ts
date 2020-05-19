@@ -1,29 +1,33 @@
 import { toID, Generations, GenerationNum, ID, Generation, NatureName, GameType } from '@pkmn/data';
-import {getCondition, WeatherName, TerrainName} from './conditions';
+import {Conditions, WeatherName, TerrainName} from './conditions';
 
-import {State} from './state';
+import {State, bounded} from './state';
 import {decodeURL} from './encode';
 
 // Flags can either be specified as key:value or as 'implicits'
 const FLAG =
-  /^(?:(?:--?)?(\w+)(?:=|:)([-+0-9a-zA-Z_'", ]+))|((?:-|\+)[a-zA-Z'"][0-9a-zA-Z_'", ]+)$/;
+  /^(?:(?:--?)?(\w+)(?:=|:)([-+0-9a-zA-Z_'’", ]+))|((?:--?|\+)[a-zA-Z'’"][0-9a-zA-Z_'’", ]+)$/;
 type Flags = {[id: string]: string};
 
 const PHRASE = new RegExp([
   // Attacker Boosts
-  /^(?:((?:\+|-)[1-6])?\s+)?/,
+  /^(?:((?:\+|-)[1-6])?\s+)?/, // 1
+  // Attacker Level
+  /(?:Lvl?\s*(\d{1,2})\s+)?/, // 2
   // Attacker EVs
-  /(?:(\d{1,3}(?:\+|-)?\s*(?:SpA|Atk))?\s+)?/,
+  /(?:(\d{1,3}(?:\+|-)?\s*(?:SpA|Atk))?\s+)?/, // 3
   // Attacker Pokemon (@ Attacker Item)?
-  /(?:([A-Za-z][-0-9A-Za-z' ]+)(?:\s*@\s*([A-Za-z][-0-9A-Za-z' ]+))?)/,
+  /(?:([A-Za-z][-0-9A-Za-z'’ ]+)(?:\s*@\s*([A-Za-z][-0-9A-Za-z' ]+))?)/, // 4 & 5
   // Move
-  /\s*\[([-0-9A-Za-z' ]+)\]\s+vs\.?\s+/,
+  /\s*\[([-0-9A-Za-z', ]+)\]\s+vs\.?\s+/, // 6
   // Defender Boosts
-  /(?:((?:\+|-)[1-6])?\s+)?/,
+  /(?:((?:\+|-)[1-6])?\s+)?/, // 7
+  // Defender Level
+  /(?:Lvl?\s*(\d{1,2})\s+)?/, // 8
   // Defender EVs
-  /(?:(\d{1,3}\s*HP)?\s*\/?\s*(\d{1,3}(?:\+|-)?\s*(?:SpD|Def))?\s+)?/,
+  /(?:(\d{1,3}\s*HP)?\s*\/?\s*(\d{1,3}(?:\+|-)?\s*(?:SpD|Def))?\s+)?/, // 9 & 10
   // Defender Pokemon (@ Defender Item)?
-  /(?:([A-Za-z][-0-9A-Za-z' ]+)(?:\s*@\s*([A-Za-z][-0-9A-Za-z' ]+))?)$/
+  /(?:([A-Za-z][-0-9A-Za-z'’ ]+)(?:\s*@\s*([A-Za-z][-0-9A-Za-z' ]+))?)$/ // 11 & 12
 ].map(r => r.source).join(''), 'i');
 
 const QUOTED = /^['"].*['"]$/;
@@ -32,31 +36,22 @@ interface Phrase {
   attacker: ID;
   defender: ID;
   move: ID;
-
+  // Attacker
   attackerBoost?: number;
+  attackerLevel?: number;
   attackerNature?: '+' | '-';
   attackerEVs?: {atk?: number; spa?: number};
   attackerItem?: ID;
-
+  // Defender
   defenderBoost?: number;
+  defenderLevel?: number;
   defenderNature?: '+' | '-';
   defenderEVs?: {hp?: number; def?: number; spd?: number};
   defenderItem?: ID;
 }
 
-const BOUNDS: {[key: string]: [number, number]} = {
-  level: [0, 100],
-  evs: [0, 252],
-  ivs: [0, 31],
-  dvs: [0, 15],
-  gen: [1, 7],
-  boosts: [-6, 6],
-  toxicCounter: [0, 15],
-};
-
 export function parse(gens: Generations, s: string, strict = false) {
   const argv = tokenize(decodeURL(s));
-  // const argv = tokenize(s);
 
   const flags: Flags = {};
   const fragments: string[] = [];
@@ -89,8 +84,8 @@ export function parse(gens: Generations, s: string, strict = false) {
   }
 
 
-  // return build(gens, parsed, flags, context, strict);
-  return {phrase, flags} as unknown as State; // FIXME
+  // FIXME return build(gens, parsed, flags, context, strict);
+  return {phrase, flags} as unknown as State;
 }
 
 function parsePhrase(s: string) {
@@ -98,24 +93,26 @@ function parsePhrase(s: string) {
   if (!m) return undefined;
 
   const phrase: Phrase = {
-    attacker: toID(m[3]),
-    defender: toID(m[9]),
-    move: toID(m[5]),
+    attacker: toID(m[5]),
+    defender: toID(m[11]),
+    move: toID(m[6]),
 
     attackerBoost: parseInt(m[1]) || undefined,
-    attackerItem: toID(m[4]) || undefined,
+    attackerLevel: parseInt(m[2]) || undefined,
+    attackerItem: toID(m[5]) || undefined,
 
-    defenderBoost: parseInt(m[6]) || undefined,
-    defenderItem: toID(m[10]) || undefined,
+    defenderBoost: parseInt(m[7]) || undefined,
+    defenderLevel: parseInt(m[8]) || undefined,
+    defenderItem: toID(m[12]) || undefined,
   };
 
-  if (m[2]) {
+  if (m[3]) {
     phrase.attackerNature = m[2].includes('+') ? '+' : m[2].includes('-') ? '-' : undefined;
     phrase.attackerEVs = {};
     phrase.attackerEVs[toID(m[2]).endsWith('atk') ? 'atk' : 'spa'] = parseInt(m[2]) || undefined;
   }
-  if (m[7]) phrase.defenderEVs = {hp: parseInt(m[7]) || undefined};
-  if (m[8]) {
+  if (m[9]) phrase.defenderEVs = {hp: parseInt(m[7]) || undefined};
+  if (m[10]) {
     phrase.defenderNature = m[8].includes('+') ? '+' : m[8].includes('-') ? '-' : undefined;
     phrase.defenderEVs = phrase.defenderEVs || {};
     phrase.defenderEVs[toID(m[8]).endsWith('def') ? 'def' : 'spd'] = parseInt(m[7]) || undefined;
@@ -134,7 +131,7 @@ function build(
   let g: GenerationNum = 8;
   if (flags.gen) {
     const n = Number(flags.gen);
-    if (isNaN(n) || n < 1 || n > 8) {
+    if (isNaN(n) || bounded('gen', n)) {
       if (strict) throw new Error(`Invalid generation '${flags.gen}': ${context}`);
     } else {
       g = n as GenerationNum;
@@ -173,19 +170,19 @@ function buildField(
 ) {
   const field: State.Field = {};
   if (flags.weather) {
-    const c = getCondition(gen, flags.weather);
+    const c = Conditions.get(gen, flags.weather);
     if (!c) {
       invalid('weather', flags.weather);
     } else {
-      field.weather = {name: c[1] as WeatherName};
+      field.weather = c[1] as WeatherName;
     }
   }
   if (flags.terrain) {
-    const c = getCondition(gen, flags.terrain);
+    const c = Conditions.get(gen, flags.terrain);
     if (!c) {
       invalid('terrain', flags.terrain);
     } else {
-      field.terrain = {name: c[1] as TerrainName};
+      field.terrain = c[1] as TerrainName;
     }
   }
 
@@ -194,7 +191,12 @@ function buildField(
   return field;
 }
 
-
+function asBoolean(s: string) {
+  const id = toID(s);
+  if (['true', '1', 'yes', 'y'].includes(id)) return true;
+  if (['false', '0', 'no', 'n'].includes(id)) return false;
+  throw new TypeError(`Invalid boolean flag value: ${s}`);
+}
 
 // https://github.com/mccormicka/string-argv v0.3.0
 // MIT License Copyright 2014 Anthony McCormick

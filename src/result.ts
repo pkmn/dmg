@@ -1,7 +1,18 @@
 import {StatsTable} from '@pkmn/data';
 
-import { State } from './state';
+import { State, Context } from './state';
 import { DeepReadonly } from './types';
+import { Handlers } from './mechanics';
+
+export type Damage =
+  | number // fixed damage, single hit
+  | number[] // standard damage rolls
+  | [number, number] // fixed damage, two hits (only Parental Bond)
+  | [number[], number[]] // standard damage rolls, two hits
+  | [number[], number[], number[]]
+  | [number[], number[], number[], number[]]
+  | [number[], number[], number[], number[], number[]]
+
 
 export class Relevancy {
   readonly p1: Relevancy.Side;
@@ -12,7 +23,7 @@ export class Relevancy {
   constructor() {
     this.p1 = {pokemon: {volatiles: {}, stats: {}}, sideConditions: {}};
     this.p2 = {pokemon: {volatiles: {}, stats: {}}, sideConditions: {}};
-    this.field = {};
+    this.field = {pseudoWeather: {}};
     this.move = {};
   }
 }
@@ -21,7 +32,7 @@ export namespace Relevancy {
   export interface Field {
     weather?: boolean;
     terrain?: boolean;
-    pseudoWeather?: {[id: string]: boolean};
+    pseudoWeather: {[id: string]: boolean};
   }
 
   export interface Side {
@@ -72,11 +83,48 @@ export namespace Relevancy {
 export class Result {
   readonly state: DeepReadonly<State>;
 
-  readonly context: context;
+  readonly context: Context;
   readonly relevant: Relevancy;
 
-  constructor(state: DeepReadonly<State>) {
-    this.state = state;
+  damage: Damage;
+
+  constructor(state: State, handlers: Handlers) {
+    this.damage = 0;
+    this.state = state as DeepReadonly<State>;
     this.relevant = new Relevancy();
+    this.context = new Context(state, this.relevant, handlers);
+  }
+
+
+  get range() {
+    return null! as [number, number]; // TODO
+  }
+
+  get desc() {
+    return this.fullDesc();
+  }
+
+  get recoil() {
+    return null! as [number, number];
+  }
+
+  get recovery() {
+    return null! as [number, number];
+  }
+
+  fullDesc(notation = '%') {
+    return ''; // TODO
+  }
+
+  moveDesc(notation = '%') {
+    return ''; // TODO
+  }
+
+  recoilDesc(notation = '%') {
+    return ''; // TODO
+  }
+
+  recoveryDesc(notation = '%') {
+    return ''; // TODO
   }
 }

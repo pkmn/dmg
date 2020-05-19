@@ -1,5 +1,7 @@
 # Parsing
 
+TODO
+
 ## Usage
 
 ### Programmatic
@@ -49,9 +51,9 @@ $ dmg gen=3 mence @ CB [EQ] vs. cune @ lefties
 252+ Atk Choice Band Salamence Earthquake vs. 252 HP / 252+ Def Suicune: 121-143 (29.9 - 35.3%) -- guaranteed 4HKO after Leftovers recovery
 ```
 
-~~Like the https://calc.pokemonshowdown.com, the CLI relies on predefined sets and heuristics to
+Like the https://calc.pokemonshowdown.com, the CLI relies on predefined sets and heuristics to
 minimize the amount of information that needs to be specified in order to perform a calculation. See
-the [CLI's documentation][4] for more details.~~
+the [CLI's documentation][4] for more details.
 
 ## Format
 
@@ -157,13 +159,15 @@ understands is similar to the output description, with items and moves requiring
 modification in their place in order to make parsing easier:
 
 ```txt
-<ATTACKER_BOOST>? <ATTACKER_EVS>? <ATTACKER_POKEMON> (@ <ATTACKER_ITEM>)? ([<ATTACKER_MOVE>])?
-vs. <DEFENDER_BOOST>? <DEFENDER_EVS>? <DEFENDER_POKEMON> (@ <DEFENDER_ITEM>)?
+<ATTACKER_BOOST>? <ATTACKER_LEVEL>? <ATTACKER_EVS>? <ATTACKER_POKEMON> (@ <ATTACKER_ITEM>)?
+   [<ATTACKER_MOVE>] vs.
+<DEFENDER_BOOST>? <DEFENDER_LEVEL>? <DEFENDER_EVS>? <DEFENDER_POKEMON> (@ <DEFENDER_ITEM>)?
 ```
 
 where:
 
 - `ATTACKER_BOOST`: optional, can range from -6 to +6 and boosts the stat used for attacking.
+- `ATTACKER_LEVEL`: optional, can range from 1 to 100, defaults to 100.
 - `ATTACKER_EVS`: optional, can range from 0-252 and can only be 'Atk' or 'SpA' EVs (not
    case-sensitive). A '+' or '-' may be included after the number of EVs to indicate nature.
 - `ATTACKER_POKEMON`: required, the name of the attacking Pokémon species/forme.
@@ -171,6 +175,7 @@ where:
 - `ATTACKER_MOVE`: optional, must be enclosed in square brackets, the attacking move.
 - `DEFENDER_BOOST`: optional, can range from -6 to +6 and boosts the stat used to defend against
    the attack.
+- `DEFENDER_LEVEL`: optional, can range from 1 to 100, defaults to 100.
 - `DEFENDER_EVS`: optional, can range from 0-252 and can of the form `<N> HP / <N> Def` or
    `<N> HP / <N> SpD` (not case-sensitive). A '+' or '-' may be included after the number of Def or
    SpD EVs to indicate nature.

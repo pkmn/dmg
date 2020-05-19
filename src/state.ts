@@ -17,6 +17,20 @@ import {Handlers, Handler} from './mechanics';
 import { Relevancy } from './result';
 import { extend } from './tools';
 
+const BOUNDS: {[key: string]: [number, number]} = {
+  level: [1, 100],
+  evs: [0, 252],
+  ivs: [0, 31],
+  dvs: [0, 15],
+  gen: [1, 8],
+  boosts: [-6, 6],
+  toxicCounter: [0, 15],
+};
+
+export function bounded(key: keyof typeof BOUNDS, val: number) {
+  return val >= BOUNDS[key][0] && val <= BOUNDS[key][1];
+}
+
 export class State {
   readonly gameType: GameType;
   readonly gen: Generation;
@@ -30,7 +44,7 @@ export class State {
     attacker: State.Side | State.Pokemon,
     defender: State.Side | State.Pokemon,
     move: State.Move,
-    field: State.Field = {},
+    field: State.Field = {pseudoWeather: {}},
     gameType: GameType = 'singles'
   ) {
     this.gameType = gameType;
@@ -40,13 +54,24 @@ export class State {
     this.move = move;
     this.field = field;
   }
+
+  // TODO: convenience helper also validates!
+  static createPokemon(gen: Generation, name: string) {
+
+
+  }
+
+  // TODO: convenience also validates!
+  static createMove(gen: Generation, name: string) {
+
+  }
 }
 
 export namespace State {
   export interface Field {
     weather?: WeatherName;
     terrain?: TerrainName;
-    pseudoWeather?: {[id: string]: unknown};
+    pseudoWeather: {[id: string]: unknown};
   }
 
   export interface Side {
@@ -103,7 +128,7 @@ export namespace State {
     maxhp: number;
     hp: number;
 
-    nature: NatureName;
+    nature?: NatureName;
     evs?: Partial<StatsTable>;
     ivs?: Partial<StatsTable>;
 
@@ -142,8 +167,8 @@ export class Context {
   constructor(state: State, relevant: Relevancy, handlers: Handlers) {
     this.gameType = state.gameType;
     this.gen = state.gen;
-    this.p1 = new Context.Side(state.p1, relevant.p1, handlers),
-    this.p2 = new Context.Side(state.p2, relevant.p2, handlers);
+    this.p1 = new Context.Side(state.gen, state.p1, relevant.p1, handlers),
+    this.p2 = new Context.Side(state.gen, state.p2, relevant.p2, handlers);
     this.move = new Context.Move(state.move, relevant.move, handlers),
     this.field = new Context.Field(state.field, relevant.field, handlers);
     this.relevant = relevant;
@@ -154,7 +179,7 @@ export namespace Context {
   export class Field {
     weather?: {name: WeatherName} & Partial<Handler>;
     terrain?: {name: TerrainName} & Partial<Handler>;
-    pseudoWeather?: {[id: string]: Partial<Handler>};
+    pseudoWeather: {[id: string]: Partial<Handler>};
 
     readonly relevant: Relevancy.Field;
 
@@ -173,8 +198,12 @@ export namespace Context {
           this.relevant.terrain = true;
         });
       }
-      if (state.pseudoWeather) {
-        // FIXME
+      this.pseudoWeather = {};
+      for (const pw in state.pseudoWeather) {
+        this.pseudoWeather[pw] =
+          reify({data: state.pseudoWeather[pw]}, pw as ID, handlers.Conditions, () => {
+            this.relevant.pseudoWeather[pw] = true;
+          });
       }
     }
   }
@@ -196,16 +225,19 @@ export namespace Context {
 
     readonly relevant: Relevancy.Side;
 
-    constructor(state: State.Side, relevant: Relevancy.Side, handlers: Handlers) {
+    constructor(gen: Generation, state: State.Side, relevant: Relevancy.Side, handlers: Handlers) {
       this.relevant = relevant;
 
-      this.pokemon = new Pokemon(state.pokemon, relevant.pokemon, handlers)
-      if (state.sideConditions) {
-        // FIXME
+      this.pokemon = new Pokemon(gen, state.pokemon, relevant.pokemon, handlers);
+      this.sideConditions = {};
+      for (const sc in state.sideConditions) {
+        this.sideConditions[sc] =
+          reify(state.sideConditions[sc], sc as ID, handlers.Conditions, () => {
+            this.relevant.sideConditions[sc] = true;
+          });
       }
       this.active = this.active?.map(p => extend({}, p));
       this.party = this.party?.map(p => extend({}, p));
-
     }
   }
 
@@ -242,7 +274,12 @@ export namespace Context {
 
     readonly relevant: Relevancy.Pokemon;
 
-    constructor(state: State.Pokemon, relevant: Relevancy.Pokemon, handlers: Handlers) {
+    constructor(
+      gen: Generation,
+      state: State.Pokemon,
+      relevant: Relevancy.Pokemon,
+      handlers: Handlers
+    ) {
       this.relevant = relevant;
 
       this.species = state.species;
@@ -268,6 +305,12 @@ export namespace Context {
         });
       }
       this.statusData = this.statusData && extend({}, state.statusData);
+      this.volatiles = {};
+      for (const v in state.volatiles) {
+        this.volatiles[v] = reify(state.volatiles[v], v as ID, handlers.Conditions, () => {
+          this.relevant.volatiles[v] = true;
+        });
+      }
 
       this.types = state.types.slice() as Pokemon['types'];
       this.addedType = state.addedType;
@@ -275,14 +318,23 @@ export namespace Context {
       this.maxhp = state.maxhp;
       this.hp = state.hp;
 
-      // TODO stats
+      this.stats = {} as StatsTable;
+      for (const stat of gen.stats) {
+        this.stats[stat] = gen.stats.calc(
+          stat,
+          this.species.baseStats[stat],
+          state.ivs?.[stat] ?? 31,
+          state.evs?.[stat] ?? (gen.num <= 2 ? 252 : 0),
+          state.level,
+          gen.natures.get(state.nature!)!
+        );
+      }
       this.boosts = extend({}, state.boosts);
 
       this.position = state.position;
       this.switching = state.switching;
       this.moveLastTurnResult = state.moveLastTurnResult;
       this.hurtThisTurn = state.hurtThisTurn;
-      this.fainted = state.fainted;
     }
   }
 
@@ -298,7 +350,7 @@ export namespace Context {
     constructor(state: State.Move, relevant: Relevancy.Move, handlers: Handlers) {
       this.relevant = relevant;
 
-      // TODO
+      reify(this, this.id, handlers.Moves);
     }
   }
 }
@@ -307,7 +359,7 @@ function reify<T>(
   obj: T & Partial<Handler>,
   id: ID,
   handlers: Handlers[keyof Handlers],
-  callback: () => void
+  callback?: () => void
 ) {
   const handler = handlers[id];
   if (handler) {
@@ -316,7 +368,7 @@ function reify<T>(
       if (fn && n !== 'apply') {
         obj[n as Exclude<keyof Handler, 'apply'>] = (c: Context) => {
           const r = (fn as any)(c);
-          if (r) callback();
+          if (r && callback) callback();
           return r;
         };
       }

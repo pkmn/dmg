@@ -2,9 +2,10 @@
 
 ## Motivation
 
-The logic packaged into `@smogon/calc` looks substantially different than the original code Honko
-wrote, and it has incrementally improved over time. However, there are still a number of
-shortcomings:
+The [logic packaged into `@smogon/calc`](https://github.com/smogon/damage-calc/blob/master/calc)
+looks substantially different than the [original code Honko
+wrote](https://github.com/smogon/damage-calc/commit/5de3119428112d2a1682e914986ae11880493834), and
+it has incrementally improved over time. However, there are still a number of shortcomings:
 
 - lots of **logic is duplicated between the mechanics files** - too many low level concerns are
   mixed together with the high level calculation flow meaning its difficult to see differences in
