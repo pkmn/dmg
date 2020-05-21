@@ -21,6 +21,7 @@ import {
   StatusName,
   toID,
   TypeName,
+  StatName,
 } from '@pkmn/data';
 import {WeatherName, TerrainName, Conditions} from './conditions';
 import {Handlers, Handler} from './mechanics';
@@ -65,9 +66,8 @@ export interface PokemonOptions extends Partial<Omit<State.Pokemon, OverriddenFi
 };
 
 export interface MoveOptions extends Partial<State.Move> {
-  species?: Specie | string;
-  item?: string;
-  ability?: string;
+  useZ?: boolean;
+  useMax?: boolean;
 };
 
 export class State {
@@ -97,7 +97,8 @@ export class State {
   static createPokemon(
     gen: Generation,
     name: string,
-    options: PokemonOptions = {}
+    options: PokemonOptions = {},
+    move: string | {name?: string} = {},
   ) {
     const pokemon: Partial<State.Pokemon> = {};
 
@@ -123,30 +124,11 @@ export class State {
 
     // Item
     pokemon.item = undefined;
-    if (options.item) {
-      const item = gen.items.get(options.item);
-      if (!item) invalid(gen, 'item', options.item);
-      pokemon.item = item.id;
-    }
+    setItem(gen, pokemon, options.item);
 
     // Ability
     pokemon.ability = undefined;
-    if (options.ability) {
-      const ability = gen.abilities.get(options.ability);
-      if (!ability) invalid(gen, 'ability', options.ability);
-      pokemon.ability = ability.id;
-    }
-
-    // Gender
-    if (options.gender) {
-      if (gen.num === 1) throw new Error(`Gender does not exist in generation 1`);
-      if (pokemon.species.gender && options.gender !== pokemon.species.gender) {
-        throw new Error(`${pokemon.species.name} must be ${pokemon.species.gender}`);
-      }
-      pokemon.gender = options.gender || pokemon.species.gender || 'M';
-    } else {
-      pokemon.gender = gen.num === 1 ? undefined : 'M';
-    }
+    setAbility(gen, pokemon, options.ability);
 
     // Happiness
     pokemon.happiness = bounded('happiness', options.happiness || 0) || undefined;
@@ -210,19 +192,15 @@ export class State {
 
     // Nature
     pokemon.nature = undefined;
-    if (options.nature) {
-      const nature = gen.natures.get(options.nature);
-      if (!nature) invalid(gen, 'nature', options.nature);
-      pokemon.nature = nature.name;
-    }
+    setNature(gen, pokemon, options.nature);
 
     // EVs
     setValues(gen, pokemon, 'evs', options.evs)
 
     // FIXME IVs / DVs
 
-    // Boosts
 
+    // Boosts
     pokemon.boosts = {};
     if (options.boosts) {
       for (const b in options.boosts) {
@@ -234,6 +212,17 @@ export class State {
     }
     setSpc(gen, pokemon.boosts, 'boosts', options.boosts);
 
+    // Gender (depends on DVs)
+
+    const setAtkDV = typeof (options.dvs?.atk ?? options.ivs?.atk) === 'number';
+    setGender(gen, pokemon, options.gender, setAtkDV);
+
+    // HP (depends on stats)
+
+    const setHPDV = typeof (options.dvs?.hp ?? options.ivs?.hp) === 'number';
+    correctHPDV(gen, pokemon, setHPDV);
+
+    // TODO
     pokemon.maxhp =
       gen.stats.calc('hp', species.baseStats.hp, pokemon.ivs!.hp, pokemon.evs!.hp, pokemon.level);
     if (options.maxhp) {
@@ -259,12 +248,15 @@ export class State {
   static createMove(
     gen: Generation,
     name: string,
-    options: MoveOptions = {}
-  ) {
+    options: MoveOptions = {},
+    pokemon:  string | {
+      species?: string | Specie;
+      item?: string;
+      ability?: string;
+    } = {}) {
     const base = gen.moves.get(name);
     if (!base) invalid(gen, 'move', name);
-    // whatever, the species / item / ability are fine, and no one has time to validate move fields
-    const move = extend({}, base, options);
+    const move = extend({}, base, options); // whatever, there are too many move fields
     move.crit = options.crit ?? base.willCrit;
     if (typeof options.magnitude === 'number') {
       if (move.id !== 'magnitude') {
@@ -276,23 +268,48 @@ export class State {
     // hits?: number;
     // spreadHit?: boolean;
     // numConsecutive?: number;
+
+
+    // TODO
+    // use species/item/ability if useZ / useMax
     return move;
   }
 
-  static mergeSet(pokemon: State.Pokemon, move: string | PokemonSet, ...sets: PokemonSet[]) {
+  static mergeSet(
+    gen: Generation,
+    pokemon: State.Pokemon,
+    move: string | PokemonSet,
+    ...sets: PokemonSet[]
+  ) {
     const set = bestMatch(pokemon, move, ...sets);
 
-    pokemon.level = set.level || pokemon.level;
-    pokemon.item = set.item ? toID(set.item) : pokemon.item;
-    pokemon.ability = set.ability ? toID(set.ability) : pokemon.ability;
-    pokemon.gender = set.gender as GenderName || pokemon.gender;
-    pokemon.happiness = set.happiness || pokemon.happiness;
-    pokemon.nature = set.nature as NatureName || pokemon.nature;
+    pokemon.level = bounded('level', set.level);
+    setItem(gen, pokemon, set.item);
+    setAbility(gen, pokemon, set.ability);
+    pokemon.happiness = bounded('happiness', set.happiness || 0) || pokemon.happiness;
+    // Nature is required on PokemonSet, so we just ignore it for generations 1 and 2
+    setNature(gen, pokemon, set.nature, gen.num >= 3);
 
-    // TODO: what about hidden power dynamics and HP dv, shiny etc
-    // evs: StatsTable;
-    // ivs: StatsTable;
-    // shiny?: boolean;
+    setValues(gen, pokemon, 'evs', set.evs);
+    // TODO: what about hidden power dynamics
+    setValues(gen, pokemon, 'ivs', set.ivs);
+
+    // Shiny
+
+    const dv = (stat: StatName) => gen.stats.itod(pokemon.ivs![stat]!);
+    const shiny =
+      !!(dv('def') === 10 && dv('spe') === 10 && dv('spa') === 10 && dv('atk') % 4 >= 2);
+    if (gen.num === 2 && (shiny !== !!set.shiny)) {
+      throw new Error(
+        `${pokemon.species.name} is required to ${shiny ? '' : 'not '}be ` +
+        `shiny in generation 2 given its DVs.`
+      )
+    }
+    setGender(gen, pokemon, set.gender as GenderName, typeof set.ivs?.atk === 'number')
+
+    correctHPDV(gen, pokemon, typeof set.ivs.hp === 'number');
+
+    // FIXME redo HP
 
     return pokemon;
   }
@@ -767,15 +784,42 @@ function bestMatch(pokemon: State.Pokemon, move: string | PokemonSet, ...sets: P
   return best[1];
 }
 
+function setItem(gen: Generation, pokemon: Partial<State.Pokemon>, name?: string) {
+  if (name) {
+    const item = gen.items.get(name);
+    if (!item) invalid(gen, 'item', name);
+    pokemon.item = item.id;
+  }
+}
+
+function setAbility(gen: Generation, pokemon: Partial<State.Pokemon>, name?: string) {
+  if (name) {
+    const ability = gen.abilities.get(name);
+    if (!ability) invalid(gen, 'ability', ability);
+    pokemon.ability = ability.id;
+  }
+}
+
+function setNature(gen: Generation, pokemon: Partial<State.Pokemon>, name?: string, die = true) {
+  if (name) {
+    const nature = gen.natures.get(name);
+    if (!nature) {
+      if (die) invalid(gen, 'nature', name);
+    } else {
+      pokemon.nature = nature.name;
+    }
+  }
+}
+
 function setValues(
   gen: Generation,
   pokemon: Partial<State.Pokemon>,
   type: 'evs' | 'ivs',
   vals?: Partial<StatsTable & {spc: number}>
 ) {
-  pokemon[type] = {};
+  pokemon[type] = pokemon[type] || {};
   for (const stat of gen.stats) {
-    pokemon[type]![stat] = type == 'evs' ? (gen.num <= 2 ? 252 : 0) : 31;
+    pokemon[type]![stat] = pokemon[type]![stat] ?? (type == 'evs' ? (gen.num <= 2 ? 252 : 0) : 31);
     const val = vals?.[stat];
     if (typeof val === 'number') pokemon[type]![stat] = bounded(type, val);
   }
@@ -803,3 +847,111 @@ function setSpc(
     throw new Error(`SpA and SpD ${type} must match before generation 3`);
   }
 }
+
+// PRECONDITION: pokemon.species and pokemon.ivs must be set
+function setGender(
+  gen: Generation,
+  pokemon: Partial<State.Pokemon>,
+  name?: GenderName,
+  setAtkDV = false
+) {
+  const ivs = pokemon.ivs!;
+  const species = pokemon.species!;
+  const atkDV = gen.stats.itod(ivs.atk!);
+  // AtkDV determing gender is only at thing in generation 2, but we can use it as the default
+  const gender = gen.num === 1 ? undefined : species.genderRatio.F * 16 >= atkDV ? 'M' : 'F';
+  if (name) {
+    if (gen.num === 1) throw new Error(`Gender does not exist in generation 1`);
+    if (species.gender && name !== species.gender) {
+      throw new Error(`${species.name} must be ${species.gender} in generation ${gen.num}`);
+    }
+    if (gen.num === 2 && setAtkDV && name !== gender) {
+      throw new Error(`A ${species.name} with ${atkDV} Atk DVs must be '${gender}' in gen 2`);
+    }
+    pokemon.gender = name || species.gender || gender;
+  } else {
+    pokemon.gender = gender;
+  }
+}
+
+// PRECONDITION: pokemon.species and pokemon.ivs must be set
+function correctHPDV(
+  gen: Generation,
+  pokemon: Partial<State.Pokemon>,
+  setHPDV = false
+) {
+  const expectedHPDV = gen.stats.getHPDV(pokemon.ivs!);
+  const actualHPDV = gen.stats.itod(pokemon.ivs!.hp!);
+  if (gen.num <= 2 && expectedHPDV !== actualHPDV) {
+    if (setHPDV) {
+      throw new Error(
+        `${pokemon.species!.name} is required to have an HP DV of `+
+        `${expectedHPDV} in generations 1 and 2 but it is ${actualHPDV}`
+      );
+    }
+    pokemon.ivs!.hp = gen.stats.dtoi(expectedHPDV);
+  }
+}
+
+const Z_MOVES: { [type in Exclude<TypeName, '???'>]: string } = {
+  Bug: 'Savage Spin-Out',
+  Dark: 'Black Hole Eclipse',
+  Dragon: 'Devastating Drake',
+  Electric: 'Gigavolt Havoc',
+  Fairy: 'Twinkle Tackle',
+  Fighting: 'All-Out Pummeling',
+  Fire: 'Inferno Overdrive',
+  Flying: 'Supersonic Skystrike',
+  Ghost: 'Never-Ending Nightmare',
+  Grass: 'Bloom Doom',
+  Ground: 'Tectonic Rage',
+  Ice: 'Subzero Slammer',
+  Normal: 'Breakneck Blitz',
+  Poison: 'Acid Downpour',
+  Psychic: 'Shattered Psyche',
+  Rock: 'Continental Crush',
+  Steel: 'Corkscrew Crash',
+  Water: 'Hydro Vortex',
+};
+
+function getZMove(
+  gen: Generation,
+  move: State.Move,
+  pokemon: {
+    species?: {name: string}
+    item?: string,
+  } = {}
+) {
+  if (gen.num < 7) throw new TypeError(`Z-Moves do not exist in gen ${gen.num}`);
+  if (pokemon.item) {
+    const item = gen.items.get(pokemon.item);
+    const matching =
+      item &&
+      item.zMove &&
+      item.itemUser?.includes(pokemon.species?.name as SpeciesName) &&
+      item.zMoveFrom === move.name
+    if (matching) return item!.zMove;
+  }
+  return Z_MOVES[move.type as Exclude<TypeName, '???'>];
+}
+
+const MAX_MOVES: { [type in Exclude<TypeName, '???'>]: string } = {
+  Bug: 'Max Flutterby',
+  Dark: 'Max Darkness',
+  Dragon: 'Max Wyrmwind',
+  Electric: 'Max Lightning',
+  Fairy: 'Max Starfall',
+  Fighting: 'Max Knuckle',
+  Fire: 'Max Flare',
+  Flying: 'Max Airstream',
+  Ghost: 'Max Phantasm',
+  Grass: 'Max Overgrowth',
+  Ground: 'Max Quake',
+  Ice: 'Max Hailstorm',
+  Normal: 'Max Strike',
+  Poison: 'Max Ooze',
+  Psychic: 'Max Mindstorm',
+  Rock: 'Max Rockfall',
+  Steel: 'Max Steelspike',
+  Water: 'Max Geyser',
+};
