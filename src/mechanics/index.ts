@@ -1,12 +1,12 @@
-import { State, Context } from '../state';
+import {State, Context} from '../state';
 // import { Context } from '../context';
-import { clamp, pokeRound } from '../math';
-import { BoostName, ID } from '@pkmn/data';
+import {clamp, pokeRound} from '../math';
+import {BoostName, ID} from '@pkmn/data';
 
 import {Abilities} from './abilities';
-import {Conditions}  from './conditions';
-import {Items}  from './items';
-import {Moves}  from './moves';
+import {Conditions} from './conditions';
+import {Items} from './items';
+import {Moves} from './moves';
 
 export interface Handler {
   apply(state: State): void;

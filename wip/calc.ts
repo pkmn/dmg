@@ -13,7 +13,7 @@ const ceil = Math.ceil;
 const floor = Math.floor;
 const round = Math.round;
 const pokeRound = (n: number) =>  n % 1 > 0.5 ? ceil(n) : floor(n);
-// const clamp = (a: number, n: number, b: number) => min(max(floor(n), a), b);
+const clamp = (a: number, n: number, b: number) => min(max(floor(n), a), b);
 export const trunc = (n: number, bits = 0) => bits ? (n >>> 0) % (2 ** bits) : n >>> 0;
 const chain = (o: number, n: number) => round(trunc(o * n) + 0x800) >> 12;
 const apply = (v: number, mod: number) => pokeRound(trunc(v * mod) / 0x1000);
@@ -81,7 +81,7 @@ export function calculate(
 
 const LEGACY_BOOSTS = [25, 28, 33, 40, 50, 66, 100, 150, 200, 250, 300, 350, 400];
 function computeBoostedStat(stat: number, mod: number, gen?: Generation) {
-  if (gen && gen.num <= 2) return min(max(floor(stat * LEGACY_BOOSTS[mod + 6] / 100), 1), 999);
+  if (gen && gen.num <= 2) return clamp(1, stat * LEGACY_BOOSTS[mod + 6] / 100, 999);
   return floor(trunc(stat * mod >= 0 ? 2 + mod : 2, 16) / (mod >= 0 ? 2 : abs(mod) + 2));
 }
 

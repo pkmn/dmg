@@ -1,4 +1,5 @@
-/* eslint consistent-return: "off " */
+/* eslint consistent-return: "off" */
+/* eslint-disable max-len */ // FIXME
 
 import {Handler} from '.';
 

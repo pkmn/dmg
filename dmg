@@ -1,0 +1,41 @@
+#!/usr/bin/env node
+
+try {
+  require.resolve('@pokemon-showdown/sets');
+} catch (err) {
+  if (err.code !== 'MODULE_NOT_FOUND') throw err;
+  console.error('@pokemon-showdown/sets must be installed to use the CLI');
+  process.exit(2);
+}
+
+const {Dex} = require('@pkmn/dex');
+const {Generations} = require('@pkmn/data');
+const defaultSets = require('@pokemon-showdown/sets');
+const dmg = require('./build');
+
+const gens = new Generations(Dex);
+
+try {
+  (async () => {
+    const state = dmg.parse(gens, process.argv.slice(2).join(' '));
+
+
+    const gen = state.gen;
+    const sets = await defaultSets.forGen(gen.num);
+    // TODO: filter out sets to avoid those above min(attacker.tier, defender.tier)
+    // TODO: prioritize smogon > usage, skip other
+
+    dmg.State.mergeSet(state.p1.pokemon, state.move.id, ...attackerSets);
+    dmg.State.mergeSet(state.p2.pokemon, ...defenderSets);
+
+    const result = dmg.calculate(state);
+    if (process.stdout.isTTY) {
+      // TODO: print out canonical parsed state in grey
+    }
+    console.log(result);
+  })();
+} catch (e) {
+  console.error(e.message);
+  process.exit(1);
+}
+

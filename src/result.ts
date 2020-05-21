@@ -88,13 +88,12 @@ export class Result {
 
   damage: Damage;
 
-  constructor(state: State, handlers: Handlers) {
+  constructor(state: DeepReadonly<State>, handlers: Handlers) {
     this.damage = 0;
-    this.state = state as DeepReadonly<State>;
+    this.state = state;
     this.relevant = new Relevancy();
     this.context = new Context(state, this.relevant, handlers);
   }
-
 
   get range() {
     return null! as [number, number]; // TODO
@@ -105,11 +104,11 @@ export class Result {
   }
 
   get recoil() {
-    return null! as [number, number];
+    return undefined as [number, number] | undefined; // TODO
   }
 
   get recovery() {
-    return null! as [number, number];
+    return undefined as [number, number] | undefined; // TODO
   }
 
   fullDesc(notation = '%') {
@@ -126,5 +125,9 @@ export class Result {
 
   recoveryDesc(notation = '%') {
     return ''; // TODO
+  }
+
+  toString() {
+    // TODO print full desc + rolls, include recoil/recovery if applicable
   }
 }

@@ -52,6 +52,12 @@ const ALIASES: {[id: string]: string}  = {
  * There is a 4th category of 'slot' conditions which are approximately side conditions but
  * only affect a particular slot on a given side, not the entire side (eg. Wish). There are
  * elided as irrelevant for our purposes.
+ *
+ * Pokémon Showdown treats everything as IDs, but UI's need a more human-friendly way of referencing
+ * a specific condition (and, in fact, also needs to map these to a better representation in the
+ * client - https://github.com/smogon/pokemon-showdown-client/blob/master/src/battle.ts). The names
+ * in this file are mostly chosen based on `@smogon/calc` and Pokémon Showdown for familiarity,
+ * though in most cases the name of the move or ability that causes the condition is used.
  */
 export const Conditions = new class {
   /**

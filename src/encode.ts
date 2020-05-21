@@ -20,6 +20,9 @@ export function decodeURL(s: string) {
 export function encode(result: Result, urlsafe = false) {
   const state = simplify(result);
   let s = '';   // TODO
+
+  // TODO: handle makeing
   // prefer phrase, implicits
+
   return urlsafe ? encodeURL(s) : s;
 }

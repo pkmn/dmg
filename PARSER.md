@@ -149,7 +149,7 @@ All move fields only apply to the attacker, so the `attacker` prefix is unnecess
 | `move` | the name of the move being used by the attacker |
 | `useZ` | whether to use the Z-Move version of the move |
 | `useMax` | whether to use the Max version of the move |
-| `crit` (`isCrit`) | whether the move was a critical hit (`+crit` may be used as a special shortcut) |
+| `crit` | whether the move was a critical hit (`+crit` may be used as a special shortcut) |
 | `hits` | the number of times a multi hit move hit |
 
 ### Phrases

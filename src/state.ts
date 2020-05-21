@@ -3,19 +3,31 @@ import {
   GameType,
   GenderName,
   Generation,
+  GenerationNum,
+  HitEffect,
   ID,
   Move as DMove,
+  MoveCategory,
+  MoveName,
+  MoveTarget,
   NatureName,
+  Nonstandard,
+  PokemonSet,
+  PureEffectData,
+  SecondaryEffect,
   Specie,
+  SpeciesName,
   StatsTable,
   StatusName,
-  TypeName,
   toID,
+  TypeName,
 } from '@pkmn/data';
-import {WeatherName, TerrainName} from './conditions';
+import {WeatherName, TerrainName, Conditions} from './conditions';
 import {Handlers, Handler} from './mechanics';
 import { Relevancy } from './result';
 import { extend } from './tools';
+import { DeepReadonly } from './types';
+import { MoveFlags } from '@smogon/calc/dist/data/interface';
 
 const BOUNDS: {[key: string]: [number, number]} = {
   level: [1, 100],
@@ -25,11 +37,38 @@ const BOUNDS: {[key: string]: [number, number]} = {
   gen: [1, 8],
   boosts: [-6, 6],
   toxicCounter: [0, 15],
+  happiness: [0, 255],
+  magnitude: [4, 10],
 };
 
-export function bounded(key: keyof typeof BOUNDS, val: number) {
-  return val >= BOUNDS[key][0] && val <= BOUNDS[key][1];
+function invalid(gen: Generation, k: string, v: any): never {
+  throw new Error(`Unsupported or invalid ${k} '${v}' for generation ${gen.num}`);
+};
+
+export function bounded(key: keyof typeof BOUNDS, val: number, die = true) {
+  const ok = val >= BOUNDS[key][0] && val <= BOUNDS[key][1];
+  if (!ok && die) throw new RangeError(`${key} ${val} is not within [${BOUNDS[key].join(',')}]`);
+  return val;
 }
+
+type OverriddenFields = 'item' | 'ability' | 'status' | 'volatiles' | 'ivs' | 'evs' | 'boosts';
+export interface PokemonOptions extends Partial<Omit<State.Pokemon, OverriddenFields>> {
+  weightkg?: number;
+  item?: string;
+  ability?: string;
+  status?: string;
+  volatiles?: string[] | State.Pokemon['volatiles'];
+  evs?: Partial<StatsTable & {spc: number}>
+  ivs?: Partial<StatsTable & {spc: number}>
+  dvs?: Partial<StatsTable & {spc: number}>
+  boosts?: Partial<BoostsTable & {spc: number}>
+};
+
+export interface MoveOptions extends Partial<State.Move> {
+  species?: Specie | string;
+  item?: string;
+  ability?: string;
+};
 
 export class State {
   readonly gameType: GameType;
@@ -55,15 +94,207 @@ export class State {
     this.field = field;
   }
 
-  // TODO: convenience helper also validates!
-  static createPokemon(gen: Generation, name: string) {
+  static createPokemon(
+    gen: Generation,
+    name: string,
+    options: PokemonOptions = {}
+  ) {
+    const pokemon: Partial<State.Pokemon> = {};
 
+    // Species
+    const species = gen.species.get(name);
+    if (!species) invalid(gen, 'species', name);
+    if (options.species && options.species !== species) {
+      throw new Error(`Species mismatch: ${options.species} does not match ${species}`);
+    }
+    pokemon.species = species;
 
+    // Level
+    pokemon.level = 100;
+    if (typeof options.level === 'number') {
+      pokemon.level = bounded('level', options.level);
+    }
+
+    // Weight
+    pokemon.weighthg =
+      options.weighthg ? options.weighthg :
+      options.weightkg ? options.weightkg / 10 : species.weighthg;
+    if (pokemon.weighthg < 1) throw new Error(`weighthg of ${pokemon.weighthg} must be at least 1`);
+
+    // Item
+    pokemon.item = undefined;
+    if (options.item) {
+      const item = gen.items.get(options.item);
+      if (!item) invalid(gen, 'item', options.item);
+      pokemon.item = item.id;
+    }
+
+    // Ability
+    pokemon.ability = undefined;
+    if (options.ability) {
+      const ability = gen.abilities.get(options.ability);
+      if (!ability) invalid(gen, 'ability', options.ability);
+      pokemon.ability = ability.id;
+    }
+
+    // Gender
+    if (options.gender) {
+      if (gen.num === 1) throw new Error(`Gender does not exist in generation 1`);
+      if (pokemon.species.gender && options.gender !== pokemon.species.gender) {
+        throw new Error(`${pokemon.species.name} must be ${pokemon.species.gender}`);
+      }
+      pokemon.gender = options.gender || pokemon.species.gender || 'M';
+    } else {
+      pokemon.gender = gen.num === 1 ? undefined : 'M';
+    }
+
+    // Happiness
+    pokemon.happiness = bounded('happiness', options.happiness || 0) || undefined;
+
+    // Status
+    pokemon.status = undefined;
+    pokemon.statusData = undefined;
+    if (options.status) {
+      const condition = Conditions.get(gen, options.status);
+      if (!condition) invalid(gen, 'status', options.status);
+      const [name, kind] = condition;
+      if (kind !== 'Status') {
+        throw new Error(`'${name} is a ${kind} not a Status in generation ${gen.num}`);
+      }
+      pokemon.status = name as StatusName;
+      if (pokemon.status === 'tox')  pokemon.statusData = {toxicTurns: 0};
+    }
+
+    // Status
+    if (options.statusData) {
+      if (options.statusData.toxicTurns) {
+        const turns = options.statusData.toxicTurns;
+        bounded('toxicCounter', turns);
+        if (pokemon.status !== 'tox') {
+          throw new Error(`toxicTurns set to ${turns} but the Pokemon's status is not 'tox'`);
+        }
+      }
+      pokemon.statusData = options.statusData;
+    }
+
+    // Volatiles
+    pokemon.volatiles = {};
+    if (options.volatiles) {
+      if (Array.isArray(options.volatiles)) {
+        for (const volatile of options.volatiles) {
+          const condition = Conditions.get(gen, volatile);
+          if (!condition) invalid(gen, 'volatile status', volatile);
+          const [name, kind] = condition;
+          if (kind !== 'Volatile Status') {
+            throw new Error(`'${name} is a ${kind} not a Volatile Status in generation ${gen.num}`);
+          }
+          pokemon.volatiles[toID(name)] = {};
+        }
+      } else {
+        for (const volatile in options.volatiles) {
+          const condition = Conditions.get(gen, volatile);
+          if (!condition) invalid(gen, 'volatile status', volatile);
+          const [name, kind] = condition;
+          if (kind !== 'Volatile Status') {
+            throw new Error(`'${name} is a ${kind} not a Volatile Status in generation ${gen.num}`);
+          }
+          // TODO: verify layers
+          pokemon.volatiles[toID(name)] = options.volatiles[volatile];
+        }
+      }
+    }
+
+    // Types
+    pokemon.types = options.types || pokemon.species.types;
+    pokemon.addedType = options.addedType;
+
+    // Nature
+    pokemon.nature = undefined;
+    if (options.nature) {
+      const nature = gen.natures.get(options.nature);
+      if (!nature) invalid(gen, 'nature', options.nature);
+      pokemon.nature = nature.name;
+    }
+
+    // EVs
+    setValues(gen, pokemon, 'evs', options.evs)
+
+    // FIXME IVs / DVs
+
+    // Boosts
+
+    pokemon.boosts = {};
+    if (options.boosts) {
+      for (const b in options.boosts) {
+        if (b === 'spc') continue;
+        const boost = b as keyof BoostsTable
+        const val = options.boosts[boost];
+        if (typeof val === 'number') pokemon.boosts[boost] = bounded('boosts', val);
+      }
+    }
+    setSpc(gen, pokemon.boosts, 'boosts', options.boosts);
+
+    pokemon.maxhp =
+      gen.stats.calc('hp', species.baseStats.hp, pokemon.ivs!.hp, pokemon.evs!.hp, pokemon.level);
+    if (options.maxhp) {
+      if (options.maxhp < pokemon.maxhp) {
+        throw new RangeError(`maxhp ${options.maxhp} less than calculated max HP ${pokemon.maxhp}`);
+      }
+      pokemon.maxhp = options.maxhp;
+    }
+    pokemon.hp = typeof options.hp === 'number' ? options.hp : pokemon.maxhp;
+    if (!(pokemon.hp >= 0 && pokemon.hp <= pokemon.maxhp)) {
+      throw new RangeError(`hp ${pokemon.hp} is not within [0,${pokemon.maxhp}]`);
+    }
+
+    // Miscellaneous
+    pokemon.position = options.position;
+    pokemon.switching = options.switching;
+    pokemon.moveLastTurnResult = options.moveLastTurnResult;
+    pokemon.hurtThisTurn = options.hurtThisTurn;
+
+    return pokemon as State.Pokemon;
   }
 
-  // TODO: convenience also validates!
-  static createMove(gen: Generation, name: string) {
+  static createMove(
+    gen: Generation,
+    name: string,
+    options: MoveOptions = {}
+  ) {
+    const base = gen.moves.get(name);
+    if (!base) invalid(gen, 'move', name);
+    // whatever, the species / item / ability are fine, and no one has time to validate move fields
+    const move = extend({}, base, options);
+    move.crit = options.crit ?? base.willCrit;
+    if (typeof options.magnitude === 'number') {
+      if (move.id !== 'magnitude') {
+        throw new Error(`magnitude ${options.magnitude} incorrectly set on move '${base.name}'`);
+      }
+      move.magnitude = bounded('magnitude', options.magnitude);
+    }
+    // TODO
+    // hits?: number;
+    // spreadHit?: boolean;
+    // numConsecutive?: number;
+    return move;
+  }
 
+  static mergeSet(pokemon: State.Pokemon, move: string | PokemonSet, ...sets: PokemonSet[]) {
+    const set = bestMatch(pokemon, move, ...sets);
+
+    pokemon.level = set.level || pokemon.level;
+    pokemon.item = set.item ? toID(set.item) : pokemon.item;
+    pokemon.ability = set.ability ? toID(set.ability) : pokemon.ability;
+    pokemon.gender = set.gender as GenderName || pokemon.gender;
+    pokemon.happiness = set.happiness || pokemon.happiness;
+    pokemon.nature = set.nature as NatureName || pokemon.nature;
+
+    // TODO: what about hidden power dynamics and HP dv, shiny etc
+    // evs: StatsTable;
+    // ivs: StatsTable;
+    // shiny?: boolean;
+
+    return pokemon;
   }
 }
 
@@ -116,7 +347,7 @@ export namespace State {
     happiness?: number;
 
     status?: StatusName;
-    statusData?: {toxicTurns: number};
+    statusData?: {toxicTurns?: number};
     // Level is used to track layers/stockpiles/etc
     volatiles: {[id: string]: {level?: number}};
 
@@ -132,7 +363,7 @@ export namespace State {
     evs?: Partial<StatsTable>;
     ivs?: Partial<StatsTable>;
 
-    boosts: BoostsTable;
+    boosts: Partial<BoostsTable>;
 
     // Use to disambiguate this Pokemon from its allies if included in the Side's active or party
     position?: number;
@@ -145,7 +376,7 @@ export namespace State {
     hurtThisTurn?: boolean;
   }
 
-  export interface Move extends DMove, Partial<Handler> {
+  export interface Move extends DMove {
     crit?: boolean;
     hits?: number;
     magnitude?: number;
@@ -164,11 +395,11 @@ export class Context {
 
   readonly relevant: Relevancy;
 
-  constructor(state: State, relevant: Relevancy, handlers: Handlers) {
+  constructor(state: DeepReadonly<State>, relevant: Relevancy, handlers: Handlers) {
     this.gameType = state.gameType;
-    this.gen = state.gen;
-    this.p1 = new Context.Side(state.gen, state.p1, relevant.p1, handlers),
-    this.p2 = new Context.Side(state.gen, state.p2, relevant.p2, handlers);
+    this.gen = state.gen as Generation;
+    this.p1 = new Context.Side(this.gen, state.p1, relevant.p1, handlers),
+    this.p2 = new Context.Side(this.gen, state.p2, relevant.p2, handlers);
     this.move = new Context.Move(state.move, relevant.move, handlers),
     this.field = new Context.Field(state.field, relevant.field, handlers);
     this.relevant = relevant;
@@ -183,7 +414,7 @@ export namespace Context {
 
     readonly relevant: Relevancy.Field;
 
-    constructor(state: State.Field, relevant: Relevancy.Field, handlers: Handlers) {
+    constructor(state: DeepReadonly<State.Field>, relevant: Relevancy.Field, handlers: Handlers) {
       this.relevant = relevant;
 
       if (state.weather) {
@@ -225,7 +456,12 @@ export namespace Context {
 
     readonly relevant: Relevancy.Side;
 
-    constructor(gen: Generation, state: State.Side, relevant: Relevancy.Side, handlers: Handlers) {
+    constructor(
+      gen: Generation,
+      state: DeepReadonly<State.Side>,
+      relevant: Relevancy.Side,
+      handlers: Handlers
+    ) {
       this.relevant = relevant;
 
       this.pokemon = new Pokemon(gen, state.pokemon, relevant.pokemon, handlers);
@@ -276,13 +512,13 @@ export namespace Context {
 
     constructor(
       gen: Generation,
-      state: State.Pokemon,
+      state: DeepReadonly<State.Pokemon>,
       relevant: Relevancy.Pokemon,
       handlers: Handlers
     ) {
       this.relevant = relevant;
 
-      this.species = state.species;
+      this.species = state.species as Specie;
       this.level = state.level;
       this.weighthg = state.weighthg;
 
@@ -338,18 +574,120 @@ export namespace Context {
     }
   }
 
-  export class Move implements DMove, Partial<Handler> {
+  export class Move implements State.Move, Partial<Handler> {
+    id!: ID;
+    name!: MoveName;
+    fullname!: string;
+    exists!: boolean;
+    num!: number;
+    gen!: GenerationNum;
+    shortDesc!: string;
+    desc!: string;
+    isNonstandard!: Nonstandard | null;
+    duration?: number;
+
+    effectType!: 'Move';
+    kind!: 'Move';
+    secondaries!: SecondaryEffect[] | null;
+    flags!: MoveFlags;
+    zMoveEffect?: ID;
+    isZ!: boolean | ID;
+    zMove?: {
+      basePower?: number;
+      effect?: ID;
+      boost?: Partial<BoostsTable>;
+    };
+    isMax!: boolean | SpeciesName;
+    maxMove?: {
+      basePower: number;
+    };
+    noMetronome?: MoveName[];
+    volatileStatus?: ID;
+    slotCondition?: ID;
+    sideCondition?: ID;
+    terrain?: ID;
+    pseudoWeather?: ID;
+    weather?: ID;
+
+    basePower!: number;
+    type!: TypeName;
+    accuracy!: true | number;
+    pp!: number;
+    target!: MoveTarget;
+    priority!: number;
+    category!: MoveCategory;
+
+    realMove?: string;
+    effect?: Partial<PureEffectData>;
+    damage?: number | 'level' | false | null;
+    noPPBoosts?: boolean;
+
+    ohko?: boolean | TypeName;
+    thawsTarget?: boolean;
+    heal?: number[] | null;
+    forceSwitch?: boolean;
+    selfSwitch?: boolean | 'copyvolatile';
+    selfBoost?: { boosts?: Partial<BoostsTable> };
+    selfdestruct?: boolean | 'ifHit' | 'always';
+    breaksProtect?: boolean;
+    recoil?: [number, number];
+    drain?: [number, number];
+    mindBlownRecoil?: boolean;
+    stealsBoosts?: boolean;
+    secondary?: SecondaryEffect | null;
+    self?: HitEffect | null;
+    struggleRecoil?: boolean;
+
+    alwaysHit?: boolean;
+    basePowerModifier?: number;
+    critModifier?: number;
+    critRatio?: number;
+    defensiveCategory?: MoveCategory;
+    forceSTAB?: boolean;
+    ignoreAbility?: boolean;
+    ignoreAccuracy?: boolean;
+    ignoreDefensive?: boolean;
+    ignoreEvasion?: boolean;
+    ignoreImmunity?: boolean | { [k in keyof TypeName]?: boolean };
+    ignoreNegativeOffensive?: boolean;
+    ignoreOffensive?: boolean;
+    ignorePositiveDefensive?: boolean;
+    ignorePositiveEvasion?: boolean;
+    infiltrates?: boolean;
+    multiaccuracy?: boolean;
+    multihit?: number | number[];
+    noCopy?: boolean;
+    noDamageVariance?: boolean;
+    noFaint?: boolean;
+    nonGhostTarget?: MoveTarget;
+    pressureTarget?: MoveTarget;
+    sleepUsable?: boolean;
+    smartTarget?: boolean;
+    spreadModifier?: number;
+    tracksTarget?: boolean;
+    useSourceDefensiveAsOffensive?: boolean;
+    useTargetOffensive?: boolean;
+    willCrit?: boolean;
+
+    hasCrashDamage?: boolean;
+    isConfusionSelfHit?: boolean;
+    isFutureMove?: boolean;
+    noSketch?: boolean;
+    stallingMove?: boolean;
+
     crit?: boolean;
     hits?: number;
     magnitude?: number;
     spreadHit?: boolean;
     numConsecutive?: number;
 
+    apply?(state: State): void; // Silence TS2559
+
     readonly relevant: Relevancy.Move;
 
-    constructor(state: State.Move, relevant: Relevancy.Move, handlers: Handlers) {
+    constructor(state: DeepReadonly<State.Move>, relevant: Relevancy.Move, handlers: Handlers) {
       this.relevant = relevant;
-
+      extend(this, state);
       reify(this, this.id, handlers.Moves);
     }
   }
@@ -375,4 +713,93 @@ function reify<T>(
     }
   }
   return obj;
+}
+
+// Naive algorithm for determing the 'best' matching set to the `pokemon` (with optional `move`) -
+// iterate through each set and assign it a score based on how many fields match vs. how many
+// conflict (with the score being unaffected if the field is not set) and then return the highest
+// scoring set, breaking ties by using the ordering of the sets provided. This works well enough
+// in a pinch, but could be improved by valuing certain fields more than others or eg. relying on
+// a set clustering similarity metric.
+function bestMatch(pokemon: State.Pokemon, move: string | PokemonSet, ...sets: PokemonSet[]) {
+  if (typeof move !== 'string') {
+    sets.unshift(move);
+    move = '';
+  }
+
+  const match = (a: string, b: string) => toID(a) === toID(b);
+  const scored: Array<[number, PokemonSet]> = [];
+  for (const set of sets) {
+    let score = 0;
+    if (!match(set.species, pokemon.species.name)) {
+      throw new Error(`Received invalid ${set.species} set for ${pokemon.species.name}`);
+    }
+    if (set.level !== pokemon.level) score--;
+    if (!match(set.item, pokemon.item!)) {
+      score--;
+    } else if (pokemon.item) {
+      score++
+    }
+    if (!match(set.ability, pokemon.ability!)) {
+      score--;
+    } else if (pokemon.ability) {
+      score++
+    }
+    if (!match(set.nature, pokemon.nature!)) {
+      score--;
+    } else if (pokemon.nature) {
+      score++
+    }
+    if (move && !set.moves.some(m => match(m, move as string))) {
+      score--;
+    } else if (move) {
+      score++
+    }
+    scored.push([score, set]);
+  }
+  if (!scored.length) throw new Error(`Received no sets for ${pokemon.species.name}`);
+
+  let best: [number, PokemonSet] = scored[0];
+  for (let i = 1; i < scored.length; i++) {
+    if (scored[i][0] > best[0]) best = scored[i];
+  }
+
+  return best[1];
+}
+
+function setValues(
+  gen: Generation,
+  pokemon: Partial<State.Pokemon>,
+  type: 'evs' | 'ivs',
+  vals?: Partial<StatsTable & {spc: number}>
+) {
+  pokemon[type] = {};
+  for (const stat of gen.stats) {
+    pokemon[type]![stat] = type == 'evs' ? (gen.num <= 2 ? 252 : 0) : 31;
+    const val = vals?.[stat];
+    if (typeof val === 'number') pokemon[type]![stat] = bounded(type, val);
+  }
+  setSpc(gen, pokemon[type]!, type, vals);
+}
+
+function setSpc(
+  gen: Generation,
+  existing: Partial<{spc: number, spa: number, spd: number}>,
+  type: 'evs' | 'ivs' | 'boosts',
+  vals?: Partial<{spc: number, spa: number, spd: number}>
+) {
+  let spc = vals?.spc;
+  if (typeof spc === 'number') {
+    if (gen.num >= 2) throw new Error('Spc does not exist after generation 1');
+    if (typeof vals!.spa === 'number' && vals!.spa != spc) {
+      throw new Error(`Spc and SpA ${type} mismatch: ${spc} vs. ${vals!.spa}`);
+    }
+    if (typeof vals!.spd === 'number' && vals!.spd != spc) {
+      throw new Error(`Spc and SpD ${type} mismatch: ${spc} vs. ${vals!.spd}`);
+    }
+    existing.spa = existing.spd = bounded(type, spc);
+  }
+  if (gen.num <= 2 && existing.spa !== existing.spd) {
+    throw new Error(`SpA and SpD ${type} must match before generation 3`);
+  }
 }

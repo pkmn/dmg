@@ -8,20 +8,51 @@ import {Result} from '../result';
 
 const gens = new Generations(Dex);
 
-export function tests(name: string, fn: (scope: Scope) => void): void;
-export function tests(name: string, from: GenerationNum, fn: (scope: Scope) => void): void;
-export function tests(
-  name: string, from: GenerationNum, to: GenerationNum, fn: (scope: Scope) => void): void;
+export function tests(name: string, fn: (scope: Scope) => void, type?: 'skip' | 'only'): void;
 export function tests(
   name: string,
-  from: GenerationNum | ((scope: Scope) => void),
-  to?: GenerationNum | ((scope: Scope) => void),
-  fn?: (scope: Scope) => void
-) {
-  inGens(gens, from as GenerationNum, to as GenerationNum, (scope: Scope) => {
-    test(`${name} (gen ${scope.gen.num})`, () => {
-      fn!(scope);
-    });
+  from: GenerationNum,
+  fn: (scope: Scope) => void,
+  type?: 'skip' | 'only'
+): void;
+export function tests(
+  name: string,
+  from: GenerationNum,
+  to: GenerationNum,
+  fn: (scope: Scope) => void,
+  type?: 'skip' | 'only'
+): void;
+export function tests(...args: any[]) {
+  const name = args[0];
+  let from: GenerationNum;
+  let to: GenerationNum;
+  let fn: (scooe: Scope) => void;
+  let type: 'skip' | 'only' | undefined;
+  if (typeof args[1] !== 'number') {
+    from = 1;
+    to = 8;
+    fn = args[1];
+    type = args[2];
+  } else if (typeof args[2] !== 'number') {
+    from = args[1] as GenerationNum ?? 1;
+    to = 8;
+    fn = args[2];
+    type = args[3];
+  } else {
+    from = args[1] as GenerationNum ?? 1;
+    to = args[2] as GenerationNum ?? 8;
+    fn = args[3];
+    type = args[4];
+  }
+  inGens(gens, from, to, (scope: Scope) => {
+    const n = `${name} (gen ${scope.gen.num})`;
+    if (type === 'skip') {
+      test.skip(n, () => fn(scope));
+    } else if (type === 'only') {
+      test.only(n, () => fn(scope));
+    } else {
+      test(n, () => fn(scope));
+    }
   });
 }
 
@@ -33,13 +64,13 @@ declare global {
   }
 }
 
-type ResultDiff = Partial<Record<GenerationNum, Partial<ResultBreakdown>>>;
-interface ResultBreakdown {
-  range: [number, number];
-  recoil: [number, number];
-  recovery: [number, number];
-  desc: string;
-  result: string;
+export type ResultDiff = Partial<Record<GenerationNum, ResultBreakdown>>;
+export interface ResultBreakdown {
+  range?: [number, number];
+  recoil?: [number, number];
+  recovery?: [number, number];
+  desc?: string;
+  result?: string;
 }
 
 expect.extend({

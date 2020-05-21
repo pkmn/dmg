@@ -1,5 +1,6 @@
 # `@pkmn/dmg`
 
+[![npm version](https://img.shields.io/npm/v/@pkmn/dmg.svg)](https://www.npmjs.com/package/@pkmn/dmg)
 ![Test Status](https://github.com/pkmn/dmg/workflows/Tests/badge.svg)
 
 The most accurate and complete multi-generational Pokémon damage calculator package.
@@ -68,7 +69,7 @@ loaded your data layer **before** loading the calc:
 - [The Complete Damage Formula for Black & White](https://www.smogon.com/bw/articles/bw_complete_damage_formula) - Xfr, Bond697, Kaphotics, V4Victini
 - [A Complete Guide to the Damage Formula](https://www.trainertower.com/dawoblefets-damage-dissertation/) - DaWoblefet, based on work by [OZY](http://bbs10.aimix-z.com/mtpt.cgi?room=sonota&mode=view2&f=140&no=27-29)
 
-### Tools
+### Implementations
 
 - [pret](https://github.com/pret) - disassembly of Gens 1-3
 - [Pokémon Showdown!](https://github.com/smogon/pokemon-showdown) - Guangcong Luo (Zarel) and contributors
