@@ -1,23 +1,54 @@
-import { GenerationNum, Generations, Generation } from '@pkmn/data';
+import { GenerationNum, Generations, Generation, Specie, GameType } from '@pkmn/data';
+import { PokemonOptions, MoveOptions, State } from './state';
+import { Result } from './result';
+import { calculate } from './mechanics';
+import * as parser from './parse';
 
-// const pokemon = (gen: Generation) => (
-//   name: string
-// ) => ;
+const pokemon = (gen: Generation) => (
+  name: string,
+  options: PokemonOptions = {},
+  move: string | {name?: string} = {},
+) => State.createPokemon(gen, name, options, move);
+
+const move = (gen: Generation) => (
+  name: string,
+  options: MoveOptions = {},
+  pokemon:  string | {
+    species?: string | Specie;
+    item?: string;
+    ability?: string;
+  } = {}
+) => State.createMove(gen, name, options, pokemon);
+
+type Calculate = {
+  (gen: Generation): (
+    attacker: State.Side | State.Pokemon,
+    defender: State.Side | State.Pokemon,
+    move: State.Move,
+    field?: State.Field,
+    gameType?: GameType
+    ) => Result;
+  (gen: Generation): (args: string) => Result;
+};
+
+const parse = (gen: Generation) => (s: string, strict?: boolean) => parser.parse(gen, s, strict);
 
 export interface Scope {
-  gen: Generation,
-  // calculate: ReturnType<typeof calc>;
-  // Pokemon: ReturnType<typeof pokemon>;
-  // Move: ReturnType<typeof move>;
+  gen: Generation;
+  calculate: Calculate;
+  parse: ReturnType<typeof parse>;
+  Pokemon: ReturnType<typeof pokemon>;
+  Move: ReturnType<typeof move>;
 }
 
 export function inGen(gen: Generation, fn: (scope: Scope) => void) {
-  // fn({
-  //   gen,
-  //   calculate: calc(gen),
-  //   Move: move(gen),
-  //   Pokemon: pokemon(gen),
-  // });
+  fn({
+    gen,
+    calculate: ((...args: any[]) => calculate(gen as any, ...args)) as unknown as Calculate,
+    parse: parse(gen),
+    Move: move(gen),
+    Pokemon: pokemon(gen),
+  });
 }
 
 export function inGens(gens: Generations, fn: (scope: Scope) => void): void;

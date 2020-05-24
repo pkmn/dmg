@@ -3,54 +3,22 @@ import {
   GameType,
   GenderName,
   Generation,
-  GenerationNum,
-  HitEffect,
   ID,
   Move as DMove,
-  MoveCategory,
   MoveName,
-  MoveTarget,
   NatureName,
-  Nonstandard,
   PokemonSet,
-  PureEffectData,
-  SecondaryEffect,
   Specie,
-  SpeciesName,
   StatsTable,
   StatusName,
   toID,
   TypeName,
   StatName,
+  Type,
 } from '@pkmn/data';
 import {WeatherName, TerrainName, Conditions} from './conditions';
-import {Handlers, Handler} from './mechanics';
-import { Relevancy } from './result';
-import { extend } from './tools';
-import { DeepReadonly } from './types';
-import { MoveFlags } from '@smogon/calc/dist/data/interface';
-
-const BOUNDS: {[key: string]: [number, number]} = {
-  level: [1, 100],
-  evs: [0, 252],
-  ivs: [0, 31],
-  dvs: [0, 15],
-  gen: [1, 8],
-  boosts: [-6, 6],
-  toxicCounter: [0, 15],
-  happiness: [0, 255],
-  magnitude: [4, 10],
-};
-
-function invalid(gen: Generation, k: string, v: any): never {
-  throw new Error(`Unsupported or invalid ${k} '${v}' for generation ${gen.num}`);
-};
-
-export function bounded(key: keyof typeof BOUNDS, val: number, die = true) {
-  const ok = val >= BOUNDS[key][0] && val <= BOUNDS[key][1];
-  if (!ok && die) throw new RangeError(`${key} ${val} is not within [${BOUNDS[key].join(',')}]`);
-  return val;
-}
+import { floor } from './math';
+import { is, has, extend } from './utils';
 
 type OverriddenFields = 'item' | 'ability' | 'status' | 'volatiles' | 'ivs' | 'evs' | 'boosts';
 export interface PokemonOptions extends Partial<Omit<State.Pokemon, OverriddenFields>> {
@@ -195,10 +163,25 @@ export class State {
     setNature(gen, pokemon, options.nature);
 
     // EVs
-    setValues(gen, pokemon, 'evs', options.evs)
+    setValues(gen, pokemon, 'evs', options.evs);
 
-    // FIXME IVs / DVs
+    // IVs / DVs
+    setValues(gen, pokemon, 'ivs', options.ivs);
+    for (const stat of gen.stats) {
+      const val = options.dvs?.[stat];
+      if (typeof val === 'number') {
+        const dv = bounded('dvs', val);
+        if (typeof options.ivs?.[stat] === 'number' && gen.stats.itod(options.ivs![stat]!) !== dv) {
+          throw new Error(`${stat} DV of '${dv}' does not match IV of '${options.ivs![stat]}'`);
+        }
+        pokemon.ivs![stat] = gen.stats.itod(dv);
+      }
+    }
+    setSpc(gen, pokemon.ivs!, 'ivs', options.dvs)
 
+    if (move) {
+      // TODO HIDDEN POWER
+    }
 
     // Boosts
     pokemon.boosts = {};
@@ -213,16 +196,12 @@ export class State {
     setSpc(gen, pokemon.boosts, 'boosts', options.boosts);
 
     // Gender (depends on DVs)
-
     const setAtkDV = typeof (options.dvs?.atk ?? options.ivs?.atk) === 'number';
     setGender(gen, pokemon, options.gender, setAtkDV);
 
     // HP (depends on stats)
-
     const setHPDV = typeof (options.dvs?.hp ?? options.ivs?.hp) === 'number';
     correctHPDV(gen, pokemon, setHPDV);
-
-    // TODO
     pokemon.maxhp =
       gen.stats.calc('hp', species.baseStats.hp, pokemon.ivs!.hp, pokemon.evs!.hp, pokemon.level);
     if (options.maxhp) {
@@ -253,10 +232,54 @@ export class State {
       species?: string | Specie;
       item?: string;
       ability?: string;
-    } = {}) {
+      volatiles?: {[id: string]: unknown};
+    } = {}
+  ) {
     const base = gen.moves.get(name);
     if (!base) invalid(gen, 'move', name);
-    const move = extend({}, base, options); // whatever, there are too many move fields
+    if (options.name && options.name !== base.name) {
+      throw new Error(`Move mismatch: '${options.name}' does not match '${base.name}'`);
+    }
+    const move: Partial<State.Move> = {};
+
+    if (typeof pokemon == 'string') {
+      const species = gen.species.get(pokemon);
+      if (!species) invalid(gen, 'species', pokemon);
+      pokemon = {species};
+    } else if (typeof pokemon.species === 'string') {
+      const species = gen.species.get(pokemon.species);
+      if (!species) invalid(gen, 'species', pokemon.species);
+      pokemon.species = species;
+    }
+
+    if (options.useMax && options.useZ) {
+      throw new Error(`Cannot use ${base.name} as both a Z-Move and a Max Move simulataneously`);
+    }
+    if (options.useMax || pokemon.volatiles?.dynamax) {
+      if (options.hits && options.hits > 1) {
+        throw new Error(`'${options.hits}' hits requested but Max Moves cannot be multi-hit`);
+      }
+      // TODO should it be on whether the move was isMax, not whether useMax?
+    } else if (options.useZ) {
+      if (options.hits && options.hits > 1) {
+        throw new Error(`'${options.hits}' hits requested but Z-Moves cannot be multi-hit`);
+      }
+     // TODO should it be on whether the move was isZ, not whether useZ?
+    } else {
+      if (base.multihit) {
+        if (typeof base.multihit === 'number') {
+          move.hits = base.multihit;
+        } else if (options.hits) {
+          move.hits = options.hits;
+        } else {
+          move.hits = (pokemon?.ability === 'Skill Link' || pokemon?.item === 'Grip Claw')
+            ? base.multihit[1]
+            : base.multihit[0] + 1;
+        }
+      }
+    }
+
+    extend(move, base, options); // whatever, there are too many move fields
     move.crit = options.crit ?? base.willCrit;
     if (typeof options.magnitude === 'number') {
       if (move.id !== 'magnitude') {
@@ -264,14 +287,16 @@ export class State {
       }
       move.magnitude = bounded('magnitude', options.magnitude);
     }
-    // TODO
-    // hits?: number;
-    // spreadHit?: boolean;
-    // numConsecutive?: number;
+    if (gen.num <= 3 && options.spreadHit) {
+      throw new Error(`Spread moves do not exist in generation ${gen.num}`);
+    } else {
+      move.spreadHit = options.spreadHit;
+    }
+    if (options.numConsecutive && pokemon.item && toID(pokemon.item) !== 'metronome') {
+      throw new Error(`numConsecutive has no meaning with '${pokemon.item}'`);
+    }
+    options.numConsecutive = options.numConsecutive
 
-
-    // TODO
-    // use species/item/ability if useZ / useMax
     return move;
   }
 
@@ -291,11 +316,23 @@ export class State {
     setNature(gen, pokemon, set.nature, gen.num >= 3);
 
     setValues(gen, pokemon, 'evs', set.evs);
+
     // TODO: what about hidden power dynamics
+
     setValues(gen, pokemon, 'ivs', set.ivs);
 
-    // Shiny
+    if ( // Marowak hack, cribbed from Pokémon Showdown's sim/team-validator.ts
+      gen.num === 2 &&
+      pokemon.species.id === 'marowak' && is(pokemon.item, 'thickclub') &&
+      has(set.moves.map(toID), 'swordsdance') && set.level === 100
+    ) {
+      const ivs = pokemon.ivs!.atk = gen.stats.itod(pokemon.ivs!.atk!) * 2;
+      while (pokemon.evs!.atk! > 0 && 2 * 80 + ivs + floor(pokemon.evs!.atk! / 4) + 5 > 255) {
+        pokemon.evs!.atk! -= 4;
+      }
+    }
 
+    // Shiny
     const dv = (stat: StatName) => gen.stats.itod(pokemon.ivs![stat]!);
     const shiny =
       !!(dv('def') === 10 && dv('spe') === 10 && dv('spa') === 10 && dv('atk') % 4 >= 2);
@@ -309,7 +346,13 @@ export class State {
 
     correctHPDV(gen, pokemon, typeof set.ivs.hp === 'number');
 
-    // FIXME redo HP
+    // We can't validate HP here, but we can attempt to preserve the same percentage
+    // of health while adjusting the HP values to be legal.
+    const maxhp = gen.stats.calc(
+      'hp', pokemon.species.baseStats.hp, pokemon.ivs!.hp, pokemon.evs!.hp, pokemon.level
+    );
+    pokemon.hp = pokemon.hp * floor(maxhp / pokemon.maxhp);
+    pokemon.maxhp = maxhp;
 
     return pokemon;
   }
@@ -402,334 +445,26 @@ export namespace State {
   }
 }
 
-export class Context {
-  gameType: GameType;
-  gen: Generation;
-  p1: Context.Side;
-  p2: Context.Side;
-  move: Context.Move;
-  field: Context.Field;
+const BOUNDS: {[key: string]: [number, number]} = {
+  level: [1, 100],
+  evs: [0, 252],
+  ivs: [0, 31],
+  dvs: [0, 15],
+  gen: [1, 8],
+  boosts: [-6, 6],
+  toxicCounter: [0, 15],
+  happiness: [0, 255],
+  magnitude: [4, 10],
+};
 
-  readonly relevant: Relevancy;
+function invalid(gen: Generation, k: string, v: any): never {
+  throw new Error(`Unsupported or invalid ${k} '${v}' for generation ${gen.num}`);
+};
 
-  constructor(state: DeepReadonly<State>, relevant: Relevancy, handlers: Handlers) {
-    this.gameType = state.gameType;
-    this.gen = state.gen as Generation;
-    this.p1 = new Context.Side(this.gen, state.p1, relevant.p1, handlers),
-    this.p2 = new Context.Side(this.gen, state.p2, relevant.p2, handlers);
-    this.move = new Context.Move(state.move, relevant.move, handlers),
-    this.field = new Context.Field(state.field, relevant.field, handlers);
-    this.relevant = relevant;
-  }
-}
-
-export namespace Context {
-  export class Field {
-    weather?: {name: WeatherName} & Partial<Handler>;
-    terrain?: {name: TerrainName} & Partial<Handler>;
-    pseudoWeather: {[id: string]: Partial<Handler>};
-
-    readonly relevant: Relevancy.Field;
-
-    constructor(state: DeepReadonly<State.Field>, relevant: Relevancy.Field, handlers: Handlers) {
-      this.relevant = relevant;
-
-      if (state.weather) {
-        const id = toID(state.weather)
-        this.weather = reify({name: state.weather}, id, handlers.Conditions, () => {
-          this.relevant.weather = true;
-        });
-      }
-      if (state.terrain) {
-        const id = toID(state.terrain);
-        this.terrain = reify({name: state.terrain}, id, handlers.Conditions, () => {
-          this.relevant.terrain = true;
-        });
-      }
-      this.pseudoWeather = {};
-      for (const pw in state.pseudoWeather) {
-        this.pseudoWeather[pw] =
-          reify({data: state.pseudoWeather[pw]}, pw as ID, handlers.Conditions, () => {
-            this.relevant.pseudoWeather[pw] = true;
-          });
-      }
-    }
-  }
-
-  export class Side {
-    pokemon: Pokemon;
-    sideConditions: {[id: string]: {level?: number} & Partial<Handler>};
-    active?: Array<{
-      ability?: ID;
-      position?: number;
-      fainted?: boolean;
-    }>;
-    party?: Array<{
-      species: {baseStat: {atk: number}};
-      status?: StatusName;
-      fainted?: boolean;
-      position?: number;
-    }>;
-
-    readonly relevant: Relevancy.Side;
-
-    constructor(
-      gen: Generation,
-      state: DeepReadonly<State.Side>,
-      relevant: Relevancy.Side,
-      handlers: Handlers
-    ) {
-      this.relevant = relevant;
-
-      this.pokemon = new Pokemon(gen, state.pokemon, relevant.pokemon, handlers);
-      this.sideConditions = {};
-      for (const sc in state.sideConditions) {
-        this.sideConditions[sc] =
-          reify(state.sideConditions[sc], sc as ID, handlers.Conditions, () => {
-            this.relevant.sideConditions[sc] = true;
-          });
-      }
-      this.active = this.active?.map(p => extend({}, p));
-      this.party = this.party?.map(p => extend({}, p));
-    }
-  }
-
-  export class Pokemon {
-    species: Specie;
-    level: number;
-    weighthg: number;
-
-    item?: {id: ID} & Partial<Handler>;
-    ability?: {id: ID} & Partial<Handler>;
-    gender?: GenderName;
-    happiness?: number;
-
-    status?: {name: StatusName} & Partial<Handler>;
-    statusData?: {toxicTurns: number};
-    volatiles: {[id: string]: {level?: number} & Partial<Handler>};
-
-    types: [TypeName] | [TypeName, TypeName];
-    addedType?: TypeName;
-
-    maxhp: number;
-    hp: number;
-
-    // The stored stats based simply on spread and base stats.
-    stats: StatsTable;
-    boosts: BoostsTable;
-
-    position?: number;
-    fainted?: boolean;
-
-    switching?: 'in' | 'out';
-    moveLastTurnResult?: false | unknown;
-    hurtThisTurn?: boolean;
-
-    readonly relevant: Relevancy.Pokemon;
-
-    constructor(
-      gen: Generation,
-      state: DeepReadonly<State.Pokemon>,
-      relevant: Relevancy.Pokemon,
-      handlers: Handlers
-    ) {
-      this.relevant = relevant;
-
-      this.species = state.species as Specie;
-      this.level = state.level;
-      this.weighthg = state.weighthg;
-
-      if (state.item) {
-        this.item = reify({id: state.item}, state.item, handlers.Items, () => {
-          this.relevant.item = true;
-        });
-      }
-      if (state.ability) {
-        this.ability = reify({id: state.ability}, state.ability, handlers.Abilities, () => {
-          this.relevant.ability = true;
-        });
-      }
-      this.gender = state.gender;
-      this.happiness = state.happiness;
-
-      if (state.status) {
-        this.status = reify({name: state.status}, state.status as ID, handlers.Conditions, () => {
-          this.relevant.status = true;
-        });
-      }
-      this.statusData = this.statusData && extend({}, state.statusData);
-      this.volatiles = {};
-      for (const v in state.volatiles) {
-        this.volatiles[v] = reify(state.volatiles[v], v as ID, handlers.Conditions, () => {
-          this.relevant.volatiles[v] = true;
-        });
-      }
-
-      this.types = state.types.slice() as Pokemon['types'];
-      this.addedType = state.addedType;
-
-      this.maxhp = state.maxhp;
-      this.hp = state.hp;
-
-      this.stats = {} as StatsTable;
-      for (const stat of gen.stats) {
-        this.stats[stat] = gen.stats.calc(
-          stat,
-          this.species.baseStats[stat],
-          state.ivs?.[stat] ?? 31,
-          state.evs?.[stat] ?? (gen.num <= 2 ? 252 : 0),
-          state.level,
-          gen.natures.get(state.nature!)!
-        );
-      }
-      this.boosts = extend({}, state.boosts);
-
-      this.position = state.position;
-      this.switching = state.switching;
-      this.moveLastTurnResult = state.moveLastTurnResult;
-      this.hurtThisTurn = state.hurtThisTurn;
-    }
-  }
-
-  export class Move implements State.Move, Partial<Handler> {
-    id!: ID;
-    name!: MoveName;
-    fullname!: string;
-    exists!: boolean;
-    num!: number;
-    gen!: GenerationNum;
-    shortDesc!: string;
-    desc!: string;
-    isNonstandard!: Nonstandard | null;
-    duration?: number;
-
-    effectType!: 'Move';
-    kind!: 'Move';
-    secondaries!: SecondaryEffect[] | null;
-    flags!: MoveFlags;
-    zMoveEffect?: ID;
-    isZ!: boolean | ID;
-    zMove?: {
-      basePower?: number;
-      effect?: ID;
-      boost?: Partial<BoostsTable>;
-    };
-    isMax!: boolean | SpeciesName;
-    maxMove?: {
-      basePower: number;
-    };
-    noMetronome?: MoveName[];
-    volatileStatus?: ID;
-    slotCondition?: ID;
-    sideCondition?: ID;
-    terrain?: ID;
-    pseudoWeather?: ID;
-    weather?: ID;
-
-    basePower!: number;
-    type!: TypeName;
-    accuracy!: true | number;
-    pp!: number;
-    target!: MoveTarget;
-    priority!: number;
-    category!: MoveCategory;
-
-    realMove?: string;
-    effect?: Partial<PureEffectData>;
-    damage?: number | 'level' | false | null;
-    noPPBoosts?: boolean;
-
-    ohko?: boolean | TypeName;
-    thawsTarget?: boolean;
-    heal?: number[] | null;
-    forceSwitch?: boolean;
-    selfSwitch?: boolean | 'copyvolatile';
-    selfBoost?: { boosts?: Partial<BoostsTable> };
-    selfdestruct?: boolean | 'ifHit' | 'always';
-    breaksProtect?: boolean;
-    recoil?: [number, number];
-    drain?: [number, number];
-    mindBlownRecoil?: boolean;
-    stealsBoosts?: boolean;
-    secondary?: SecondaryEffect | null;
-    self?: HitEffect | null;
-    struggleRecoil?: boolean;
-
-    alwaysHit?: boolean;
-    basePowerModifier?: number;
-    critModifier?: number;
-    critRatio?: number;
-    defensiveCategory?: MoveCategory;
-    forceSTAB?: boolean;
-    ignoreAbility?: boolean;
-    ignoreAccuracy?: boolean;
-    ignoreDefensive?: boolean;
-    ignoreEvasion?: boolean;
-    ignoreImmunity?: boolean | { [k in keyof TypeName]?: boolean };
-    ignoreNegativeOffensive?: boolean;
-    ignoreOffensive?: boolean;
-    ignorePositiveDefensive?: boolean;
-    ignorePositiveEvasion?: boolean;
-    infiltrates?: boolean;
-    multiaccuracy?: boolean;
-    multihit?: number | number[];
-    noCopy?: boolean;
-    noDamageVariance?: boolean;
-    noFaint?: boolean;
-    nonGhostTarget?: MoveTarget;
-    pressureTarget?: MoveTarget;
-    sleepUsable?: boolean;
-    smartTarget?: boolean;
-    spreadModifier?: number;
-    tracksTarget?: boolean;
-    useSourceDefensiveAsOffensive?: boolean;
-    useTargetOffensive?: boolean;
-    willCrit?: boolean;
-
-    hasCrashDamage?: boolean;
-    isConfusionSelfHit?: boolean;
-    isFutureMove?: boolean;
-    noSketch?: boolean;
-    stallingMove?: boolean;
-
-    crit?: boolean;
-    hits?: number;
-    magnitude?: number;
-    spreadHit?: boolean;
-    numConsecutive?: number;
-
-    apply?(state: State): void; // Silence TS2559
-
-    readonly relevant: Relevancy.Move;
-
-    constructor(state: DeepReadonly<State.Move>, relevant: Relevancy.Move, handlers: Handlers) {
-      this.relevant = relevant;
-      extend(this, state);
-      reify(this, this.id, handlers.Moves);
-    }
-  }
-}
-
-function reify<T>(
-  obj: T & Partial<Handler>,
-  id: ID,
-  handlers: Handlers[keyof Handlers],
-  callback?: () => void
-) {
-  const handler = handlers[id];
-  if (handler) {
-    for (const n in handler) {
-      const fn = handler[n as keyof Handler] as Omit<Handler, 'apply'> | undefined;
-      if (fn && n !== 'apply') {
-        obj[n as Exclude<keyof Handler, 'apply'>] = (c: Context) => {
-          const r = (fn as any)(c);
-          if (r && callback) callback();
-          return r;
-        };
-      }
-    }
-  }
-  return obj;
+export function bounded(key: keyof typeof BOUNDS, val: number, die = true) {
+  const ok = val >= BOUNDS[key][0] && val <= BOUNDS[key][1];
+  if (!ok && die) throw new RangeError(`${key} ${val} is not within [${BOUNDS[key].join(',')}]`);
+  return val;
 }
 
 // Naive algorithm for determing the 'best' matching set to the `pokemon` (with optional `move`) -
@@ -893,65 +628,30 @@ function correctHPDV(
   }
 }
 
-const Z_MOVES: { [type in Exclude<TypeName, '???'>]: string } = {
-  Bug: 'Savage Spin-Out',
-  Dark: 'Black Hole Eclipse',
-  Dragon: 'Devastating Drake',
-  Electric: 'Gigavolt Havoc',
-  Fairy: 'Twinkle Tackle',
-  Fighting: 'All-Out Pummeling',
-  Fire: 'Inferno Overdrive',
-  Flying: 'Supersonic Skystrike',
-  Ghost: 'Never-Ending Nightmare',
-  Grass: 'Bloom Doom',
-  Ground: 'Tectonic Rage',
-  Ice: 'Subzero Slammer',
-  Normal: 'Breakneck Blitz',
-  Poison: 'Acid Downpour',
-  Psychic: 'Shattered Psyche',
-  Rock: 'Continental Crush',
-  Steel: 'Corkscrew Crash',
-  Water: 'Hydro Vortex',
-};
-
-function getZMove(
-  gen: Generation,
-  move: State.Move,
-  pokemon: {
-    species?: {name: string}
-    item?: string,
-  } = {}
-) {
-  if (gen.num < 7) throw new TypeError(`Z-Moves do not exist in gen ${gen.num}`);
-  if (pokemon.item) {
-    const item = gen.items.get(pokemon.item);
-    const matching =
-      item &&
-      item.zMove &&
-      item.itemUser?.includes(pokemon.species?.name as SpeciesName) &&
-      item.zMoveFrom === move.name
-    if (matching) return item!.zMove;
+// TODO handle Hidden Power '' and mismatched types
+function getHiddenPowerIVs(gen: Generation, pokemon: Partial<State.Pokemon>, ...moves: string[]) {
+  const hpTypes: Type[] = [];
+  for (const move of moves) {
+    const id = toID(move);
+    if (id.startsWith('hiddenpower')) {
+      const type = gen.types.get(id.slice(11));
+      if (gen.num === 1 || gen.num === 8 || !type || is(type.name, '???', 'Normal', 'Fairy')) {
+        invalid(gen, 'Hidden Power', type);
+      }
+      hpTypes.push(type);
+    }
   }
-  return Z_MOVES[move.type as Exclude<TypeName, '???'>];
+  if (!hpTypes.length) return {};
+  if (hpTypes.length > 1) {
+    throw new Error(`Cannot have more than one Hidden Power on a set`);
+  }
+  if (gen.num >= 7 && pokemon.level === 100) return {};
+  if (gen.num <= 2) {
+    const ivs: Partial<StatsTable>  = {};
+    for (const stat in hpTypes[0].HPdvs) {
+      ivs[stat as StatName] = gen.stats.dtoi(hpTypes[0].HPdvs[stat as StatName]!);
+    }
+    return ivs;
+  }
+  return hpTypes[0].HPivs;
 }
-
-const MAX_MOVES: { [type in Exclude<TypeName, '???'>]: string } = {
-  Bug: 'Max Flutterby',
-  Dark: 'Max Darkness',
-  Dragon: 'Max Wyrmwind',
-  Electric: 'Max Lightning',
-  Fairy: 'Max Starfall',
-  Fighting: 'Max Knuckle',
-  Fire: 'Max Flare',
-  Flying: 'Max Airstream',
-  Ghost: 'Max Phantasm',
-  Grass: 'Max Overgrowth',
-  Ground: 'Max Quake',
-  Ice: 'Max Hailstorm',
-  Normal: 'Max Strike',
-  Poison: 'Max Ooze',
-  Psychic: 'Max Mindstorm',
-  Rock: 'Max Rockfall',
-  Steel: 'Max Steelspike',
-  Water: 'Max Geyser',
-};

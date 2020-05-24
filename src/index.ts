@@ -1,12 +1,11 @@
 // core API
-export {calculate} from './calc';
+export {calculate} from './mechanics';
 export {State} from './state';
 export {Damage, Result} from './result';
 
 // parsing
 export {parse} from './parse';
 export {encode} from './encode';
-export {simplify} from './simplify';
 
 // convenience scoping
 export {inGen, inGens, Scope} from './gens';
@@ -15,5 +14,5 @@ export {inGen, inGens, Scope} from './gens';
 export * from './conditions';
 
 // mod support
-export {override} from './tools';
+export {override} from './utils';
 export {Handler, Handlers, HANDLERS} from './mechanics';

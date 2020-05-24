@@ -1,8 +1,9 @@
-import { toID, Generations, GenerationNum, ID, Generation, NatureName, GameType } from '@pkmn/data';
-import {Conditions, WeatherName, TerrainName, ConditionKind} from './conditions';
+import { toID, Generations, GenerationNum, ID, Generation,  GameType } from '@pkmn/data';
+import { Conditions, WeatherName, TerrainName } from './conditions';
 
-import {State, bounded} from './state';
-import {decodeURL} from './encode';
+import { State, bounded } from './state';
+import { decodeURL } from './encode';
+import { is } from './utils';
 
 // Flags can either be specified as key:value or as 'implicits'
 const FLAG =
@@ -124,7 +125,7 @@ function parseFlags(gen: Generation, raw: Array<[ID, string]>, strict: boolean) 
     // Currently safe because no implicits start with 'is' or 'has'. Technically this prefix is
     // only allowed on boolean parameters, but it's not really worth the effort to be strict here
     if (id.startsWith('is') || id.startsWith('has')) id = id.slice(2) as ID;
-    if (id.startsWith('attacker') || id.startsWith('defender') || UNAMBIGUOUS.includes(id)) {
+    if (id.startsWith('attacker') || id.startsWith('defender') || is(id, UNAMBIGUOUS)) {
       checkConflict(id, val);
       flags[id] = val;
       continue;
@@ -263,8 +264,8 @@ function categorizeConditions(gen: Generation, conditions: string, strict: boole
 
 function asBoolean(s: string) {
   const id = toID(s);
-  if (['true', '1', 'yes', 'y'].includes(id)) return true;
-  if (['false', '0', 'no', 'n'].includes(id)) return false;
+  if (is(id, 'true', '1', 'yes', 'y')) return true;
+  if (is(id, 'false', '0', 'no', 'n')) return false;
   throw new TypeError(`Invalid boolean flag value: ${s}`);
 }
 

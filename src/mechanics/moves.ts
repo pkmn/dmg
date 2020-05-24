@@ -1,9 +1,9 @@
 /* eslint consistent-return: "off" */
 /* eslint-disable max-len */ // FIXME
 
-import {Handler} from '.';
+import {Applier, Handler} from '.';
 
-export const Moves: {[id: string]: Partial<Handler>} = {
+export const Moves: {[id: string]: Partial<Applier & Handler>} = {
   acrobatics: {
     basePowerCallback({p1, move}) {
       return p1.pokemon.item ? move.basePower : move.basePower * 2;

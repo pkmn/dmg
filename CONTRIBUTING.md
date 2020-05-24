@@ -147,3 +147,33 @@ required to have a `clone` method to deep copy fields, `swap` exists on `Field` 
 #### Helpers
 
 #### Triggers
+
+
+----
+
+##### `is`/`has`
+
+`is` and `has` in [`utils.ts`](src/utils.ts) are widely used convenience helpers function used to
+make `===` and `includes` checks more succint and readable. While there is some overhead associated
+with the function call and spread args, they should almost always be used in favor of `includes` and
+can also be used to replace `===` depending on the author's preference (rule of thumb - if theres a
+good possibility someone might want to add more equality checks later use `is` instead of `===`).
+
+Both `is` and `has` take the same type of second argument, but `is` takes a scalar first argument
+vs. `has` which takes an array as its first argument. While its possible to implement a single
+function that covers both arrays and scalars (or a function which supports non-`string` arrays)
+fairly trivially, `is` and `has` are primarly used for increased readability and the restricted
+domain of the functions encourages them to be used in a way which results in the most readable code.
+
+**`is` and `has` are not typesafe**, but the extra security from branded types (`ID`, `MoveName`,
+etc) is seen to be less valuable - something like `foo.id === 'Not Id'` already doesn't result in
+a compilation error, and the the ceremony of `is(id, 'foo' as ID, 'bar' as ID)` is seen as too
+onerous to jusity a small improvement in typesafety.
+
+##### `math`
+
+In addition to providing fundamental Pokémon math function like `pokeRound`,
+[`math.ts`](src/math.ts) re-exports methods off of `Math`. This is mainly useful for conveniently
+aliasing these methods to a short form while importing, but also ensures that if you do `import * as
+math` you don't have to mix and match between `Math` and `math`. As such, prefer `math` function
+over `Math` everywhere.

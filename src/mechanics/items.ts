@@ -1,9 +1,9 @@
 /* eslint consistent-return: "off" */
 /* eslint-disable max-len */ // FIXME
 
-import {Handler} from '.';
+import {Applier, Handler} from '.';
 
-export const Items: {[id: string]: Partial<Handler>} = {
+export const Items: {[id: string]: Partial<Applier & Handler>} = {
   // absorbbulb: {
   //   onDamagingHit(damage, target, source, move) {
   //     if (move.type === 'Water') {

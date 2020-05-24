@@ -1,7 +1,8 @@
-import {StatsTable} from '@pkmn/data';
+import {Generation, Specie, StatsTable, BoostsTable} from '@pkmn/data';
 
-import { State, Context } from './state';
-import { DeepReadonly } from './types';
+import { State } from './state';
+import { Context } from './context';
+import { DeepReadonly, extend } from './utils';
 import { Handlers } from './mechanics';
 
 export type Damage =
@@ -15,14 +16,16 @@ export type Damage =
 
 
 export class Relevancy {
+  gameType: boolean;
   readonly p1: Relevancy.Side;
   readonly p2: Relevancy.Side;
   readonly move: Relevancy.Move;
   readonly field: Relevancy.Field;
 
   constructor() {
-    this.p1 = {pokemon: {volatiles: {}, stats: {}}, sideConditions: {}};
-    this.p2 = {pokemon: {volatiles: {}, stats: {}}, sideConditions: {}};
+    this.gameType = false;
+    this.p1 = {pokemon: {volatiles: {}, stats: {}, boosts: {}}, sideConditions: {}};
+    this.p2 = {pokemon: {volatiles: {}, stats: {}, boosts: {}}, sideConditions: {}};
     this.field = {pseudoWeather: {}};
     this.move = {};
   }
@@ -57,10 +60,11 @@ export namespace Relevancy {
     // types are always relevant (though usually elided in output)
     // addedType is always relevant
 
-    // hp is relevant for the defender, but is checked when calculated OHKO chance
+    // hp is relevant for the defender, but is checked when calculating OHKO chance
 
-    // certain moves/condtions change which stats are relevant
+    // certain moves/conditions change which stats are relevant
     stats: Partial<Omit<StatsTable<boolean>, 'hp'>>;
+    boosts: Partial<BoostsTable<boolean>>;
 
     // position is never relevant, it merely exists as an implementation detail
 
@@ -72,11 +76,12 @@ export namespace Relevancy {
   }
 
   export interface Move {
-    // TODO
+    // TODO useZ/useMax?
     crit?: boolean;
     hits?: boolean;
     magnitude?: boolean;
     spreadHit?: boolean;
+    numConsecutive?: boolean;
   }
 }
 
@@ -127,7 +132,81 @@ export class Result {
     return ''; // TODO
   }
 
+  simplified(): State {
+    return  {
+      gameType: this.relevant.gameType ? this.state.gameType : 'singles',
+      gen: this.state.gen as Generation,
+      p1: simplifySide(this.state.p1, this.relevant.p1),
+      p2: simplifySide(this.state.p2, this.relevant.p2),
+      move: simplifyMove(this.state.move, this.relevant.move),
+      field: simplifyField(this.state.field, this.relevant.field),
+    };
+  }
+
   toString() {
     // TODO print full desc + rolls, include recoil/recovery if applicable
   }
+}
+
+function simplifySide(state: DeepReadonly<State.Side>, relevant: Relevancy.Side) {
+  const side: State.Side = {
+    pokemon: simplifyPokemon(state.pokemon, relevant.pokemon),
+    sideConditions: {},
+    active: relevant.active ? state.active!.map(p => extend({}, p)) : undefined,
+    party: relevant.party ? state.party!.map(p => extend({}, p)) : undefined,
+  };
+  for (const id in state.sideConditions) {
+    if (relevant.sideConditions[id]) side.sideConditions[id] = extend({}, state.sideConditions[id]);
+  }
+  return side;
+}
+
+function simplifyPokemon(state: DeepReadonly<State.Pokemon>, relevant: Relevancy.Pokemon) {
+  const pokemon: State.Pokemon = {
+    species: state.species as Specie,
+    level: state.level,
+    weighthg: state.weighthg,
+    item: relevant.item ? state.item : undefined,
+    ability: relevant.ability ? state.ability : undefined,
+    gender: relevant.gender ? state.gender : undefined,
+    status: relevant.status ? state.status : undefined,
+    volatiles: {},
+    types: state.types as State.Pokemon['types'],
+    maxhp: state.maxhp,
+    hp: state.hp,
+    nature: undefined,
+    evs: {},
+    ivs: {},
+    boosts: {},
+    switching: relevant.switching ? state.switching : undefined,
+    moveLastTurnResult: relevant.moveLastTurnResult ? state.moveLastTurnResult : undefined,
+    hurtThisTurn: relevant.hurtThisTurn ? state.hurtThisTurn : undefined,
+  }
+  // TODO nature / evs / ivs / boosts
+  for (const id in state.volatiles) {
+    if (relevant.volatiles[id]) pokemon.volatiles[id] = extend({}, state.volatiles[id]);
+  }
+  return pokemon;
+}
+
+function simplifyMove(state: DeepReadonly<State.Move>, relevant: Relevancy.Move) {
+  const move = extend({}, state) as State.Move;
+  if (!relevant.crit) move.crit = undefined;
+  if (!relevant.hits) move.hits = undefined;
+  if (!relevant.magnitude) move.magnitude = undefined;
+  if (!relevant.spreadHit) move.spreadHit = undefined;
+  if (!relevant.numConsecutive) move.numConsecutive = undefined;
+  return move;
+}
+
+function simplifyField(state: DeepReadonly<State.Field>, relevant: Relevancy.Field) {
+  const field: State.Field = {
+    weather: relevant.weather ? state.weather : undefined,
+    terrain: relevant.terrain ? state.terrain : undefined,
+    pseudoWeather: {},
+  };
+  for (const id in state.pseudoWeather) {
+    if (relevant.pseudoWeather[id]) field.pseudoWeather[id] = extend({}, state.pseudoWeather[id]);
+  }
+  return field;
 }

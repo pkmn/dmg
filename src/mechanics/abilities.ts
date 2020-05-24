@@ -1,9 +1,9 @@
 /* eslint consistent-return: "off" */
 /* eslint-disable max-len */ // FIXME
 
-import {Handler} from '.';
+import {Applier, Handler} from '.';
 
-export const Abilities: {[id: string]: Partial<Handler>} = {
+export const Abilities: {[id: string]: Partial<Applier & Handler>} = {
   // adaptability: {
   //   onModifyMove(move) {
   //     move.stab = 2;

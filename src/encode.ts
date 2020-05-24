@@ -1,5 +1,6 @@
-import {simplify} from './simplify';
 import {Result} from './result';
+import { State } from './state';
+import { is } from './utils';
 
 const FORWARD = {'/': '$', '[': '(', ']': ')', '@': '*', ':': '=', ' ': '_'};
 const BACKWARD = {'\\$': '/', '\\(': '[', '\\)': ']', '\\*': '@', '=': ':', '_': ' '};
@@ -17,12 +18,30 @@ export function decodeURL(s: string) {
   return decodeURIComponent(s).replace(DECODE, match => BACKWARD[match as keyof typeof BACKWARD]);
 }
 
-export function encode(result: Result, urlsafe = false) {
-  const state = simplify(result);
+/**
+ * Encodes state. If passed a `Result`, the result will be simplified first based on its `relevant`
+ * fields. Returns a string parseable by `parse` by default (which can then be made URL-safe with
+ * `encodeURL`), but can alternatively return the more human-friendly description format.
+ */
+export function encode(result: State | Result, desc = false) {
+  const {gen, p1, p2, move, field} = 'relevant' in result ? result.simplified() : result;
+
+  if (move.category === 'Status') {
+     // TODO use z/use max
+    return `${p1.pokemon.species.name} [${move.name}] vs ${p2.pokemon.species.name}`;
+  }
+
+
+  const atkStat = move.category === 'Special' ? 'spa' : is(move.name, 'Body Press') ? 'def' : 'atk';
+  const defStat = (move.defensiveCategory || move.category) === 'Special' ? 'spd' : 'def';
+  if (is(move.name, 'Foul Play')) {
+
+  }
+
   let s = '';   // TODO
 
   // TODO: handle makeing
   // prefer phrase, implicits
 
-  return urlsafe ? encodeURL(s) : s;
+  return s;
 }
