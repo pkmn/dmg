@@ -17,8 +17,9 @@ const gens = new Generations(Dex);
 
 try {
   (async () => {
-    const state = dmg.parse(gens, process.argv.slice(2).join(' '));
+    if (process.argv[0].startsWith('gen')) false; // TODO
 
+    const state = dmg.parse(gens, process.argv.slice(2).join(' '));
 
     const gen = state.gen;
     const sets = await defaultSets.forGen(gen.num);

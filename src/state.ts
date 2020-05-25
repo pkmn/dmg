@@ -5,7 +5,6 @@ import {
   Generation,
   ID,
   Move as DMove,
-  MoveName,
   NatureName,
   PokemonSet,
   Specie,
@@ -96,7 +95,7 @@ export class State {
 
     // Ability
     pokemon.ability = undefined;
-    setAbility(gen, pokemon, options.ability);
+    setAbility(gen, pokemon, options.ability); // TODO: default to ability[0] in gen.num > 3
 
     // Happiness
     pokemon.happiness = bounded('happiness', options.happiness || 0) || undefined;
@@ -527,11 +526,14 @@ function setItem(gen: Generation, pokemon: Partial<State.Pokemon>, name?: string
   }
 }
 
+// PRECONDITION: pokemon.species must be set
 function setAbility(gen: Generation, pokemon: Partial<State.Pokemon>, name?: string) {
   if (name) {
     const ability = gen.abilities.get(name);
     if (!ability) invalid(gen, 'ability', ability);
     pokemon.ability = ability.id;
+  } else if (gen.num >= 3) {
+    pokemon.ability = toID(pokemon.species!.abilities[0]);
   }
 }
 

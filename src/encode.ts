@@ -1,4 +1,3 @@
-import {Result} from './result';
 import { State } from './state';
 import { is } from './utils';
 
@@ -19,12 +18,11 @@ export function decodeURL(s: string) {
 }
 
 /**
- * Encodes state. If passed a `Result`, the result will be simplified first based on its `relevant`
- * fields. Returns a string parseable by `parse` by default (which can then be made URL-safe with
- * `encodeURL`), but can alternatively return the more human-friendly description format.
+ * Encodes `state`. Returns a string parseable by `parse` by default, but can alternatively return a
+ * more human-friendly description (`'desc'`) or an a URL-safe one (`'url'`).
  */
-export function encode(result: State | Result, desc = false) {
-  const {gen, p1, p2, move, field} = 'relevant' in result ? result.simplified() : result;
+export function encode(state: State, type: 'parse' | 'desc' | 'url' = 'parse') {
+  const {gen, p1, p2, move, field} = state;
 
   if (move.category === 'Status') {
      // TODO use z/use max
@@ -43,5 +41,5 @@ export function encode(result: State | Result, desc = false) {
   // TODO: handle makeing
   // prefer phrase, implicits
 
-  return s;
+  return type === 'url' ? encodeURL(s) : s;
 }

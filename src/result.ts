@@ -64,6 +64,7 @@ export namespace Relevancy {
 
     // certain moves/conditions change which stats are relevant
     stats: Partial<Omit<StatsTable<boolean>, 'hp'>>;
+    // usually only the boosts in the relevant stats matter, but Stored Power etc depends on more
     boosts: Partial<BoostsTable<boolean>>;
 
     // position is never relevant, it merely exists as an implementation detail
