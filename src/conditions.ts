@@ -19,7 +19,7 @@ const ALIASES: {[id: string]: string}  = {
   sandstorm: 'sand',
   sunnyday: 'sun',
   raindance: 'rain',
-  desolateland: 'hashsunshine',
+  desolateland: 'harshsunshine',
   primordialsea: 'heavyrain',
   deltastream: 'strongwinds',
   // Terrain
@@ -172,8 +172,8 @@ export type PseudoWeatherName =
   wildfire: ['Wildfire', 8, 'p2'],
   sitckyweb: ['Sticky Web', 6],
   // Before Gen 6 these were treated as a volatiles
-  lightscreen: ['Light Screen', 2],
-  reflect: ['Reflect', 2],
+  lightscreen: ['Light Screen', 2, 'p2'],
+  reflect: ['Reflect', 2, 'p2'],
   // Not really relevant for damage
   toxicspikes: ['Toxic Spikes', 4, 'p2'],
   safeguard: ['Safeguard', 2, 'p2'],
@@ -218,7 +218,7 @@ export const Volatiles: {[id: string]: [VolatileStatusName, GenerationNum, Playe
   maxguard: ['Max Guard', 8, 'p2'],
   dynamax: ['Dynamax', 8],
   miracleeye: ['Miracle Eye', 4, 'p2'],
-  minimize: ['Minimize', 1, 'p1'],
+  minimize: ['Minimize', 1, 'p2'],
   obstruct: ['Obstruct', 8, 'p2'],
   roost: ['Roost', 4, 'p2'],
   smackdown: ['Smack Down', 5, 'p2'],
@@ -226,10 +226,10 @@ export const Volatiles: {[id: string]: [VolatileStatusName, GenerationNum, Playe
   stockpile: ['Stockpile', 3, 'p1'],
   tarshot: ['Tar Shot', 3, 'p2'],
   // These changed to Pseudo Weathers and Side Conditions respectively in later generations
-  mudsport: ['Mud Sport', 3],
-  watersport: ['Water Sport', 3],
-  lightscreen: ['Light Screen', 1],
-  reflect: ['Reflect', 1],
+  mudsport: ['Mud Sport', 3, 'p2'],
+  watersport: ['Water Sport', 3, 'p2'],
+  lightscreen: ['Light Screen', 1, 'p2'],
+  reflect: ['Reflect', 1, 'p2'],
   // Not really relevant for damage
   beakblast: ['Beak Blast', 7, 'p1'],
   octolock: ['Octolock', 8, 'p2'],

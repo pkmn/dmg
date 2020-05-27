@@ -1,8 +1,9 @@
 # `@pkmn/dmg`
 
+![Test Status](https://github.com/pkmn/dmg/workflows/Tests/badge.svg)
 [![npm
 version](https://img.shields.io/npm/v/@pkmn/dmg.svg)](https://www.npmjs.com/package/@pkmn/dmg)
-![Test Status](https://github.com/pkmn/dmg/workflows/Tests/badge.svg)
+
 
 The most accurate and complete multi-generational Pokémon damage calculator package.
 
@@ -14,8 +15,8 @@ architecture and correctness, `@pkmn/dmg` features.
 - sophisticated [**text parsing**](PARSING.md) support and the **ability to canonicalize and encode
   calculations**
 - generalized pre-computation [**state manipulation**](#appliers) through **'application' of effects**
-- **comprehensive multi-hit** support and **OHKO chance** calculation
-- improved programmatic support for **recoil and recovery** results
+- **comprehensive multi-hit** support and **KO chance** calculation, enabling ['**chained**'](#chaining) calculations
+- improved [**programmatic support**](#library) for **recoil and recovery** results
 - **non-intrusive support for [mods](#mods)** overriding data or effects
 - extensive **tests** build on state of the art [**multi-generational testing
   infrastructure**](TESTING.md)
@@ -41,7 +42,76 @@ convenient way to get started, simply depend on a transpiled and minified versio
 
 ### Library
 
-TODO `inGen`, `State.createFoo`, `parse`, `calculate`
+`@pkmn/dmg`'s main API is the `calculate` function takes in [`State`](src/state.ts) and returns a
+[`Result`](src/result.ts).
+
+`@pkmn/dmg` is data-layer agnostic thanks to its dependency on
+[`@pkmn/data`](https://github.com/pkmn/ps/blob/master/data), it simply requires a Pokémon Showdown
+compatible `Dex`-type implementation to be provided to `@pkmn/data`'s `Generations` constructor
+([`@pkmn/dex`](https://github.com/pkmn/ps/blob/master/dex) is the recommended choice here, though
+note that as it is fully featured it is ~4x the size of `@smogon/calc/data` and certain applications
+may wish to preprocess the JSON files to trim unnecessary fields).
+
+`State`'s helper functions, `State#createPokemon` and `State.createMove` are the recommended ways
+to initialize the input data structures required for `calculate` - these functions provide a
+convenient way to avoid having to specify all of the fields while also performing basic integrity
+checking. Objects compatible with the `State` interface can be provided instead, though this is
+mostly relevant for applications which already have their own battle state representation
+(eg. `@pkmn/client`).
+
+```ts
+import {Dex} from '@pkmn/dex'
+import {Generations} from '@pkmn/data';
+import * as dmg from '@pkmn/dmg';
+
+const gens = new Generations(Dex);
+const gen = gens.get(4);
+const result = dmg.calculate(
+  gen,
+  State.createPokemon(gen, 'Gengar', {item: 'Choice Specs', nature: 'Modest', evs: {spa: 252}}),
+  {
+    pokemon: State.createPokemon(gen, 'Blissey', {evs: {hp: 252, spd: 252}}),
+    sideConditions: {spikes: {level: 2}, stealthrock: {}},
+  }
+  State.createMove(gen, 'Focus Blast'),
+  {weather: 'Sandstorm', pseudoWeather: {}}
+);
+```
+
+This can be further simplified by using the scoped [`inGen`](src/gens.ts) helper:
+
+```ts
+const result = dmg.inGen(gens.get(4), ({calculate, Pokemon, Move}) =>
+  calculate(
+    Pokemon('Gengar', {item: 'Choice Specs', nature: 'Modest', evs: {spa: 252}}),
+    {
+      pokemon: Pokemon('Blissey', {evs: {hp: 252, spd: 252}}),
+      sideConditions: {spikes: {level: 2}, stealthrock: {}},
+    }
+    Move('Focus Blast'),
+    {weather: 'Sandstorm', pseudoWeather: {}}
+  );
+);
+```
+
+Above is a more advanced example demonstrating how `Side` or `Field` conditions would be
+specified, the common case looks more similar to the following:
+
+```ts
+const result = dmg.inGen(gens.get(4) , ({calculate, Pokemon, Move}) =>
+  calculate(
+    Pokemon('Gengar', {item: 'Choice Specs', nature: 'Modest', evs: {spa: 252}}),
+    Pokemon('Blissey', {evs: {hp: 252, spd: 252}})
+    Move('Focus Blast')
+  );
+);
+```
+
+The `Result` returned by `calculate` contains information about damage rolls, recoil or
+drain/recovery information, end of turn residual data, and detailed KO chance breakdowns, all
+available in machine-friendly formats for programmatic usage (compared to `@smogon/calc`, where less
+indepth human-friendly text is provided). The fmailiar human-friendly output can be obtained as
+well by encoding the `Result` into the desired format.
 
 ### CLI
 
@@ -60,7 +130,9 @@ $ dmg gen=3 mence @ CB [EQ] vs. cune @ lefties
 
 Like the https://calc.pokemonshowdown.com, the CLI relies on predefined sets and heuristics to
 minimize the amount of information that needs to be specified in order to perform a calculation. The
-[parsing documentation](PARSING.md) covers the syntax in more details.
+[parsing documentation](PARSING.md) covers the syntax in more details. The optional
+[`@pokemon-showdown/sets`](https://www.npmjs.com/package/@pokemon-showdown/sets) dependency must be
+installed to run `dmg`.
 
 While not required, the first positional argument to `dmg` can be the format ID (eg. `gen7ou` or
 `gen8anythinggoes`) which will scope the sets from
@@ -94,7 +166,7 @@ perhaps the largest innovation `@pkmn/dmg` provides over previous damage calcula
 
 TODO
 
-### Improvements
+### Chaining
 
 TODO
 - multihit

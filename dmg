@@ -15,28 +15,61 @@ const dmg = require('./build');
 
 const gens = new Generations(Dex);
 
+const ORDERED = ['ag', 'uber', 'ou', 'uu', 'ru', 'nu', 'pu'];
+const tierToFormat = tier => tier === 'ag' ? 'anythinggoes' : tier; // sigh
+
+const findSets = (gen, sets, species, format) => {
+  const found = [];
+  const add = format => {
+    if (sets[format]) {
+      for (const source of ['smogon.com/dex', 'smogon.com/stats']) {
+        if (sets[source] && sets[source][species.id]) found.push(sets[source][species.id]);
+      }
+    }
+    return found;
+  };
+
+  if (format && add(format).length) return found;
+  const tier = toID(species.tier);
+  if (add(`gen${gen.num}${tierToFormat(tier)}`).length) return found;
+
+  const i = ORDERED.indexOf(tier);
+  const formats = new Set(Object.keys(sets));
+  for (const [tier, j] of ORDERED.entries()) {
+    if (j < i) continue;
+    format = `gen${gen.num}${tierToFormat(tier)}`;
+    if (formats.has(format)) {
+      add(format);
+      formats.delete(format);
+    }
+  }
+  for (const format of formats) {
+   add(format);
+  }
+
+  return found;
+};
+
 try {
   (async () => {
-    if (process.argv[0].startsWith('gen')) false; // TODO
+    const argv = process.arv.slice(2);
 
-    const state = dmg.parse(gens, process.argv.slice(2).join(' '));
+    const format = /^gen[1-8][a-z0-9]+/.test(argv[0]) ? argv.shift() : undefined;
+    let gen = format ? gens.get(Number(format.charAt(3))) : undefined;
+    const state = dmg.parse(gen || gens, argv.join(' '));
+    gen = gen || state.gen;
 
-    const gen = state.gen;
     const sets = await defaultSets.forGen(gen.num);
-    // TODO: filter out sets to avoid those above min(attacker.tier, defender.tier)
-    // TODO: prioritize smogon > usage, skip other
-
-    dmg.State.mergeSet(state.p1.pokemon, state.move.id, ...attackerSets);
-    dmg.State.mergeSet(state.p2.pokemon, ...defenderSets);
+    dmg.State.mergeSet(
+      state.p1.pokemon, state.move.id, ...findSets(gen, sets,state.p1.pokemon.species, format));
+    dmg.State.mergeSet(
+      state.p2.pokemon, ...findSets(gen, sets, state.p2.pokemon.species, format));
 
     const result = dmg.calculate(state);
-    if (process.stdout.isTTY) {
-      // TODO: print out canonical parsed state in grey
-    }
+    if (process.stdout.isTTY) console.log(`\x1b[90m(${dmg.encode(result.state)})\x1b[0m`);
     console.log(result);
   })();
 } catch (e) {
   console.error(e.message);
   process.exit(1);
 }
-

@@ -1,16 +1,38 @@
-import {extend} from '../utils';
+import {override, is, has, extend} from '../utils';
+
+class Foo {
+  x: number;
+  constructor(x: number) {
+    this.x = x;
+  }
+  bar() {
+    return this.x + 1;
+  }
+}
 
 describe('utils', () => {
   test('override', () => {
-    // TODO
+    const foo = new Foo(5);
+    expect(foo.bar()).toBe(6);
+    expect(override(foo, {x: 4}).bar()).toBe(5);
   });
 
   test('is', () => {
-    // TODO
+    expect(is('hello', 'hello')).toBe(true);
+    expect(is('hello', 'goodbye')).toBe(false);
+    expect(is('hello', 'hello', 'goodbye')).toBe(true);
+    expect(is('hello', ['hello'])).toBe(true);
+    expect(is('hello', ['goodbye'])).toBe(false);
+    expect(is('hello', ['hello', 'goodbye'])).toBe(true);
   });
 
   test('has', () => {
-    // TODO
+    expect(has(['hello'], 'hello')).toBe(true);
+    expect(has(['hello'], 'goodbye')).toBe(false);
+    expect(has(['hello'], 'hello', 'goodbye')).toBe(true);
+    expect(has(['hello'], ['hello'])).toBe(true);
+    expect(has(['hello'], ['goodbye'])).toBe(false);
+    expect(has(['hello'], ['hello', 'goodbye'])).toBe(true);
   });
 
   test('extend', () => {

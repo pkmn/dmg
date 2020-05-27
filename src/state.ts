@@ -17,7 +17,7 @@ import {
 } from '@pkmn/data';
 import {WeatherName, TerrainName, Conditions} from './conditions';
 import { floor } from './math';
-import { is, has, extend } from './utils';
+import { is, has, extend, DeepPartial } from './utils';
 
 type OverriddenFields = 'item' | 'ability' | 'status' | 'volatiles' | 'ivs' | 'evs' | 'boosts';
 export interface PokemonOptions extends Partial<Omit<State.Pokemon, OverriddenFields>> {
@@ -170,10 +170,10 @@ export class State {
       const val = options.dvs?.[stat];
       if (typeof val === 'number') {
         const dv = bounded('dvs', val);
-        if (typeof options.ivs?.[stat] === 'number' && gen.stats.itod(options.ivs![stat]!) !== dv) {
+        if (typeof options.ivs?.[stat] === 'number' && gen.stats.toDV(options.ivs![stat]!) !== dv) {
           throw new Error(`${stat} DV of '${dv}' does not match IV of '${options.ivs![stat]}'`);
         }
-        pokemon.ivs![stat] = gen.stats.itod(dv);
+        pokemon.ivs![stat] = gen.stats.toDV(dv);
       }
     }
     setSpc(gen, pokemon.ivs!, 'ivs', options.dvs)
@@ -275,6 +275,8 @@ export class State {
             ? base.multihit[1]
             : base.multihit[0] + 1;
         }
+      } else if (options.hits) {
+        throw new Error(`'${options.hits}' hits requested but ${move.name} in not multi-hit`);
       }
     }
 
@@ -296,18 +298,18 @@ export class State {
     }
     options.numConsecutive = options.numConsecutive
 
-    return move;
+    return move as State.Move;
   }
 
   static mergeSet(
     gen: Generation,
     pokemon: State.Pokemon,
-    move: string | PokemonSet,
-    ...sets: PokemonSet[]
+    move: string | DeepPartial<PokemonSet>,
+    ...sets: DeepPartial<PokemonSet>[]
   ) {
     const set = bestMatch(pokemon, move, ...sets);
 
-    pokemon.level = bounded('level', set.level);
+    pokemon.level = bounded('level', set.level || 100);
     setItem(gen, pokemon, set.item);
     setAbility(gen, pokemon, set.ability);
     pokemon.happiness = bounded('happiness', set.happiness || 0) || pokemon.happiness;
@@ -323,16 +325,16 @@ export class State {
     if ( // Marowak hack, cribbed from Pokémon Showdown's sim/team-validator.ts
       gen.num === 2 &&
       pokemon.species.id === 'marowak' && is(pokemon.item, 'thickclub') &&
-      has(set.moves.map(toID), 'swordsdance') && set.level === 100
+      has(set.moves?.map(toID), 'swordsdance') && set.level === 100
     ) {
-      const ivs = pokemon.ivs!.atk = gen.stats.itod(pokemon.ivs!.atk!) * 2;
+      const ivs = pokemon.ivs!.atk = gen.stats.toDV(pokemon.ivs!.atk!) * 2;
       while (pokemon.evs!.atk! > 0 && 2 * 80 + ivs + floor(pokemon.evs!.atk! / 4) + 5 > 255) {
         pokemon.evs!.atk! -= 4;
       }
     }
 
     // Shiny
-    const dv = (stat: StatName) => gen.stats.itod(pokemon.ivs![stat]!);
+    const dv = (stat: StatName) => gen.stats.toDV(pokemon.ivs![stat]!);
     const shiny =
       !!(dv('def') === 10 && dv('spe') === 10 && dv('spa') === 10 && dv('atk') % 4 >= 2);
     if (gen.num === 2 && (shiny !== !!set.shiny)) {
@@ -343,7 +345,7 @@ export class State {
     }
     setGender(gen, pokemon, set.gender as GenderName, typeof set.ivs?.atk === 'number')
 
-    correctHPDV(gen, pokemon, typeof set.ivs.hp === 'number');
+    correctHPDV(gen, pokemon, typeof set.ivs?.hp === 'number');
 
     // We can't validate HP here, but we can attempt to preserve the same percentage
     // of health while adjusting the HP values to be legal.
@@ -472,36 +474,40 @@ export function bounded(key: keyof typeof BOUNDS, val: number, die = true) {
 // scoring set, breaking ties by using the ordering of the sets provided. This works well enough
 // in a pinch, but could be improved by valuing certain fields more than others or eg. relying on
 // a set clustering similarity metric.
-function bestMatch(pokemon: State.Pokemon, move: string | PokemonSet, ...sets: PokemonSet[]) {
+function bestMatch(
+  pokemon: State.Pokemon,
+  move: string | DeepPartial<PokemonSet>,
+  ...sets: DeepPartial<PokemonSet>[]
+) {
   if (typeof move !== 'string') {
     sets.unshift(move);
     move = '';
   }
 
-  const match = (a: string, b: string) => toID(a) === toID(b);
-  const scored: Array<[number, PokemonSet]> = [];
+  const match = (a?: string, b?: string) => toID(a) === toID(b);
+  const scored: Array<[number, DeepPartial<PokemonSet>]> = [];
   for (const set of sets) {
     let score = 0;
     if (!match(set.species, pokemon.species.name)) {
       throw new Error(`Received invalid ${set.species} set for ${pokemon.species.name}`);
     }
     if (set.level !== pokemon.level) score--;
-    if (!match(set.item, pokemon.item!)) {
+    if (!match(set.item, pokemon.item)) {
       score--;
     } else if (pokemon.item) {
       score++
     }
-    if (!match(set.ability, pokemon.ability!)) {
+    if (!match(set.ability, pokemon.ability)) {
       score--;
     } else if (pokemon.ability) {
       score++
     }
-    if (!match(set.nature, pokemon.nature!)) {
+    if (!match(set.nature, pokemon.nature)) {
       score--;
     } else if (pokemon.nature) {
       score++
     }
-    if (move && !set.moves.some(m => match(m, move as string))) {
+    if (move && !set.moves?.some(m => match(m, move as string))) {
       score--;
     } else if (move) {
       score++
@@ -510,7 +516,7 @@ function bestMatch(pokemon: State.Pokemon, move: string | PokemonSet, ...sets: P
   }
   if (!scored.length) throw new Error(`Received no sets for ${pokemon.species.name}`);
 
-  let best: [number, PokemonSet] = scored[0];
+  let best: [number, DeepPartial<PokemonSet>] = scored[0];
   for (let i = 1; i < scored.length; i++) {
     if (scored[i][0] > best[0]) best = scored[i];
   }
@@ -594,7 +600,7 @@ function setGender(
 ) {
   const ivs = pokemon.ivs!;
   const species = pokemon.species!;
-  const atkDV = gen.stats.itod(ivs.atk!);
+  const atkDV = gen.stats.toDV(ivs.atk!);
   // AtkDV determing gender is only at thing in generation 2, but we can use it as the default
   const gender = gen.num === 1 ? undefined : species.genderRatio.F * 16 >= atkDV ? 'M' : 'F';
   if (name) {
@@ -618,7 +624,7 @@ function correctHPDV(
   setHPDV = false
 ) {
   const expectedHPDV = gen.stats.getHPDV(pokemon.ivs!);
-  const actualHPDV = gen.stats.itod(pokemon.ivs!.hp!);
+  const actualHPDV = gen.stats.toDV(pokemon.ivs!.hp!);
   if (gen.num <= 2 && expectedHPDV !== actualHPDV) {
     if (setHPDV) {
       throw new Error(
@@ -626,7 +632,7 @@ function correctHPDV(
         `${expectedHPDV} in generations 1 and 2 but it is ${actualHPDV}`
       );
     }
-    pokemon.ivs!.hp = gen.stats.dtoi(expectedHPDV);
+    pokemon.ivs!.hp = gen.stats.toIV(expectedHPDV);
   }
 }
 
@@ -651,7 +657,7 @@ function getHiddenPowerIVs(gen: Generation, pokemon: Partial<State.Pokemon>, ...
   if (gen.num <= 2) {
     const ivs: Partial<StatsTable>  = {};
     for (const stat in hpTypes[0].HPdvs) {
-      ivs[stat as StatName] = gen.stats.dtoi(hpTypes[0].HPdvs[stat as StatName]!);
+      ivs[stat as StatName] = gen.stats.toIV(hpTypes[0].HPdvs[stat as StatName]!);
     }
     return ivs;
   }

@@ -2,7 +2,7 @@
  * Override the attributes of `obj` with `overrides`. Primarily useful for fundamental data such
  * as Species or Move, eg: `override(gen.species.get('Pikachu'), {weighthg: 420})`.
  */
-export function override(obj: any, overrides: any) {
+export function override<T extends object>(obj: T, overrides: any): T {
   const copy = Object.create(obj.constructor.prototype);
   return extend(copy, obj, overrides);
 }

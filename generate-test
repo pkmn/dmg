@@ -18,7 +18,7 @@ try {
     const generator = require('./build/tests/generator');
 
     let use = 'dmg';
-    let argv = process.arv.slice(2);
+    const argv = process.arv.slice(2);
     if (['calc', 'smogon'].includes(argv[0])) {
       use = 'calc';
       argv.shift();

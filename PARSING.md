@@ -1,44 +1,52 @@
 # Parsing
 
-TODO
+Battle state can be encoded purely textually and passed to the damage calculator for it to parse and
+perform computation on. The rules for encoding a damage calculation scenario were chosen to be as
+similar as possible to the human readable output of a damage calculation, though certain rules have
+to be added to making parsing easier (technically, because there is a set number of possible
+Pokémon/items/moves/abilities/conditions and relatively little overlap between data types one could
+use an algorithm relying on bruteforcing via prefix tries and a small number of disambiguation
+rules). The result should be a syntax with is relatively intutive and familar, though incredibly
+flexible (perhaps overly so).
 
 ## Format
+
+State can be encoded soley with [**flags**](#flags), though [**phrases**](#phrases), while less
+comprehensive, are more often going to be used to describe the bulk of damage calculations.
 
 ### Flags
 
 Every configuration option is possible to set programmatically can be specified as a **flag**. Flags
-are verfy flexible in how they can be specified: any thing in the form `key:value` or `key=value`
-(where the key can optionally be prefixed with `-` or `--`, i.e. `-key=value` or `--key:value`, etc)
-gets interpreted as a flag. Some flag values (`Choice Band`) may contain spaces - you may either
-completely remove spaces (`attackerItem:ChoiceBand` or `attackerItem=choiceband`), replace spaces
-with underscores (`attackerItem=Choice_Band`) or quote the space using if the parser in an
+are very flexible in how they can be specified: any thing in the form `key:value` or `key=value`
+(where the key can optionally be prefixed with `+`, `-` or `--`, i.e. `-key=value` or `--key:value`,
+etc) gets interpreted as a flag. Some flag values (`Choice Band`) may contain spaces - you may
+either completely remove spaces (`attackerItem:ChoiceBand` or `attackerItem=choiceband`), replace
+spaces with underscores (`attackerItem=Choice_Band`) or quote the space using if the parser in an
 environment where spaces are allowed in the input (eg. `--attackerItem='Choice Band'` on the command
 line, though this wouldn't be allowed in a browser URL).
 
+#### Implicits
+
 Flags used to set properties of the attacker Pokémon or side must prefix all of their keys with
 `attacker` (like `attackerItem` above) or `p1`, those for the defender must begin with `defender` or
-`p2`.
+`p2`. However, because the calculator only handles a single move being used by an attacker vs. a
+defender, there are certain cases where the side a property is for is implicit and can be inferred
+based on the context. In these circumstances (or for properties not associated with sides at all,
+like field conditions or move flags etc), the disambiguating prefix can be elided (e.g.
+`--isSR=true` and `sr:1` both set Stealth Rock on the defender's side). In the cases where a
+property's scope is not implicit, the `attacker` / `p1` or `defender` / `p2` *flags* can be used to
+explicitly scope a property as belonging to a certain side. Multiple ambiguous flags may be passed
+to these dismabiguators, and in these scenarios, boolean flags can drop their prefix enitrely
+ eg. `p2:spikes:3,auroaveil` or `--attacker=flashfire+foresight+helpinghand`.
 
 #### Booleans
 
 For boolean options, `true`, `1`, `yes`, and `y` are all recognized as affirmative, where `false`,
 `0`, `no`, and `n` can be used for negatives (though all booleans default to negative to begin
-with). In some cases `+` and `-` prefixes may be used as a shortcut for boolean conditions/statuses,
-see below.
-
-#### Implicits
-
-Because the parsing only handles a single move being used by an attacker vs. a defender, prefixes
-can be sometimes elided in the cases where they only make sense for one side or the other. For
-example (i.e. `--isSR=true` and `sr:1` both set Stealth Rock on the defender's side).
-
-In the cases where the side is implicit, as a shortcut, for fields may be implictitly enabled by
-using just `+` or `-`, eg. `+sr` or `-stealthrock` both *set* Stealth Rock.
-
-- field attributes are always implicit (an side-insensitive) so may always use the shortcut syntax
-  (`+sandstorm`)
-- certain conditions and statuses may be implicit for the attacker or the defender, see
-  `conditions.ts`
+with). Boolean flags can also have an `is` or `has` prefix added for readability. Furthermore, if
+the boolean flag is specified with a leading prefix (`+`, `-` or `--`) the value part to the flag
+is optional and assumed to be `true` by default (`+sr` and `--isStealthRock` are the same as
+`stealthrock:true`).
 
 #### Flag Reference
 
@@ -94,8 +102,8 @@ All move fields only apply to the attacker, so the `attacker` prefix is unnecess
 | **key** | **description** |
 | ------- | ----------------|
 | `move` | the name of the move being used by the attacker |
-| `useZ` | whether to use the Z-Move version of the move |
-| `useMax` | whether to use the Max version of the move |
+| `useZ` | whether to use the Z-Move version of the move (or `+z`) |
+| `useMax` | whether to use the Max version of the move (or `+max`) |
 | `crit` | whether the move was a critical hit (`+crit` may be used as a special shortcut) |
 | `hits` | the number of times a multi hit move hit |
 
@@ -162,7 +170,7 @@ const encode = str => str.replace(REGEX, match => REPLACE[match]);
 
 ## Usage
 
-[`parse.ts`](src/parse.ts) contains the logic for parsing the [format](#Format) detailed above:
+[`parse.ts`](src/parse.ts) contains the logic for parsing the [format](#format) detailed above:
 
 ```ts
 import {parse} from `@pkmn/dmg`;

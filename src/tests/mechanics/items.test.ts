@@ -1,7 +1,7 @@
 /* eslint-disable max-len */
 import {tests} from '../helper';
 
-describe('Item Mechanics', () => {
+describe('Items', () => {
   test('true', () => {
     expect(true).toBe(true);
   });

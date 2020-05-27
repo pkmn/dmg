@@ -41,8 +41,8 @@ export interface Scope {
   Move: ReturnType<typeof move>;
 }
 
-export function inGen(gen: Generation, fn: (scope: Scope) => void) {
-  fn({
+export function inGen<T>(gen: Generation, fn: (scope: Scope) => T) {
+  return fn({
     gen,
     calculate: ((...args: any[]) => calculate(gen as any, ...args)) as unknown as Calculate,
     parse: parse(gen),

@@ -7,9 +7,15 @@ import { is } from './utils';
 
 // Flags can either be specified as key:value or as 'implicits'
 const FLAG =
-  /^(?:(?:--?)?(\w+)(?:=|:)([-+0-9a-zA-Z_'’", ]+))|((?:--?|\+)[a-zA-Z'’"][0-9a-zA-Z_'’", ]+)$/;
+  /^(?:(?:--?)?(\w+)(?:=|:)([-+0-9a-zA-Z_'’",= ]+))|((?:--?|\+)[a-zA-Z'’"][-+0-9a-zA-Z_'’",= ]+)$/;
 
-type Flags = {[id: string]: string};
+type Flags = {
+  general: {[id: string]: string},
+  field: {[id: string]: string},
+  p1: {[id: string]: string},
+  p2: {[id: string]: string},
+  move: {[id: string]: string},
+};
 
 const PHRASE = new RegExp([
   // Attacker Boosts
@@ -19,7 +25,7 @@ const PHRASE = new RegExp([
   // Attacker EVs
   /(?:(\d{1,3}(?:\+|-)?\s*(?:SpA|Atk))?\s+)?/, // 3
   // Attacker Pokemon (@ Attacker Item)?
-  /(?:([A-Za-z][-0-9A-Za-z'’ ]+)(?:\s*@\s*([A-Za-z][-0-9A-Za-z' ]+))?)/, // 4 & 5
+  /(?:([A-Za-z][-0-9A-Za-z'’. ]+)(?:\s*@\s*([A-Za-z][-0-9A-Za-z' ]+))?)/, // 4 & 5
   // Move
   /\s*\[([-0-9A-Za-z', ]+)\]\s+vs\.?\s+/, // 6
   // Defender Boosts
@@ -29,7 +35,7 @@ const PHRASE = new RegExp([
   // Defender EVs
   /(?:(\d{1,3}\s*HP)?\s*\/?\s*(\d{1,3}(?:\+|-)?\s*(?:SpD|Def))?\s+)?/, // 9 & 10
   // Defender Pokemon (@ Defender Item)?
-  /(?:([A-Za-z][-0-9A-Za-z'’ ]+)(?:\s*@\s*([A-Za-z][-0-9A-Za-z' ]+))?)$/ // 11 & 12
+  /(?:([A-Za-z][-0-9A-Za-z'’. ]+)(?:\s*@\s*([A-Za-z][-0-9A-Za-z' ]+))?)$/ // 11 & 12
 ].map(r => r.source).join(''), 'i');
 
 const QUOTED = /^['"].*['"]$/;
@@ -94,7 +100,7 @@ export function parse(gens: Generation | Generations, s: string, strict = false)
     }
   }
 
-  const gen = 'num' in gens ? gens: gens.get(g || 8);
+  const gen = 'num' in gens ? gens : gens.get(g || 8);
   const flags = parseFlags(gen, raw, strict);
   const phrase = fragments.join(' ');
   const context = JSON.stringify({phrase, flags});
@@ -114,10 +120,11 @@ const UNAMBIGUOUS = [
 ] as ID[];
 
 function parseFlags(gen: Generation, raw: Array<[ID, string]>, strict: boolean) {
-  const flags: Flags = {};
-  const checkConflict = (id: ID, val: string) => {
-    if (strict && flags[id] && flags[id] !== val) {
-      throw new Error(`Conflicting values for flag '${id}': '${flags[id]}' vs. '${val}'`);
+  const flags: Flags = {general: {}, field: {}, p1: {}, p2: {}, move: {}};
+
+  const checkConflict = (k: keyof Flags, id: ID, val: string) => {
+    if (strict && flags[k][id] && flags[k][id] !== val) {
+      throw new Error(`Conflicting values for flag '${id}': '${flags[k][id]}' vs. '${val}'`);
     }
   };
 
@@ -225,18 +232,18 @@ function buildField(
   invalid: (key: string, val: any) => void
 ) {
   const field: State.Field = {pseudoWeather: {}};
-  if (flags.weather) {
-    const c = Conditions.get(gen, flags.weather);
+  if (flags.field.weather) {
+    const c = Conditions.get(gen, flags.field.weather);
     if (!c) {
-      invalid('weather', flags.weather);
+      invalid('weather', flags.field.weather);
     } else {
       field.weather = c[1] as WeatherName;
     }
   }
-  if (flags.terrain) {
-    const c = Conditions.get(gen, flags.terrain);
+  if (flags.field.terrain) {
+    const c = Conditions.get(gen, flags.field.terrain);
     if (!c) {
-      invalid('terrain', flags.terrain);
+      invalid('terrain', flags.field.terrain);
     } else {
       field.terrain = c[1] as TerrainName;
     }
