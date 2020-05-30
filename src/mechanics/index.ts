@@ -1,10 +1,10 @@
 import {Generation, GameType, Generations, TypeName, MoveName} from '@pkmn/data';
 
-import { State } from '../state';
-import { Context } from '../context';
-import { Result } from '../result';
-import { DeepReadonly, has } from '../utils';
-import { parse } from '../parse';
+import {State} from '../state';
+import {Context} from '../context';
+import {HitResult, Result} from '../result';
+import {DeepReadonly, has} from '../utils';
+import {parse} from '../parse';
 
 import {Abilities} from './abilities';
 import {Conditions} from './conditions';
@@ -20,10 +20,12 @@ export interface Handler {
   damageCallback(context: Context): number;
 
   onModifyBasePower(context: Context): number | undefined;
+
   onModifyAtk(context: Context): number | undefined;
   onModifySpA(context: Context): number | undefined;
   onModifyDef(context: Context): number | undefined;
   onModifySpD(context: Context): number | undefined;
+
   onModifySpe(context: Context): number | undefined;
   onModifyWeight(context: Context): number | undefined;
 
@@ -34,8 +36,8 @@ export type Handlers = typeof HANDLERS;
 export const HANDLERS = {Abilities, Conditions, Items, Moves};
 
 export const HANDLER_FNS: Set<keyof Handler> = new Set([
-  'basePowerCallback', 'damageCallback','onModifyBasePower', 'onModifyAtk',
-  'onModifySpA','onModifyDef', 'onModifySpD', 'onModifySpe', 'onModifyWeight',
+  'basePowerCallback', 'damageCallback', 'onModifyBasePower', 'onModifyAtk',
+  'onModifySpA', 'onModifyDef', 'onModifySpD', 'onModifySpe', 'onModifyWeight',
 ]);
 
 // Convenience overload for most programs
@@ -46,9 +48,8 @@ export function calculate(
   move: State.Move,
   field?: State.Field,
   gameType?: GameType): Result;
-// Convenience overloads for humans
-export function calculate(gen: Generation, args: string): Result;
-export function calculate(gens: Generations, args: string): Result;
+// Convenience overload for humans
+export function calculate(gens: Generation | Generations, args: string): Result;
 // Main API offered - state can be created and the mutated, handlers can be overriden
 export function calculate(state: State, handlers?: Handlers): Result;
 export function calculate(...args: any[]) {
@@ -65,14 +66,12 @@ export function calculate(...args: any[]) {
 
   // Admittedly, somewhat odd to be creating a result and then letting it get mutated, but
   // this means we don't need to plumb state/handlers/context/relevancy in separately
-  const result = new Result(state as DeepReadonly<State>, handlers);
+  const hit = new HitResult(state as DeepReadonly<State>, handlers);
 
   // TODO mutate result and actually do calculations - should this part be in mechanics/index?
 
-  return result;
+  return new Result(hit); // TODO handle multihit / parental bond etc
 }
-
-
 
 const Z_MOVES: { [type in Exclude<TypeName, '???'>]: string } = {
   Bug: 'Savage Spin-Out',
@@ -99,16 +98,15 @@ function getZMoveName(
   gen: Generation,
   move: State.Move,
   pokemon: {
-    species?: {name: string}
-    item?: string,
+    species?: {name: string};
+    item?: string;
   } = {}
 ) {
   if (gen.num < 7) throw new TypeError(`Z-Moves do not exist in gen ${gen.num}`);
   if (pokemon.item) {
     const item = gen.items.get(pokemon.item);
     const matching =
-      item &&
-      item.zMove &&
+      item?.zMove &&
       has(item.itemUser, pokemon.species?.name) &&
       item.zMoveFrom === move.name;
     if (matching) return item!.zMove;
@@ -141,8 +139,8 @@ function getMaxMovename(
   gen: Generation,
   move: State.Move,
   pokemon: {
-    species?: {isGigantamax: MoveName}
-    item?: string,
+    species?: {isGigantamax: MoveName};
+    item?: string;
   } = {}
 ) {
   if (gen.num < 8) throw new TypeError(`Max Moves do not exist in gen ${gen.num}`);
@@ -171,10 +169,17 @@ setAbility(ability: string | Ability, source?: Pokemon | null, isFromFormeChange
     const oldAbility = this.ability;
     if (!isFromFormeChange) {
       const abilities = [
-        'battlebond', 'comatose', 'disguise', 'gulpmissile', 'hungerswitch', 'iceface', 'multitype', 'powerconstruct', 'rkssystem', 'schooling', 'shieldsdown', 'stancechange',
+        'battlebond', 'comatose', 'disguise', 'gulpmissile', 'hungerswitch', 'iceface',
+        'multitype', 'powerconstruct', 'rkssystem', 'schooling', 'shieldsdown', 'stancechange',
       ];
-      if (ability.id === 'illusion' || abilities.includes(ability.id) || abilities.includes(oldAbility)) return false;
-      if (this.battle.gen >= 7 && (ability.id === 'zenmode' || oldAbility === 'zenmode')) return false;
+      if (ability.id === 'illusion' ||
+          abilities.includes(ability.id) ||
+          abilities.includes(oldAbility)) {
+        return false;
+      }
+      if (this.battle.gen >= 7 && (ability.id === 'zenmode' || oldAbility === 'zenmode')) {
+        return false;
+      }
     }
 
   ignoringItem() {
@@ -189,7 +194,8 @@ setAbility(ability: string | Ability, source?: Pokemon | null, isFromFormeChange
     if ('smackdown' in this.volatiles) return true;
     const item = (this.ignoringItem() ? '' : this.item);
     if (item === 'ironball') return true;
-    // If a Fire/Flying type uses Burn Up and Roost, it becomes ???/Flying-type, but it's still grounded.
+    // If a Fire/Flying type uses Burn Up and Roost, it becomes ???/Flying-type,
+    // but it's still grounded.
     if (!negateImmunity && this.hasType('Flying') && !('roost' in this.volatiles)) return false;
     if (this.hasAbility('levitate') && !this.battle.suppressingAttackEvents()) return null;
     if ('magnetrise' in this.volatiles) return false;
@@ -211,7 +217,8 @@ setAbility(ability: string | Ability, source?: Pokemon | null, isFromFormeChange
 
   ignoringAbility() {
     const abilities = [
-      'battlebond', 'comatose', 'disguise', 'gulpmissile', 'multitype', 'powerconstruct', 'rkssystem', 'schooling', 'shieldsdown', 'stancechange',
+      'battlebond', 'comatose', 'disguise', 'gulpmissile', 'multitype', 'powerconstruct',
+      'rkssystem', 'schooling', 'shieldsdown', 'stancechange',
     ];
     // Check if any active pokemon have the ability Neutralizing Gas
     let neutralizinggas = false;
@@ -226,7 +233,8 @@ setAbility(ability: string | Ability, source?: Pokemon | null, isFromFormeChange
 
     return !!(
       (this.battle.gen >= 5 && !this.isActive) ||
-      ((this.volatiles['gastroacid'] || (neutralizinggas && this.ability !== ('neutralizinggas' as ID))) &&
+      ((this.volatiles['gastroacid'] ||
+        (neutralizinggas && this.ability !== ('neutralizinggas' as ID))) &&
       !abilities.includes(this.ability))
     );
   }

@@ -22,7 +22,7 @@ import {
   NatureName,
 } from '@pkmn/data';
 import { WeatherName, TerrainName } from './conditions';
-import { Handlers, Handler, HANDLER_FNS } from './mechanics';
+import { Handlers, Handler, HANDLER_FNS, HANDLERS } from './mechanics';
 import { Relevancy } from './result';
 import { DeepReadonly, extend } from './utils';
 import { State } from './state';
@@ -42,7 +42,7 @@ export class Context {
     state: DeepReadonly<State>,
     relevant: Relevancy,
     residual: Relevancy,
-    handlers: Handlers
+    handlers: Handlers = HANDLERS
   ) {
     this.gameType = state.gameType;
     this.gen = state.gen as Generation;
@@ -302,7 +302,7 @@ export namespace Context {
         hp: this.hp,
         nature: this.nature,
         evs: this.evs && extend({}, this.evs),
-        ivs: this.evs && extend({}, this.evs),
+        ivs: this.ivs && extend({}, this.ivs),
         boosts: extend({}, this.boosts),
         position: this.position,
         switching: this.switching,

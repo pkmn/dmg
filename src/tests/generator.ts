@@ -29,7 +29,7 @@ export function generate(s: string, pkg: 'dmg' | 'calc' = 'dmg') {
   const to = results[results.length - 1][0];
 
   let diff = '';
-  const last: {gen: number, breakdown: ResultBreakdown} = {gen: from - 1, breakdown: {}};
+  const last: {gen: number; breakdown: ResultBreakdown} = {gen: from - 1, breakdown: {}};
   for (const [gen, breakdown] of results) {
     if (gen !== last.gen + 1) {
       throw new Error(`Gap in generations with successful calculations: ${last.gen} -> ${gen}`);

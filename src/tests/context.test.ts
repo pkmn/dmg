@@ -4,14 +4,14 @@ import {Dex} from '@pkmn/dex';
 import {Context} from '../context';
 import {State} from '../state';
 import {Relevancy} from '../result';
-import {HANDLERS} from '../mechanics';
-import { DeepReadonly } from '../utils';
+import {DeepReadonly} from '../utils';
 
 describe('Context', () => {
   const newContext = () => {
     const gens = new Generations(Dex);
     const gen = gens.get(7);
     const relevancy = new Relevancy();
+    const residual = new Relevancy();
     const state = new State(
       gen,
       {
@@ -30,14 +30,14 @@ describe('Context', () => {
           ability: 'Natural Cure',
           status: 'tox',
           statusData: {toxicTurns: 2},
-          volatiles: {lightscreen: {}, leechseed: {}}
+          volatiles: {lightscreen: {}, leechseed: {}},
         }),
         sideConditions: {stealthrock: {}, spikes: {level: 1}},
       },
       State.createMove(gen, 'Sacred Sword'),
       {weather: 'Sand', terrain: 'Misty', pseudoWeather: {gravity: {}}}
     ) as DeepReadonly<State>;
-    const context = new Context(state, relevancy, {
+    const context = new Context(state, relevancy, residual, {
       Items: {
         choicespecs: {},
         leftovers: {},
@@ -55,15 +55,15 @@ describe('Context', () => {
         leechseed: {},
         stealthrock: {},
         spikes: {},
-        sand: { onModifyAtk() { return 1; } },
-        misty: { onModifyDef() { return 2; } },
-        gravity: { onModifySpA() { return 3; } },
+        sand: {onModifyAtk() { return 1; }},
+        misty: {onModifyDef() { return 2; }},
+        gravity: {onModifySpA() { return 3; }},
       },
       Moves: {
-        sacredsword: {}
-      }
+        sacredsword: {},
+      },
     });
-    return {context, state, relevancy};
+    return {context, state, relevancy, residual};
   };
 
 
@@ -71,18 +71,18 @@ describe('Context', () => {
     const {context, state, relevancy} = newContext();
     const before = JSON.stringify(state);
 
-    expect(context.field.weather?.basePowerCallback?.(context)).toBe(undefined);
-    expect(relevancy.field.weather).toBe(undefined);
+    expect(context.field.weather?.basePowerCallback?.(context)).toBeUndefined();
+    expect(relevancy.field.weather).toBeUndefined();
     expect(context.field.weather?.onModifyAtk?.(context)).toBe(1);
     expect(relevancy.field.weather).toBe(true);
 
-    expect(context.field.terrain?.onModifyAtk?.(context)).toBe(undefined);
-    expect(relevancy.field.terrain).toBe(undefined);
+    expect(context.field.terrain?.onModifyAtk?.(context)).toBeUndefined();
+    expect(relevancy.field.terrain).toBeUndefined();
     expect(context.field.terrain?.onModifyDef?.(context)).toBe(2);
     expect(relevancy.field.terrain).toBe(true);
 
-    expect(context.field.pseudoWeather['gravity']?.onModifyAtk?.(context)).toBe(undefined);
-    expect(relevancy.field.pseudoWeather['gravity']).toBe(undefined);
+    expect(context.field.pseudoWeather['gravity']?.onModifyAtk?.(context)).toBeUndefined();
+    expect(relevancy.field.pseudoWeather['gravity']).toBeUndefined();
 
     expect(context.field.pseudoWeather['gravity']?.onModifySpA?.(context)).toBe(3);
     expect(relevancy.field.pseudoWeather['gravity']).toBe(true);
@@ -92,20 +92,15 @@ describe('Context', () => {
     expect(JSON.stringify(state)).toEqual(before);
   });
 
-  test('Side', () => {
-    const {context, state, relevancy} = newContext();
+  // test('Side', () => {
+  //   const {context, state, relevancy} = newContext();
+  // });
 
-  });
+  // test('Pokemon', () => {
+  //   const {context, state, relevancy} = newContext();
+  // });
 
-  test('Pokemon', () => {
-    const {context, state, relevancy} = newContext();
-
-  });
-
-  test('Move', () => {
-    const {context, state, relevancy} = newContext();
-
-    //
-
-  });
+  // test('Move', () => {
+  //   const {context, state, relevancy} = newContext();
+  // });
 });

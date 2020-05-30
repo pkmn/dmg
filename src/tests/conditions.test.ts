@@ -7,7 +7,7 @@ const gens = new Generations(Dex);
 
 describe('Conditions', () => {
   test('get', () => {
-    expect(Conditions.get(gens.get(3), 'stealthrock')).toEqual(undefined);
+    expect(Conditions.get(gens.get(3), 'stealthrock')).toBeUndefined();
     expect(Conditions.get(gens.get(4), 'sr')).toEqual(['Stealth Rock', 'Side Condition', 'p2']);
 
     expect(Conditions.get(gens.get(7), 'Psychic Terrain')).toEqual(['Psychic', 'Terrain', 'field']);
