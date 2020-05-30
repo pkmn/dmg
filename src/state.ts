@@ -231,7 +231,7 @@ export class State {
       species?: string | Specie;
       item?: string;
       ability?: string;
-      volatiles?: {[id: string]: unknown};
+      volatiles?: {[id: string]: object};
     } = {}
   ) {
     const base = gen.moves.get(name);

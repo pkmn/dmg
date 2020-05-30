@@ -26,6 +26,8 @@ export interface Handler {
   onModifySpD(context: Context): number | undefined;
   onModifySpe(context: Context): number | undefined;
   onModifyWeight(context: Context): number | undefined;
+
+  onResidual(context: Context): number | undefined;
 }
 
 export type Handlers = typeof HANDLERS;

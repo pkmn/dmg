@@ -37,7 +37,7 @@ like field conditions or move flags etc), the disambiguating prefix can be elide
 property's scope is not implicit, the `attacker` / `p1` or `defender` / `p2` *flags* can be used to
 explicitly scope a property as belonging to a certain side. Multiple ambiguous flags may be passed
 to these dismabiguators, and in these scenarios, boolean flags can drop their prefix enitrely
- eg. `p2:spikes:3,auroaveil` or `--attacker=flashfire+foresight+helpinghand`.
+ eg. `p2:spikes:3,auroraveil` or `--attacker=flashfire+foresight+helpinghand`.
 
 #### Booleans
 
@@ -58,7 +58,7 @@ Flag names are **not** case sensitive, though are written as such below for impr
 | ------- | ----------------|
 | `gen` | sets the generation of the calculation |
 | `gameType` | sets the type of game (`+doubles` or `+singles` can be used instead) |
-| `attacker` / `defender` | used to *scope* a condition / status  |
+| `attacker` / `defender` | used to *scope* a condition / status, also `p1` / `p2`  |
 
 ##### Field
 
@@ -93,7 +93,9 @@ implicitly if disambiguous.
 | `attackerToxicCounter` / `defenderToxicCounter` | the current toxic counter of the attacker / defender |
 
 Pokémon conditions (volatiles and statuses) may be set using the general `attacker` / `defender`
-flags to indicate the side, or implicitly if disambiguous.
+flags to indicate the side, or implicitly if disambiguous. `attackerVolatile` or
+`defenderSideCondition` etc may also be used, though don't offer any benefits over
+`attacker` / `p1` or `defender` / `p2` or implicits and only exist for consistency.
 
 ##### Move
 

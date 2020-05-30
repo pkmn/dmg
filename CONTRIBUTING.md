@@ -48,7 +48,10 @@ Not satisfied with just one `Pokemon` class, `@pkmn/dmg` has *several* concepts 
   description or be present in the canonical representation of the calculation state). This is
   analogous to [`RawDesc` in
   `@smogon/calc`](https://github.com/smogon/damage-calc/blob/master/calc/src/desc.ts), only unlike
-  `RawDesc` it has the same 'shape' as the input `State`.
+  `RawDesc` it has the same 'shape' as the input `State`. Note that `Context`/`Result` actually
+  contains **two** `Relevancy` fields - `relevant` tracking properties relevant to the damage rolls
+  and `residual` which tracks properties related to tracking end of turn damage/recovery (which
+  factors into KO chance calculation).
 - **`Scope`** is yet another place where `Pokemon` and `Move` appears to crop up, though these are
   simply fancy wrappers around the `State.createPokemon` and `State.createMove` helper methods
   discussed above which have an `Generation` bound already. These are methods, not interfaces, and
@@ -106,3 +109,16 @@ over `Math` everywhere.
 TODO limitations
 
 - 100% chance of happening only
+
+
+### Validation
+
+Validation is performed in various places within the codebase (notably:
+`State.createPokemon`/`State.createMove` helpers and `strict` text parsing). In all cases,
+**validation is not intended to be exhaustive**. Input validation in `@pkmn/dmg` is 'best effort',
+simply intending to make it easier to provide correct input. Validation in these methods can be
+improved to be more exhaustive, but there is no obligation to do anything too fancy here.
+Furthermore, `@pkmn/dmg` should **never validate the type** of its input - client's are responsible
+for not passing in malformed objects that don't match the type signatures (and they are strongly
+recommended to use TypeScript to help them enforce this), and `@pkmn/dmg` should not attempt to
+handle malformed input.

@@ -1,7 +1,7 @@
 // core API
 export {calculate} from './mechanics';
 export {State} from './state';
-export {Damage, Result} from './result';
+export {Result} from './result';
 
 // parsing
 export {parse} from './parse';

@@ -1,19 +1,20 @@
 import { toID, Generations, GenerationNum, ID, Generation,  GameType } from '@pkmn/data';
-import { Conditions, WeatherName, TerrainName } from './conditions';
+import { Conditions, WeatherName, TerrainName, ConditionKind } from './conditions';
 
 import { State, bounded } from './state';
 import { decodeURL } from './encode';
 import { is } from './utils';
 
 // Flags can either be specified as key:value or as 'implicits'
-const FLAG =
-  /^(?:(?:--?)?(\w+)(?:=|:)([-+0-9a-zA-Z_'’",= ]+))|((?:--?|\+)[a-zA-Z'’"][-+0-9a-zA-Z_'’",= ]+)$/;
+const FLAG = /^(?:(?:--?)?(\w+)(?:=|:)([-+0-9a-zA-Z_'’",:= ]+))|((?:--?|\+)[a-zA-Z'’"][-+0-9a-zA-Z_'’",:= ]+)$/;
+const SPLIT_SUBFLAG = /[^0-9a-zA-Z_'’":= ]/;
 
+const _ = Symbol('_');
 type Flags = {
   general: {[id: string]: string},
-  field: {[id: string]: string},
-  p1: {[id: string]: string},
-  p2: {[id: string]: string},
+  field: {[id: string]: string} & {[_]: {[k in ConditionKind]?: {[id: string]: string}}},
+  p1: {[id: string]: string} & {[_]: {[k in ConditionKind]?: {[id: string]: string}}},
+  p2: {[id: string]: string} & {[_]: {[k in ConditionKind]?: {[id: string]: string}}},
   move: {[id: string]: string},
 };
 
@@ -68,36 +69,28 @@ export function parse(gens: Generation | Generations, s: string, strict = false)
 
   // Because disambiguating implicits depends on the generation (boo!) we must make two passes over
   // the args - once to clean them up and figure out the ordering while determining which gen to
-  // use, followed by
+  // use, followed by second pass with disambiguates and scopes the parameters
   let g: GenerationNum | undefined = 'num' in gens ? gens.num : undefined;
   for (const arg of argv) {
-    let m = FLAG.exec(arg);
-    if (m) {
-      let id: ID;
-      let val: string;
-      if (m[3]) {
-        id = toID(m[3]);
-        raw.push([id, '1']);
-      } else {
-        id = toID(m[1]);
-        val = QUOTED.test(m[2]) ? m[2].slice(1, -1) : m[2];
-
-        if (id === 'gen') {
-          const n = Number(val);
-          if (isNaN(n) || !bounded('gen', n)) {
-            if (strict) throw new Error(`Invalid generation flag '${val}'`);
-          } else if ((strict || 'num' in gens) && g && g !== n) {
-            throw new Error(`Conflicting values for flag '${id}': '${g}' vs. '${val}'`);
-          } else {
-            g = n as GenerationNum;
-          }
-        } else {
-          raw.push([id, val]);
-        }
-      }
-    } else {
+    const parsed = parseFlag(arg);
+    if (!parsed) {
       fragments.push(arg);
+      continue;
     }
+
+    const [id, val] = parsed;
+    if (id === 'gen') {
+      const n = Number(val);
+      if (isNaN(n) || !bounded('gen', n)) {
+        if (strict) throw new Error(`Invalid generation flag '${val}'`);
+      } else if ((strict || 'num' in gens) && g && g !== n) {
+        throw new Error(`Conflicting values for flag '${id}': '${g}' vs. '${val}'`);
+      } else {
+        g = n as GenerationNum;
+      }
+      continue;
+     }
+     raw.push([id, val]);
   }
 
   const gen = 'num' in gens ? gens : gens.get(g || 8);
@@ -114,13 +107,24 @@ export function parse(gens: Generation | Generations, s: string, strict = false)
   return {phrase, flags} as unknown as State;
 }
 
-const UNAMBIGUOUS = [
-  'gametype', 'weather', 'terrain', 'pseudoweather',
-  'move', 'useZ', 'useMax', 'crit', 'hits',
-] as ID[];
+const UNAMBIGUOUS: {[id: string]: keyof Flags} = {
+  gametype: 'general', doubles: 'general', singles: 'general',
+  weather: 'field', terrain: 'field',
+  move: 'move', usez: 'move', usemax: 'move', crit: 'move', hits: 'move',
+};
+
+const CONDITIONS: {[id: string]: ConditionKind}  = {
+  pseudoweather: 'Pseudo Weather',
+  sidecondition: 'Side Condition',
+  sideconditions: 'Side Condition',
+  volatile: 'Volatile Status',
+  volatiles: 'Volatile Status',
+  volatilestatus: 'Volatile Status',
+  status: 'Status',
+};
 
 function parseFlags(gen: Generation, raw: Array<[ID, string]>, strict: boolean) {
-  const flags: Flags = {general: {}, field: {}, p1: {}, p2: {}, move: {}};
+  const flags: Flags = {general: {}, field: {[_]: {}}, p1: {[_]: {}}, p2: {[_]: {}}, move: {}};
 
   const checkConflict = (k: keyof Flags, id: ID, val: string) => {
     if (strict && flags[k][id] && flags[k][id] !== val) {
@@ -132,35 +136,108 @@ function parseFlags(gen: Generation, raw: Array<[ID, string]>, strict: boolean) 
     // Currently safe because no implicits start with 'is' or 'has'. Technically this prefix is
     // only allowed on boolean parameters, but it's not really worth the effort to be strict here
     if (id.startsWith('is') || id.startsWith('has')) id = id.slice(2) as ID;
-    if (id.startsWith('attacker') || id.startsWith('defender') || is(id, UNAMBIGUOUS)) {
-      checkConflict(id, val);
-      flags[id] = val;
-      continue;
-    }
 
-    const condition = Conditions.get(gen, id);
-    if (!condition) {
-      if (strict) new Error(`Unrecognized or invalid implicit condition '${id}'`);
-      continue;
-    }
-    const [name, kind, scope] = condition;
-    if (!scope) throw new Error(`Ambiguous implicit condition '${id}`);
-    if (scope === 'field') {
-      const id = toID(kind);
-      if (kind === 'Pseudo Weather') {
-        flags[id] = `${flags[id]},${toID(name)}`
-      } else {
-        checkConflict(id, val);
-        flags[id] = name;
+    // TODO no = > '0' instead of 1?
+
+    if (UNAMBIGUOUS[id]) {
+      if (is(id, 'singles', 'doubles')) {
+        val = id;
+        id = 'gametype' as ID;
       }
-    } else if (scope === 'p1') { // XXX spikes:3
-      flags.attacker = `${flags.atttacker},${toID(name)}`;
+      const type = UNAMBIGUOUS[id];
+      checkConflict(type, id, val);
+      flags[type][id] = val;
+    } else if (id === 'pseudoweather') {
+      parseConditionFlag(gen, flags, val, strict, 'field', 'Pseudo Weather');
+    } else if (id === 'attacker' || id === 'p1') {
+      parseConditionFlag(gen, flags, val, strict, 'p1');
+    } else  if (id === 'defender' || id === 'p2') {
+      parseConditionFlag(gen, flags, val, strict, 'p2');
+    } else if (id.startsWith('attacker') || id.startsWith('p1')) {
+      id = id.slice(id.charAt(0) === 'p' ? 2 : 8) as ID;
+      if (CONDITIONS[id]) {
+        parseConditionFlag(gen, flags, val, strict, 'p1', CONDITIONS[id]);
+        continue;
+      }
+      checkConflict('p1', id, val);
+      flags.p1[id] = val;
+    } else if (id.startsWith('defender') || id.startsWith('p2')) {
+      id = id.slice(id.charAt(0) === 'p' ? 2 : 8) as ID;
+      if (CONDITIONS[id]) {
+        parseConditionFlag(gen, flags, val, strict, 'p2', CONDITIONS[id]);
+        continue;
+      }
+      checkConflict('p2', id, val);
+      flags.p2[id] = val;
+      continue;
     } else {
-      flags.defender = `${flags.defender},${toID(name)}`;
+      parseConditionFlag(gen, flags, `${id}=${val}`, strict);
     }
   }
 
   return flags;
+}
+
+// TODO: handle no/is/has here
+function parseFlag(arg: string): [ID, string] | undefined {
+  const m = FLAG.exec(arg);
+  if (!m) return undefined;
+  return m[3] ? [toID(m[3]), '1'] : [toID(m[1]), QUOTED.test(m[2]) ? m[2].slice(1, -1) : m[2]];
+}
+
+const FIELD_CONDITIONS: ConditionKind[] = ['Weather', 'Terrain', 'Pseudo Weather'];
+
+function parseConditionFlag(
+  gen: Generation,
+  flags: Flags,
+  s: string,
+  strict: boolean,
+  scope?: 'p1' | 'p2' | 'field',
+  kind?: ConditionKind
+) {
+  const raw = s.split(SPLIT_SUBFLAG).filter(x => x);
+  if (strict && !raw.length) {
+    const k = kind ? `${kind} ` : '';
+    throw new Error(`Expected '${s}' to contain ${k}conditions but found none`);
+  }
+  for (const arg of raw) {
+    const parsed = parseFlag(arg);
+    if (!parsed) throw new Error(`Unable to parse '${arg}' as a flag for a condition from '${s}'`);
+    let [id, val] = parsed;
+
+    const condition = Conditions.get(gen, id);
+    if (!condition) {
+      if (strict) new Error(`Unrecognized or invalid condition '${id}' from '${s}'`);
+      continue;
+    }
+
+    const [name, kind] = condition;
+    scope = scope ?? condition[2];
+    if (!scope) throw new Error(`Ambiguous implicit condition '${id}`);
+
+    const isField = FIELD_CONDITIONS.includes(kind);
+    if ((isField && scope !== 'field') || (!isField && scope === 'field')) {
+      throw new Error(`Mismatched scope for condition '${name}'`);
+    }
+
+    if (kind === 'Weather' || kind === 'Terrain') {
+      id = toID(kind);
+      val = toID(name);
+      if (strict && flags.field[id] && flags.field[id] !== val) {
+        throw new Error(`Conflicting values for flag '${id}': '${flags.field[id]}' vs. '${val}'`);
+      }
+      flags.field[id] = val;
+      continue;
+    }
+
+    id = toID(name);
+    const conditions = flags[scope][_][kind] = (flags[scope][_][kind] || {});
+
+    if (strict && conditions[id] && conditions[id] !== val) {
+      throw new Error(`Conflicting values for condition '${id}': '${conditions[id]}' vs. '${val}'`);
+    }
+    conditions[id] = val;
+  }
 }
 
 function parsePhrase(s: string) {
@@ -208,13 +285,12 @@ function build(
       throw new Error(`Unsupported or invalid ${k} '${v}' for generation ${gen.num} (${context})`);
     }
   };
-  // TODO conflict
 
   let gameType: GameType = 'singles';
-  if (flags.gametype) {
-    const gt = flags.gametype;
+  if (flags.general.gametype) {
+    const gt = flags.general.gametype;
     if (!(gt === 'singles' || gt === 'doubles') || gen.num <= 2 && gt === 'doubles') {
-      invalid('game type', flags.gametype);
+      invalid('game type', flags.general.gametype);
     } else {
       gameType = gt;
     }
@@ -232,6 +308,7 @@ function buildField(
   invalid: (key: string, val: any) => void
 ) {
   const field: State.Field = {pseudoWeather: {}};
+
   if (flags.field.weather) {
     const c = Conditions.get(gen, flags.field.weather);
     if (!c) {
@@ -248,27 +325,17 @@ function buildField(
       field.terrain = c[1] as TerrainName;
     }
   }
-
-  // TODO implicits!
+  // TODO what about turning pseudo weather off?
+  if (flags.field[_]['Pseudo Weather']) {
+    for (const id in flags.field[_]['Pseudo Weather']) {
+      field.pseudoWeather[id] = {};
+    }
+  }
 
   return field;
 }
 
-
-function categorizeConditions(gen: Generation, conditions: string, strict: boolean) {
-  for (const c of conditions.split(/\W/)) {
-    const id = toID(c);
-    if (!id) continue;
-    const condition = Conditions.get(gen, id);
-    if (!condition) {
-      if (strict) new Error(`Unrecognized or invalid condition '${id}'`);
-      continue;
-    }
-    const [name, kind, scope] = condition;
-    /// XXX spikes: 3
-  }
-}
-
+// FIXME normalize everything as '1' or '0'?
 function asBoolean(s: string) {
   const id = toID(s);
   if (is(id, 'true', '1', 'yes', 'y')) return true;

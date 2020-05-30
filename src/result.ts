@@ -5,16 +5,6 @@ import { Context } from './context';
 import { DeepReadonly, extend } from './utils';
 import { Handlers } from './mechanics';
 
-export type Damage =
-  | number // fixed damage, single hit
-  | number[] // standard damage rolls
-  | [number, number] // fixed damage, two hits (only Parental Bond)
-  | [number[], number[]] // standard damage rolls, two hits
-  | [number[], number[], number[]]
-  | [number[], number[], number[], number[]]
-  | [number[], number[], number[], number[], number[]]
-
-
 export class Relevancy {
   gameType: boolean;
   readonly p1: Relevancy.Side;
@@ -87,18 +77,45 @@ export namespace Relevancy {
 }
 
 export class Result {
+  readonly hits: HitResult[];
+
+  constructor() {
+    this.hits = [];
+  }
+
+  chain() {
+    if (!this.hits.length) throw new Error(`No previous hit to chain`);
+    const prev = this.hits[this.hits.length - 1];
+    const next = new HitResult(prev.context.toState() as DeepReadonly<State>, prev.handlers);
+    // TODO call `apply` based on KO probabilities of previous hit(s!) to set state for next hit
+    this.add(next);
+    return next;
+  }
+
+  add(result: Result | HitResult) {
+    this.hits.push(...('hits' in result ? result.hits : [result]));
+  }
+}
+
+// FIXME ko chance : with and without residual
+
+class HitResult {
   readonly state: DeepReadonly<State>;
+  readonly handlers: Handlers;
 
   readonly context: Context;
   readonly relevant: Relevancy;
+  readonly residual: Relevancy;
 
-  damage: Damage;
+  damage: number | number[];
 
   constructor(state: DeepReadonly<State>, handlers: Handlers) {
     this.damage = 0;
     this.state = state;
+    this.handlers = handlers;
     this.relevant = new Relevancy();
-    this.context = new Context(state, this.relevant, handlers);
+    this.residual = new Relevancy();
+    this.context = new Context(state, this.relevant, this.residual, handlers);
   }
 
   get range() {
