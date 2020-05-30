@@ -1,22 +1,23 @@
-import { toID, Generations, GenerationNum, ID, Generation,  GameType } from '@pkmn/data';
-import { Conditions, WeatherName, TerrainName, ConditionKind } from './conditions';
+import type {Generations, GenerationNum, ID, Generation, GameType} from '@pkmn/data';
 
-import { State, bounded } from './state';
-import { decodeURL } from './encode';
-import { is } from './utils';
+import {Conditions, WeatherName, TerrainName, ConditionKind} from './conditions';
+import {State, bounded} from './state';
+import {decodeURL} from './encode';
+import {is, toID} from './utils';
 
 // Flags can either be specified as key:value or as 'implicits'
+// eslint-disable-next-line max-len
 const FLAG = /^(?:(?:--?)?(\w+)(?:=|:)([-+0-9a-zA-Z_'’",:= ]+))|((?:--?|\+)[a-zA-Z'’"][-+0-9a-zA-Z_'’",:= ]+)$/;
 const SPLIT_SUBFLAG = /[^0-9a-zA-Z_'’":= ]/;
 
 const _ = Symbol('_');
-type Flags = {
-  general: {[id: string]: string},
-  field: {[id: string]: string} & {[_]: {[k in ConditionKind]?: {[id: string]: string}}},
-  p1: {[id: string]: string} & {[_]: {[k in ConditionKind]?: {[id: string]: string}}},
-  p2: {[id: string]: string} & {[_]: {[k in ConditionKind]?: {[id: string]: string}}},
-  move: {[id: string]: string},
-};
+interface Flags {
+  general: {[id: string]: string};
+  field: {[id: string]: string} & {[_]: {[k in ConditionKind]?: {[id: string]: string}}};
+  p1: {[id: string]: string} & {[_]: {[k in ConditionKind]?: {[id: string]: string}}};
+  p2: {[id: string]: string} & {[_]: {[k in ConditionKind]?: {[id: string]: string}}};
+  move: {[id: string]: string};
+}
 
 const PHRASE = new RegExp([
   // Attacker Boosts
@@ -36,7 +37,7 @@ const PHRASE = new RegExp([
   // Defender EVs
   /(?:(\d{1,3}\s*HP)?\s*\/?\s*(\d{1,3}(?:\+|-)?\s*(?:SpD|Def))?\s+)?/, // 9 & 10
   // Defender Pokemon (@ Defender Item)?
-  /(?:([A-Za-z][-0-9A-Za-z'’. ]+)(?:\s*@\s*([A-Za-z][-0-9A-Za-z' ]+))?)$/ // 11 & 12
+  /(?:([A-Za-z][-0-9A-Za-z'’. ]+)(?:\s*@\s*([A-Za-z][-0-9A-Za-z' ]+))?)$/, // 11 & 12
 ].map(r => r.source).join(''), 'i');
 
 const QUOTED = /^['"].*['"]$/;
@@ -59,8 +60,6 @@ interface Phrase {
   defenderItem?: ID;
 }
 
-export function parse(gen: Generation, s: string, strict?: boolean): State;
-export function parse(gens: Generations, s: string, strict?: boolean): State;
 export function parse(gens: Generation | Generations, s: string, strict = false) {
   const argv = tokenize(decodeURL(s));
 
@@ -89,8 +88,8 @@ export function parse(gens: Generation | Generations, s: string, strict = false)
         g = n as GenerationNum;
       }
       continue;
-     }
-     raw.push([id, val]);
+    }
+    raw.push([id, val]);
   }
 
   const gen = 'num' in gens ? gens : gens.get(g || 8);
@@ -113,7 +112,7 @@ const UNAMBIGUOUS: {[id: string]: keyof Flags} = {
   move: 'move', usez: 'move', usemax: 'move', crit: 'move', hits: 'move',
 };
 
-const CONDITIONS: {[id: string]: ConditionKind}  = {
+const CONDITIONS: {[id: string]: ConditionKind} = {
   pseudoweather: 'Pseudo Weather',
   sidecondition: 'Side Condition',
   sideconditions: 'Side Condition',
@@ -151,7 +150,7 @@ function parseFlags(gen: Generation, raw: Array<[ID, string]>, strict: boolean) 
       parseConditionFlag(gen, flags, val, strict, 'field', 'Pseudo Weather');
     } else if (id === 'attacker' || id === 'p1') {
       parseConditionFlag(gen, flags, val, strict, 'p1');
-    } else  if (id === 'defender' || id === 'p2') {
+    } else if (id === 'defender' || id === 'p2') {
       parseConditionFlag(gen, flags, val, strict, 'p2');
     } else if (id.startsWith('attacker') || id.startsWith('p1')) {
       id = id.slice(id.charAt(0) === 'p' ? 2 : 8) as ID;
@@ -207,11 +206,15 @@ function parseConditionFlag(
 
     const condition = Conditions.get(gen, id);
     if (!condition) {
-      if (strict) new Error(`Unrecognized or invalid condition '${id}' from '${s}'`);
+      if (strict) throw new Error(`Unrecognized or invalid condition '${id}' from '${s}'`);
       continue;
     }
 
-    const [name, kind] = condition;
+    const name = condition[0];
+    if (kind && kind !== condition[1]) {
+      throw new Error(`Mismatched kind for condition '${name}': '${kind}' vs. '${condition[1]}'`);
+    }
+    kind = condition[1];
     scope = scope ?? condition[2];
     if (!scope) throw new Error(`Ambiguous implicit condition '${id}`);
 
@@ -374,10 +377,7 @@ function tokenize(s: string): string[] {
 
 // Accepts any number of arguments, and returns the first one that is a string (even empty string)
 function firstString(...args: Array<any>): string | undefined {
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
-    if (typeof arg === "string") {
-      return arg;
-    }
+  for (const arg of args) {
+    if (typeof arg === 'string') return arg;
   }
 }

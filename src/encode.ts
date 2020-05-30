@@ -1,5 +1,5 @@
-import { State } from './state';
-import { is } from './utils';
+import {State} from './state';
+import {is} from './utils';
 
 const FORWARD = {'/': '$', '[': '(', ']': ')', '@': '*', ':': '=', ' ': '_'};
 const BACKWARD = {'\\$': '/', '\\(': '[', '\\)': ']', '\\*': '@', '=': ':', '_': ' '};
@@ -22,21 +22,20 @@ export function decodeURL(s: string) {
  * more human-friendly description (`'desc'`) or an a URL-safe one (`'url'`).
  */
 export function encode(state: State, type: 'parse' | 'desc' | 'url' = 'parse') {
-  const {gen, p1, p2, move, field} = state;
+  // const {gen, p1, p2, move, field} = state;
 
-  if (move.category === 'Status') {
-     // TODO use z/use max
-    return `${p1.pokemon.species.name} [${move.name}] vs ${p2.pokemon.species.name}`;
-  }
+  // if (move.category === 'Status') {
+  //   // TODO use z/use max
+  //   return `${p1.pokemon.species.name} [${move.name}] vs ${p2.pokemon.species.name}`;
+  // }
 
 
-  const atkStat = move.category === 'Special' ? 'spa' : is(move.name, 'Body Press') ? 'def' : 'atk';
-  const defStat = (move.defensiveCategory || move.category) === 'Special' ? 'spd' : 'def';
-  if (is(move.name, 'Foul Play')) {
+  // const atkStat = move.category === 'Special' ? 'spa' :
+  //   is(move.name, 'Body Press') ? 'def' : 'atk';
+  // const defStat = (move.defensiveCategory || move.category) === 'Special' ? 'spd' : 'def';
+  // if (is(move.name, 'Foul Play')) {}
 
-  }
-
-  let s = '';   // TODO
+  const s = ''; // TODO
 
   // TODO: handle makeing
   // prefer phrase, implicits

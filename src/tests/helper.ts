@@ -1,6 +1,6 @@
 /* eslint-env jest */
 
-import {GenerationNum, Generation, Generations} from '@pkmn/data';
+import {Generation, GenerationNum, Generations} from '@pkmn/data';
 import {Dex} from '@pkmn/dex';
 
 import {Scope, inGens} from '../gens';

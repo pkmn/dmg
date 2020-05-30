@@ -1,4 +1,4 @@
-import {Generation, GameType, Generations, TypeName, MoveName} from '@pkmn/data';
+import type {GameType, Generation, Generations, MoveName, TypeName} from '@pkmn/data';
 
 import {State} from '../state';
 import {Context} from '../context';

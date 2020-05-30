@@ -1,4 +1,4 @@
-import {
+import type {
   BoostsTable,
   GameType,
   GenderName,
@@ -17,15 +17,15 @@ import {
   SpeciesName,
   StatsTable,
   StatusName,
-  toID,
   TypeName,
   NatureName,
 } from '@pkmn/data';
-import { WeatherName, TerrainName } from './conditions';
-import { Handlers, Handler, HANDLER_FNS, HANDLERS } from './mechanics';
-import { Relevancy } from './result';
-import { DeepReadonly, extend } from './utils';
-import { State } from './state';
+
+import {WeatherName, TerrainName} from './conditions';
+import {Handlers, Handler, HANDLER_FNS, HANDLERS} from './mechanics';
+import {Relevancy} from './result';
+import {DeepReadonly, extend, toID} from './utils';
+import {State} from './state';
 
 export class Context {
   gameType: GameType;
@@ -46,9 +46,9 @@ export class Context {
   ) {
     this.gameType = state.gameType;
     this.gen = state.gen as Generation;
-    this.p1 = new Context.Side(this.gen, state.p1, relevant.p1, residual.p1, handlers),
+    this.p1 = new Context.Side(this.gen, state.p1, relevant.p1, residual.p1, handlers);
     this.p2 = new Context.Side(this.gen, state.p2, relevant.p2, residual.p2, handlers);
-    this.move = new Context.Move(state.move, relevant.move, residual.move, handlers),
+    this.move = new Context.Move(state.move, relevant.move, residual.move, handlers);
     this.field = new Context.Field(state.field, relevant.field, residual.field, handlers);
     this.relevant = relevant;
     this.residual = residual;
@@ -85,7 +85,7 @@ export namespace Context {
       this.residual = residual;
 
       if (state.weather) {
-        const id = toID(state.weather)
+        const id = toID(state.weather);
         this.weather = reify({name: state.weather}, id, handlers.Conditions, handler => {
           this[handler === 'onResidual' ? 'residual' : 'relevant'].weather = true;
         });
@@ -114,7 +114,7 @@ export namespace Context {
         weather: this.weather?.name,
         terrain: this.terrain?.name,
         pseudoWeather,
-      }
+      };
     }
   }
 
@@ -168,7 +168,7 @@ export namespace Context {
         sideConditions,
         active: this.active?.map(p => extend({}, p)),
         party: this.party?.map(p => extend({}, p)),
-      }
+      };
     }
   }
 
@@ -446,7 +446,7 @@ function reify<T>(
   obj: T & Partial<Handler>,
   id: ID,
   handlers: Handlers[keyof Handlers],
-  callback?: (k: keyof Handler) => void
+  cbfn?: (k: keyof Handler) => void
 ) {
   const handler = handlers[id];
   if (handler) {
@@ -456,7 +456,7 @@ function reify<T>(
       if (fn && HANDLER_FNS.has(k) && typeof fn === 'function') {
         obj[k] = (c: Context) => {
           const r = (fn as any)(c);
-          if (r && callback) callback(k);
+          if (r && cbfn) cbfn(k);
           return r;
         };
       }

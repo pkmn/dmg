@@ -106,10 +106,7 @@ over `Math` everywhere.
 
 ### `apply`
 
-TODO limitations
-
-- 100% chance of happening only
-
+TODO limitations, 100% chance of happening only
 
 ### Validation
 
@@ -122,3 +119,21 @@ Furthermore, `@pkmn/dmg` should **never validate the type** of its input - clien
 for not passing in malformed objects that don't match the type signatures (and they are strongly
 recommended to use TypeScript to help them enforce this), and `@pkmn/dmg` should not attempt to
 handle malformed input.
+
+### Performance
+
+`@pkmn/dmg` is sensitive with respect to performance for determining the damage rolls of a hit - the
+cost of creating `State`, `Context` and computing the rolls is relevant for interoperability with
+`@pkmn/client`, `@pkmn/gmd` and the rest of `@pkmn` projects. Anything outside of this core flow
+can decide to make a tradeoff between performance vs. expressibility/convenience/features etc.
+
+### `@pkmn/data`
+
+`@pkmn/dmg` depends on `@pkmn/data`, but this is a type-only (compile time) dependency, **not a
+runtime dependency**. `dmg` / `generate-test` and `tests` ultimately need to depend on the
+implementation to actually do useful work, but `@pkmn/dmg` should not depend on `@pkmn/data` for
+anything other than its interfaces (enforceable through `import type` instead of `import`). This
+is only particularly relevant in the case of `toID` - depend on the (duplicated) implementation in
+[`src/utils.ts`](src/utils.ts) instead of from `@pkmn/data`. Avoid any runtime dependencies means
+that the bundled code is self contained and much easier for an end user to include in their
+projects.

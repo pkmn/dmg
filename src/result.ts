@@ -1,9 +1,9 @@
-import {Generation, Specie, StatsTable, BoostsTable} from '@pkmn/data';
+import type {Generation, Specie, StatsTable, BoostsTable} from '@pkmn/data';
 
-import { State } from './state';
-import { Context } from './context';
-import { DeepReadonly, extend } from './utils';
-import { Handlers, HANDLERS } from './mechanics';
+import {State} from './state';
+import {Context} from './context';
+import {DeepReadonly, extend} from './utils';
+import {Handlers, HANDLERS} from './mechanics';
 
 export class Relevancy {
   gameType: boolean;
@@ -40,7 +40,7 @@ export namespace Relevancy {
     // level is always relevant (though sometimes elided from the output)
     // weighthg is relevant for weight based moves, but that's covered by move base power
 
-    item?: boolean
+    item?: boolean;
     ability?: boolean;
 
     status?: boolean;
@@ -61,7 +61,7 @@ export namespace Relevancy {
 
     // relevant for the specific moves that make use of them
     gender?: boolean;
-    switching?: boolean
+    switching?: boolean;
     moveLastTurnResult?: boolean;
     hurtThisTurn?: boolean;
   }
@@ -187,7 +187,7 @@ export class HitResult {
   }
 
   simplified(): State {
-    return  {
+    return {
       gameType: this.relevant.gameType ? this.state.gameType : 'singles',
       gen: this.state.gen as Generation,
       p1: this.simplifySide(this.state.p1, this.relevant.p1),
@@ -248,7 +248,7 @@ export class HitResult {
       switching: relevant.switching ? state.switching : undefined,
       moveLastTurnResult: relevant.moveLastTurnResult ? state.moveLastTurnResult : undefined,
       hurtThisTurn: relevant.hurtThisTurn ? state.hurtThisTurn : undefined,
-    }
+    };
     // TODO nature / evs / ivs / boosts
     for (const id in state.volatiles) {
       if (relevant.volatiles[id]) pokemon.volatiles[id] = extend({}, state.volatiles[id]);

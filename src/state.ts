@@ -1,4 +1,5 @@
-import {
+/* eslint-disable no-shadow */
+import type {
   BoostsTable,
   GameType,
   GenderName,
@@ -10,14 +11,14 @@ import {
   Specie,
   StatsTable,
   StatusName,
-  toID,
   TypeName,
   StatName,
   Type,
 } from '@pkmn/data';
+
 import {WeatherName, TerrainName, Conditions} from './conditions';
-import { floor } from './math';
-import { is, has, extend, DeepPartial } from './utils';
+import {floor} from './math';
+import {is, has, extend, DeepPartial, toID} from './utils';
 
 type OverriddenFields = 'item' | 'ability' | 'status' | 'volatiles' | 'ivs' | 'evs' | 'boosts';
 export interface PokemonOptions extends Partial<Omit<State.Pokemon, OverriddenFields>> {
@@ -26,16 +27,16 @@ export interface PokemonOptions extends Partial<Omit<State.Pokemon, OverriddenFi
   ability?: string;
   status?: string;
   volatiles?: string[] | State.Pokemon['volatiles'];
-  evs?: Partial<StatsTable & {spc: number}>
-  ivs?: Partial<StatsTable & {spc: number}>
-  dvs?: Partial<StatsTable & {spc: number}>
-  boosts?: Partial<BoostsTable & {spc: number}>
-};
+  evs?: Partial<StatsTable & {spc: number}>;
+  ivs?: Partial<StatsTable & {spc: number}>;
+  dvs?: Partial<StatsTable & {spc: number}>;
+  boosts?: Partial<BoostsTable & {spc: number}>;
+}
 
 export interface MoveOptions extends Partial<State.Move> {
   useZ?: boolean;
   useMax?: boolean;
-};
+}
 
 export class State {
   readonly gameType: GameType;
@@ -85,8 +86,8 @@ export class State {
 
     // Weight
     pokemon.weighthg =
-      options.weighthg ? options.weighthg :
-      options.weightkg ? options.weightkg / 10 : species.weighthg;
+      options.weighthg ? options.weighthg
+      : options.weightkg ? options.weightkg / 10 : species.weighthg;
     if (pokemon.weighthg < 1) throw new Error(`weighthg of ${pokemon.weighthg} must be at least 1`);
 
     // Item
@@ -111,7 +112,7 @@ export class State {
         throw new Error(`'${name} is a ${kind} not a Status in generation ${gen.num}`);
       }
       pokemon.status = name as StatusName;
-      if (pokemon.status === 'tox')  pokemon.statusData = {toxicTurns: 0};
+      if (pokemon.status === 'tox') pokemon.statusData = {toxicTurns: 0};
     }
 
     // Status
@@ -170,13 +171,13 @@ export class State {
       const val = options.dvs?.[stat];
       if (typeof val === 'number') {
         const dv = bounded('dvs', val);
-        if (typeof options.ivs?.[stat] === 'number' && gen.stats.toDV(options.ivs![stat]!) !== dv) {
-          throw new Error(`${stat} DV of '${dv}' does not match IV of '${options.ivs![stat]}'`);
+        if (typeof options.ivs?.[stat] === 'number' && gen.stats.toDV(options.ivs[stat]!) !== dv) {
+          throw new Error(`${stat} DV of '${dv}' does not match IV of '${options.ivs[stat]}'`);
         }
         pokemon.ivs![stat] = gen.stats.toDV(dv);
       }
     }
-    setSpc(gen, pokemon.ivs!, 'ivs', options.dvs)
+    setSpc(gen, pokemon.ivs!, 'ivs', options.dvs);
 
     if (move) {
       // TODO HIDDEN POWER
@@ -187,7 +188,7 @@ export class State {
     if (options.boosts) {
       for (const b in options.boosts) {
         if (b === 'spc') continue;
-        const boost = b as keyof BoostsTable
+        const boost = b as keyof BoostsTable;
         const val = options.boosts[boost];
         if (typeof val === 'number') pokemon.boosts[boost] = bounded('boosts', val);
       }
@@ -227,7 +228,7 @@ export class State {
     gen: Generation,
     name: string,
     options: MoveOptions = {},
-    pokemon:  string | {
+    pokemon: string | {
       species?: string | Specie;
       item?: string;
       ability?: string;
@@ -241,7 +242,7 @@ export class State {
     }
     const move: Partial<State.Move> = {};
 
-    if (typeof pokemon == 'string') {
+    if (typeof pokemon === 'string') {
       const species = gen.species.get(pokemon);
       if (!species) invalid(gen, 'species', pokemon);
       pokemon = {species};
@@ -263,7 +264,7 @@ export class State {
       if (options.hits && options.hits > 1) {
         throw new Error(`'${options.hits}' hits requested but Z-Moves cannot be multi-hit`);
       }
-     // TODO should it be on whether the move was isZ, not whether useZ?
+      // TODO should it be on whether the move was isZ, not whether useZ?
     } else {
       if (base.multihit) {
         if (typeof base.multihit === 'number') {
@@ -296,7 +297,7 @@ export class State {
     if (options.numConsecutive && pokemon.item && toID(pokemon.item) !== 'metronome') {
       throw new Error(`numConsecutive has no meaning with '${pokemon.item}'`);
     }
-    options.numConsecutive = options.numConsecutive
+    move.numConsecutive = options.numConsecutive;
 
     return move as State.Move;
   }
@@ -341,9 +342,9 @@ export class State {
       throw new Error(
         `${pokemon.species.name} is required to ${shiny ? '' : 'not '}be ` +
         `shiny in generation 2 given its DVs.`
-      )
+      );
     }
-    setGender(gen, pokemon, set.gender as GenderName, typeof set.ivs?.atk === 'number')
+    setGender(gen, pokemon, set.gender as GenderName, typeof set.ivs?.atk === 'number');
 
     correctHPDV(gen, pokemon, typeof set.ivs?.hp === 'number');
 
@@ -460,7 +461,7 @@ const BOUNDS: {[key: string]: [number, number]} = {
 
 function invalid(gen: Generation, k: string, v: any): never {
   throw new Error(`Unsupported or invalid ${k} '${v}' for generation ${gen.num}`);
-};
+}
 
 export function bounded(key: keyof typeof BOUNDS, val: number, die = true) {
   const ok = val >= BOUNDS[key][0] && val <= BOUNDS[key][1];
@@ -495,22 +496,22 @@ function bestMatch(
     if (!match(set.item, pokemon.item)) {
       score--;
     } else if (pokemon.item) {
-      score++
+      score++;
     }
     if (!match(set.ability, pokemon.ability)) {
       score--;
     } else if (pokemon.ability) {
-      score++
+      score++;
     }
     if (!match(set.nature, pokemon.nature)) {
       score--;
     } else if (pokemon.nature) {
-      score++
+      score++;
     }
     if (move && !set.moves?.some(m => match(m, move as string))) {
       score--;
     } else if (move) {
-      score++
+      score++;
     }
     scored.push([score, set]);
   }
@@ -562,7 +563,7 @@ function setValues(
 ) {
   pokemon[type] = pokemon[type] || {};
   for (const stat of gen.stats) {
-    pokemon[type]![stat] = pokemon[type]![stat] ?? (type == 'evs' ? (gen.num <= 2 ? 252 : 0) : 31);
+    pokemon[type]![stat] = pokemon[type]![stat] ?? (type === 'evs' ? (gen.num <= 2 ? 252 : 0) : 31);
     const val = vals?.[stat];
     if (typeof val === 'number') pokemon[type]![stat] = bounded(type, val);
   }
@@ -571,17 +572,17 @@ function setValues(
 
 function setSpc(
   gen: Generation,
-  existing: Partial<{spc: number, spa: number, spd: number}>,
+  existing: Partial<{spc: number; spa: number; spd: number}>,
   type: 'evs' | 'ivs' | 'boosts',
-  vals?: Partial<{spc: number, spa: number, spd: number}>
+  vals?: Partial<{spc: number; spa: number; spd: number}>
 ) {
-  let spc = vals?.spc;
+  const spc = vals?.spc;
   if (typeof spc === 'number') {
     if (gen.num >= 2) throw new Error('Spc does not exist after generation 1');
-    if (typeof vals!.spa === 'number' && vals!.spa != spc) {
+    if (typeof vals!.spa === 'number' && vals!.spa !== spc) {
       throw new Error(`Spc and SpA ${type} mismatch: ${spc} vs. ${vals!.spa}`);
     }
-    if (typeof vals!.spd === 'number' && vals!.spd != spc) {
+    if (typeof vals!.spd === 'number' && vals!.spd !== spc) {
       throw new Error(`Spc and SpD ${type} mismatch: ${spc} vs. ${vals!.spd}`);
     }
     existing.spa = existing.spd = bounded(type, spc);
@@ -628,7 +629,7 @@ function correctHPDV(
   if (gen.num <= 2 && expectedHPDV !== actualHPDV) {
     if (setHPDV) {
       throw new Error(
-        `${pokemon.species!.name} is required to have an HP DV of `+
+        `${pokemon.species!.name} is required to have an HP DV of ` +
         `${expectedHPDV} in generations 1 and 2 but it is ${actualHPDV}`
       );
     }
@@ -655,7 +656,7 @@ function getHiddenPowerIVs(gen: Generation, pokemon: Partial<State.Pokemon>, ...
   }
   if (gen.num >= 7 && pokemon.level === 100) return {};
   if (gen.num <= 2) {
-    const ivs: Partial<StatsTable>  = {};
+    const ivs: Partial<StatsTable> = {};
     for (const stat in hpTypes[0].HPdvs) {
       ivs[stat as StatName] = gen.stats.toIV(hpTypes[0].HPdvs[stat as StatName]!);
     }

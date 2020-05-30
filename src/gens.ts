@@ -1,7 +1,9 @@
-import { GenerationNum, Generations, Generation, Specie, GameType } from '@pkmn/data';
-import { PokemonOptions, MoveOptions, State } from './state';
-import { Result } from './result';
-import { calculate } from './mechanics';
+import type {GenerationNum, Generations, Generation, Specie, GameType} from '@pkmn/data';
+
+import {PokemonOptions, MoveOptions, State} from './state';
+import {Result} from './result';
+import {calculate} from './mechanics';
+
 import * as parser from './parse';
 
 const pokemon = (gen: Generation) => (
@@ -13,23 +15,24 @@ const pokemon = (gen: Generation) => (
 const move = (gen: Generation) => (
   name: string,
   options: MoveOptions = {},
-  pokemon:  string | {
+  // eslint-disable-next-line no-shadow
+  pokemon: string | {
     species?: string | Specie;
     item?: string;
     ability?: string;
   } = {}
 ) => State.createMove(gen, name, options, pokemon);
 
-type Calculate = {
+interface Calculate {
   (gen: Generation): (
     attacker: State.Side | State.Pokemon,
     defender: State.Side | State.Pokemon,
     move: State.Move,
     field?: State.Field,
     gameType?: GameType
-    ) => Result;
+  ) => Result;
   (gen: Generation): (args: string) => Result;
-};
+}
 
 const parse = (gen: Generation) => (s: string, strict?: boolean) => parser.parse(gen, s, strict);
 

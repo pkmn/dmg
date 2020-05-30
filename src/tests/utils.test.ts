@@ -1,4 +1,4 @@
-import {override, is, has, extend} from '../utils';
+import {extend, has, is, override} from '../utils';
 
 class Foo {
   x: number;

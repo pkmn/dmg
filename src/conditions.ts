@@ -1,4 +1,6 @@
-import {GenerationNum, toID, ID, StatusName, Generation} from '@pkmn/data';
+import type {GenerationNum, ID, StatusName, Generation} from '@pkmn/data';
+
+import {toID, is} from './utils';
 
 export type Player = 'p1' | 'p2';
 
@@ -14,7 +16,7 @@ export type ConditionKind =
 
 // This primarily exists to convert between Pokémon Showdown's names for these conditions
 // (though also supports shortcuts) and the names used internally by the calculator.
-const ALIASES: {[id: string]: string}  = {
+const ALIASES: {[id: string]: string} = {
   // Weather
   sandstorm: 'sand',
   sunnyday: 'sun',
@@ -76,35 +78,40 @@ export const Conditions = new class {
     let id = toID(name);
     id = ALIASES[id] as ID || id;
 
-    // NOTE: The ordering we check these categories is important to ensure we find
-    // Reflect/Light Screen/Mud Sport/Water Sport in the correct category for the generation
-
     let condition: [ConditionName, GenerationNum, Player?];
 
+    if ((is(id, 'mudsport', 'watersport') && gen.num <= 5) ||
+        (is(id, 'reflect', 'lightscreen') && gen.num === 1)) {
+      condition = Volatiles[id];
+      return [condition[0], 'Volatile Status', condition[2]!];
+    }
+
     // Field Conditions
-    if ((condition = Weathers[id]) && condition[1] >= gen.num) {
-      return [condition[0], 'Weather', 'field'];
-    } else if ((condition = Terrains[id]) && condition[1] >= gen.num) {
-      return [condition[0], 'Terrain', 'field'];
-    } else if ((condition = PseudoWeathers[id]) && condition[1] >= gen.num) {
-      return [condition[0], 'Pseudo Weather', 'field'];
+    if ((condition = Weathers[id])) {
+      return gen.num >= condition[1] ? [condition[0], 'Weather', 'field'] : undefined;
+    } else if ((condition = Terrains[id])) {
+      return gen.num >= condition[1] ? [condition[0], 'Terrain', 'field'] : undefined;
+    } else if ((condition = PseudoWeathers[id])) {
+      return gen.num >= condition[1] ? [condition[0], 'Pseudo Weather', 'field'] : undefined;
     }
 
     // Side Conditions
-    if ((condition = SideConditions[id]) && condition[1] >= gen.num) {
-      return [condition[0], 'Side Condition', condition[2]!];
+    if ((condition = SideConditions[id])) {
+      return gen.num >= condition[1] ? [condition[0], 'Side Condition', condition[2]!] : undefined;
     }
 
     // Pokemon Conditions
-    if ((condition = Volatiles[id]) && condition[1] >= gen.num) {
-      return [condition[0], 'Volatile Status', condition[2]!];
+    if ((condition = Volatiles[id])) {
+      return gen.num >= condition[1]
+        ? [condition[0], 'Volatile Status', condition[2]!]
+        : undefined;
     } else if (id in Statuses) {
       return [id as StatusName, 'Status'];
     }
 
     return undefined;
   }
-}
+};
 
 // Weather
 
@@ -141,28 +148,28 @@ export type PseudoWeatherName =
   'Mud Sport' | 'Water Sport' |
   'Trick Room' | 'Magic Room' | 'Wonder Room';
 
- export const PseudoWeathers: {[id: string]: [PseudoWeatherName, GenerationNum]} = {
-   gravity: ['Gravity', 4],
-   fairylock: ['Fairy Lock', 6],
-   iondeluge: ['Ion Deluge', 6],
-   trickroom: ['Trick Room', 4],
-   magicroom: ['Magic Room', 5],
-   wonderroom: ['Wonder Room', 5],
+export const PseudoWeathers: {[id: string]: [PseudoWeatherName, GenerationNum]} = {
+  gravity: ['Gravity', 4],
+  fairylock: ['Fairy Lock', 6],
+  iondeluge: ['Ion Deluge', 6],
+  trickroom: ['Trick Room', 4],
+  magicroom: ['Magic Room', 5],
+  wonderroom: ['Wonder Room', 5],
   // Before Gen 6 these were treated as volatiles
-   mudsport: ['Mud Sport', 6],
-   watersport: ['Water Sport', 6],
- };
+  mudsport: ['Mud Sport', 6],
+  watersport: ['Water Sport', 6],
+};
 
- // Side Condition
+// Side Condition
 
- export type SideConditionName =
+export type SideConditionName =
   'Tailwind' | 'Stealth Rock' | 'Spikes' | 'Toxic Spikes' |
   'Aurora Veil' | 'Light Screen' | 'Reflect' |
   'Safeguard' | 'Quick Guard' | 'Wide Guard' |
   'Steelsurge' | 'Volcalith' | 'Wildfire' |
   'Crafty Shield' | 'Lucky Chant' | 'Mist' | 'Sticky Web';
 
- export const SideConditions: {[id: string]: [SideConditionName, GenerationNum, Player?]} = {
+export const SideConditions: {[id: string]: [SideConditionName, GenerationNum, Player?]} = {
   tailwind: ['Tailwind', 4],
   stealthrock: ['Stealth Rock', 4, 'p2'],
   spikes: ['Spikes', 2, 'p2'],
@@ -171,7 +178,7 @@ export type PseudoWeatherName =
   volcalith: ['Volcalith', 8, 'p2'],
   wildfire: ['Wildfire', 8, 'p2'],
   sitckyweb: ['Sticky Web', 6],
-  // Before Gen 6 these were treated as a volatiles
+  // Before Gen 2 these were treated as a volatiles
   lightscreen: ['Light Screen', 2, 'p2'],
   reflect: ['Reflect', 2, 'p2'],
   // Not really relevant for damage
@@ -181,7 +188,7 @@ export type PseudoWeatherName =
   quickguard: ['Quick Guard', 5, 'p2'],
   craftyshield: ['Crafty Shield', 6],
   mist: ['Mist', 6],
- };
+};
 
 // Volatile Status
 

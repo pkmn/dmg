@@ -1,3 +1,18 @@
+import type {ID} from '@pkmn/data';
+
+/**
+ * Converts `text` into an `ID` (lowercase alphanumeric identifier).
+ *
+ * `toID` copy and pasted from `@pkmn/data` (and this Pokémon Showdown), this implementation must
+ * be dependended on instead of `@pkmn/data`'s `toID` to avoid creating a runtime dependency on
+ * `@pkmn/data`.
+ */
+export function toID(text: any): ID {
+  if (text?.id) text = text.id;
+  if (typeof text !== 'string' && typeof text !== 'number') return '';
+  return ('' + text).toLowerCase().replace(/[^a-z0-9]+/g, '') as ID;
+}
+
 /**
  * Override the attributes of `obj` with `overrides`. Primarily useful for fundamental data such
  * as Species or Move, eg: `override(gen.species.get('Pikachu'), {weighthg: 420})`.
@@ -7,6 +22,7 @@ export function override<T extends object>(obj: T, overrides: any): T {
   return extend(copy, obj, overrides);
 }
 
+/** Convenience function used to determine whether one of `xs` is equal to `x`. */
 export function is(x: string | undefined, xs: (string | undefined)[]): boolean;
 export function is(x: string | undefined, ...xs: (string | undefined)[]): boolean;
 export function is<T extends string>(x: T | undefined, ...xs: (T | undefined)[]) {
@@ -14,11 +30,12 @@ export function is<T extends string>(x: T | undefined, ...xs: (T | undefined)[])
   return !!(x && xs.includes(x));
 }
 
+/** Convenience function used to determine whether of `x` includes one of `xs`. */
 export function has(x: string[] | undefined, xs: (string | undefined)[]): boolean;
 export function has(x: string[] | undefined, ...xs: (string | undefined)[]): boolean;
 export function has<T extends string>(x: T[] | undefined, ...xs: (T | undefined)[]) {
   if (Array.isArray(xs[0])) xs = xs[0];
-  return !!(x && x.some(y => xs.includes(y)));
+  return !!(x?.some(y => xs.includes(y)));
 }
 
 // https://github.com/krzkaczor/ts-essentials v6.0.5
@@ -72,7 +89,8 @@ export type DeepPartial<T> =
 export type Buildable<T> = DeepPartial<DeepWritable<T>>;
 
 // jQuery JavaScript Library v2.0.3
-// MIT Lience Copyright 2005, 2013 jQuery Foundation, Inc. and other contributors
+// MIT License Copyright 2005, 2013 jQuery Foundation, Inc. and other contributors
+/* eslint-disable eqeqeq, @typescript-eslint/unbound-method */
 const class2Type: {[c: string]: string} = {
   '[object Boolean]': 'boolean',
   '[object Number]': 'number',
@@ -121,6 +139,7 @@ function isPlainObject(obj: any) {
   return true;
 }
 
+/** Merge the contents of two or more objects together into the first object. */
 export function extend(this: any, ...args: any[]) {
   let options, name, src, copy, copyIsArray, clone;
   let target = args[0] || {};
@@ -145,7 +164,6 @@ export function extend(this: any, ...args: any[]) {
 
   for (; i < length; i++) {
     if ((options = args[i]) != null) {
-      // tslint:disable-next-line: forin
       for (name in options) {
         src = target[name];
         copy = options[name];

@@ -1,10 +1,10 @@
-import {Generations, GenerationNum, Generation} from '@pkmn/data';
+import {Generation, GenerationNum, Generations} from '@pkmn/data';
 import {Dex} from '@pkmn/dex';
+
+import {ResultBreakdown} from './helper';
 
 import * as smogon from '@smogon/calc';
 import * as pkmn from '../index';
-
-import {ResultBreakdown} from './helper';
 
 const KEYS: Array<keyof ResultBreakdown> = ['range', 'recoil', 'recovery', 'desc', 'result'];
 

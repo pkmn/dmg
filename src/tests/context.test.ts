@@ -30,7 +30,7 @@ describe('Context', () => {
           ability: 'Natural Cure',
           status: 'tox',
           statusData: {toxicTurns: 2},
-          volatiles: {lightscreen: {}, leechseed: {}},
+          volatiles: {leechseed: {}},
         }),
         sideConditions: {stealthrock: {}, spikes: {level: 1}},
       },
@@ -69,7 +69,7 @@ describe('Context', () => {
 
   test('Field', () => {
     const {context, state, relevancy} = newContext();
-    const before = JSON.stringify(state);
+    const before = serialize(state);
 
     expect(context.field.weather?.basePowerCallback?.(context)).toBeUndefined();
     expect(relevancy.field.weather).toBeUndefined();
@@ -89,7 +89,7 @@ describe('Context', () => {
 
     context.field.weather = undefined;
     context.field.terrain = undefined;
-    expect(JSON.stringify(state)).toEqual(before);
+    expect(serialize(state)).toEqual(before);
   });
 
   // test('Side', () => {
@@ -104,3 +104,14 @@ describe('Context', () => {
   //   const {context, state, relevancy} = newContext();
   // });
 });
+
+function serialize(state: DeepReadonly<State>) {
+  return JSON.stringify({
+    gameType: state.gameType,
+    gen: state.gen.num,
+    p1: state.p1,
+    p2: state.p2,
+    move: state.move,
+    field: state.field,
+  });
+}
