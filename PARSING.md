@@ -87,7 +87,7 @@ implicitly if disambiguous.
 | `attacker<STAT>IV(s)` / `defender<STAT>IV(s)` | the IV of the attacker / defender stat (eg. `attackerSpAIV`) |
 | `attacker<STAT>DV(s)` / `defender<STAT>DV(s)` | the IV of the attacker / defender stat (eg. `attackerSpcDV`) |
 | `attacker<STAT>EV(s)` / `defender<STAT>EV(s)` | the EV of the attacker / defender stat (eg. `defenderHPEV`) |
-| `attacker<BOOST>Boosts` / `defender<BOOST>Boosts` | the number boosts of the attacker / defender has in the specific stat |
+| `attacker<BOOST>Boost(s)` / `defender<BOOST>Boost(s)` | the number boosts of the attacker / defender has in the specific stat |
 | `attackerHappiness` / `defenderHappiness` | the current happiness of the attacker / defender (defaults correctly based on the move) |
 | `attackerHP` / `defenderHP` | the current HP of the attacker / defender |
 | `attackerToxicCounter` / `defenderToxicCounter` | the current toxic counter of the attacker / defender |

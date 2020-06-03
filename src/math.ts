@@ -21,9 +21,8 @@ export const clamp = (a: number, n: number, b: number) => min(max(floor(n), a), 
  */
 export const trunc = (n: number, bits = 0) => bits ? (n >>> 0) % (2 ** bits) : n >>> 0;
 
-// BUG overflow after + 0x800?
 /** Chain the original mod `m` to the next mod `n` per the cartridge mechanics. */
-export const chainMod = (m: number, n: number) => round(trunc(m * n) + 0x800) >> 12;
+export const chainMod = (m: number, n: number) => round(m * n + 0x800) >> 12;
 
 /** Apply the mod `m` to the number `n` per the cartridge mechanics. */
 export const applyMod = (n: number, mod: number) => pokeRound(trunc(n * mod) / 0x1000);

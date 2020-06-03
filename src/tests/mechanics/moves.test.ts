@@ -1,5 +1,4 @@
-/* eslint-disable max-len */
-import {  } from '../helper';
+import {tests} from '../helper';
 
 describe('Moves', () => {
   test('true', () => {

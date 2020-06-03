@@ -1,3 +1,18 @@
 {
-  "extends": "@pkmn"
+  "extends": "@pkmn",
+  "overrides": [
+    {
+      "files": ["src/mechanics/*.ts", "!src/test/mechanics/index.ts"],
+      "rules": {
+        "consistent-return": "off",
+        "max-len": "off" // FIXME
+      }
+    },
+    {
+      "files": ["src/test/mechanics/*.ts"],
+      "rules": {
+        "max-len": "off"
+      }
+    }
+  ]
 }

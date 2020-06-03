@@ -16,15 +16,18 @@ import type {
   Type,
 } from '@pkmn/data';
 
-import {WeatherName, TerrainName, Conditions} from './conditions';
+import {WeatherName, TerrainName, Conditions, ConditionKind} from './conditions';
 import {floor} from './math';
 import {is, has, extend, DeepPartial, toID} from './utils';
 
-type OverriddenFields = 'item' | 'ability' | 'status' | 'volatiles' | 'ivs' | 'evs' | 'boosts';
+type OverriddenFields =
+  'name' | 'item' | 'ability' | 'nature' | 'status' | 'volatiles' | 'ivs' | 'evs' | 'boosts';
 export interface PokemonOptions extends Partial<Omit<State.Pokemon, OverriddenFields>> {
+  name?: string;
   weightkg?: number;
   item?: string;
   ability?: string;
+  nature?: string;
   status?: string;
   volatiles?: string[] | State.Pokemon['volatiles'];
   evs?: Partial<StatsTable & {spc: number}>;
@@ -33,9 +36,112 @@ export interface PokemonOptions extends Partial<Omit<State.Pokemon, OverriddenFi
   boosts?: Partial<BoostsTable & {spc: number}>;
 }
 
-export interface MoveOptions extends Partial<State.Move> {
-  useZ?: boolean;
+export interface MoveOptions {
+  name?: string;
+  crit?: boolean;
+  hits?: number;
+  magnitude?: number;
+  numConsecutive?: number;
+  spreadHit?: boolean;
   useMax?: boolean;
+  useZ?: boolean;
+}
+
+export interface FieldOptions {
+  weather?: string;
+  terrain?: string;
+  pseudoWeather?: string[] | State.Field['pseudoWeather'];
+}
+
+export interface SideOptions {
+  sideConditions?: string[] | State.Side['sideConditions'];
+}
+
+export namespace State {
+  export interface Field {
+    weather?: WeatherName;
+    terrain?: TerrainName;
+    pseudoWeather: {[id: string]: unknown};
+  }
+
+  export interface Side {
+    pokemon: Pokemon;
+    sideConditions: {[id: string]: {level?: number}};
+    // Rarely useful, but required for ally-affecting abilities like Plus/Minus or Fairy Aura etc.
+    // Must be a subset of State.Pokemon so that a State.Pokemon object could be used in this array
+    active?: Array<{
+      ability?: ID;
+      // Used to differentiate the attacker/defender from their allies if they are also
+      // included in the active array
+      position?: number;
+      // Used to exclude allies which are fainted (alternatively they can just be left
+      // out of the active array)
+      fainted?: boolean;
+    }>;
+    // Similarly niche, Beat Up etc requires information about the entire team. Must be a subset
+    // of State.Pokemon so that a State.Pokemon object could be used in this array
+    party?: Array<{
+      // Fields required for Beat Up mechanics
+      species: {baseStat: {atk: number}};
+      // Fields used to exclude certain team members per the mechanics
+      status?: StatusName;
+      fainted?: boolean;
+      // Fields used to exclude the attacker/defender if they are included in the array
+      position?: number;
+    }>;
+  }
+
+  export interface Pokemon {
+    species: Specie;
+    level: number;
+    // Hectograms is stored instead of the more user-friendly and intuitive kilograms because the
+    // game considers weights down to hectogram precision when modified
+    weighthg: number;
+
+    item?: ID;
+    ability?: ID;
+    gender?: GenderName;
+    // Only relevant for submaximal happiness based move calculations - if excluded the move will be
+    // treated as max power (eg. 0 happiness for Frustration, 255 for Return etc)
+    happiness?: number;
+
+    status?: StatusName;
+    statusData?: {toxicTurns?: number};
+    // Level is used to track layers/stockpiles/etc
+    volatiles: {[id: string]: {level?: number}};
+
+    types: [TypeName] | [TypeName, TypeName];
+    // Type added by Trick-or-Treat/Forest's Curse etc
+    addedType?: TypeName;
+
+    // Base max HP is stats.hp, but max HP may change due to Dynamaxing or Power Contruct etc
+    maxhp: number;
+    hp: number;
+
+    nature?: NatureName;
+    evs?: Partial<StatsTable>;
+    ivs?: Partial<StatsTable>;
+
+    boosts: Partial<BoostsTable>;
+
+    // Use to disambiguate this Pokemon from its allies if included in the Side's active or party
+    position?: number;
+
+    // Required for certain moves which effect switches, the most obvious being Pursuit
+    switching?: 'in' | 'out';
+    // Required for Stomping Tantrum
+    moveLastTurnResult?: false | unknown;
+    // Required for Assurance
+    hurtThisTurn?: boolean;
+  }
+
+  export interface Move extends DMove {
+    crit?: boolean;
+    hits?: number;
+    magnitude?: number;
+    spreadHit?: boolean;
+    numConsecutive?: number;
+  }
 }
 
 export class State {
@@ -60,6 +166,33 @@ export class State {
     this.p2 = 'pokemon' in defender ? defender : {pokemon: defender, sideConditions: {}};
     this.move = move;
     this.field = field;
+  }
+
+  static createField(gen: Generation, options: FieldOptions = {}) {
+    const field: Partial<State.Field> = {};
+
+    if (options.weather) {
+      const c = Conditions.get(gen, options.weather);
+      if (!c) invalid(gen, 'weather', options.weather);
+      field.weather = c[1] as WeatherName;
+    }
+
+    if (options.terrain) {
+      const c = Conditions.get(gen, options.terrain);
+      if (!c) invalid(gen, 'terrain', options.terrain);
+      field.terrain = c[1] as TerrainName;
+    }
+
+    field.pseudoWeather = setConditions(gen, 'Pseudo Weather', options.pseudoWeather);
+
+    return field as State.Field;
+  }
+
+  static createSide(gen: Generation, pokemon: State.Pokemon, options: SideOptions = {}) {
+    return {
+      sideConditions: setConditions(gen, 'Side Condition', options.sideConditions),
+      pokemon,
+    }as State.Side;
   }
 
   static createPokemon(
@@ -96,7 +229,7 @@ export class State {
 
     // Ability
     pokemon.ability = undefined;
-    setAbility(gen, pokemon, options.ability); // TODO: default to ability[0] in gen.num > 3
+    setAbility(gen, pokemon, options.ability);
 
     // Happiness
     pokemon.happiness = bounded('happiness', options.happiness || 0) || undefined;
@@ -128,31 +261,7 @@ export class State {
     }
 
     // Volatiles
-    pokemon.volatiles = {};
-    if (options.volatiles) {
-      if (Array.isArray(options.volatiles)) {
-        for (const volatile of options.volatiles) {
-          const condition = Conditions.get(gen, volatile);
-          if (!condition) invalid(gen, 'volatile status', volatile);
-          const [name, kind] = condition;
-          if (kind !== 'Volatile Status') {
-            throw new Error(`'${name} is a ${kind} not a Volatile Status in generation ${gen.num}`);
-          }
-          pokemon.volatiles[toID(name)] = {};
-        }
-      } else {
-        for (const volatile in options.volatiles) {
-          const condition = Conditions.get(gen, volatile);
-          if (!condition) invalid(gen, 'volatile status', volatile);
-          const [name, kind] = condition;
-          if (kind !== 'Volatile Status') {
-            throw new Error(`'${name} is a ${kind} not a Volatile Status in generation ${gen.num}`);
-          }
-          // TODO: verify layers
-          pokemon.volatiles[toID(name)] = options.volatiles[volatile];
-        }
-      }
-    }
+    pokemon.volatiles = setConditions(gen, 'Volatile Status', options.volatiles);
 
     // Types
     pokemon.types = options.types || pokemon.species.types;
@@ -357,93 +466,6 @@ export class State {
     pokemon.maxhp = maxhp;
 
     return pokemon;
-  }
-}
-
-export namespace State {
-  export interface Field {
-    weather?: WeatherName;
-    terrain?: TerrainName;
-    pseudoWeather: {[id: string]: unknown};
-  }
-
-  export interface Side {
-    pokemon: Pokemon;
-    sideConditions: {[id: string]: {level?: number}};
-    // Rarely useful, but required for ally-affecting abilities like Plus/Minus or Fairy Aura etc.
-    // Must be a subset of State.Pokemon so that a State.Pokemon object could be used in this array
-    active?: Array<{
-      ability?: ID;
-      // Used to differentiate the attacker/defender from their allies if they are also
-      // included in the active array
-      position?: number;
-      // Used to exclude allies which are fainted (alternatively they can just be left
-      // out of the active array)
-      fainted?: boolean;
-    }>;
-    // Similarly niche, Beat Up etc requires information about the entire team. Must be a subset
-    // of State.Pokemon so that a State.Pokemon object could be used in this array
-    party?: Array<{
-      // Fields required for Beat Up mechanics
-      species: {baseStat: {atk: number}};
-      // Fields used to exclude certain team members per the mechanics
-      status?: StatusName;
-      fainted?: boolean;
-      // Fields used to exclude the attacker/defender if they are included in the array
-      position?: number;
-    }>;
-  }
-
-  export interface Pokemon {
-    species: Specie;
-    level: number;
-    // Hectograms is stored instead of the more user-friendly and intuitive kilograms because the
-    // game considers weights down to hectogram precision when modified
-    weighthg: number;
-
-    item?: ID;
-    ability?: ID;
-    gender?: GenderName;
-    // Only relevant for submaximal happiness based move calculations - if excluded the move will be
-    // treated as max power (eg. 0 happiness for Frustration, 255 for Return etc)
-    happiness?: number;
-
-    status?: StatusName;
-    statusData?: {toxicTurns?: number};
-    // Level is used to track layers/stockpiles/etc
-    volatiles: {[id: string]: {level?: number}};
-
-    types: [TypeName] | [TypeName, TypeName];
-    // Type added by Trick-or-Treat/Forest's Curse etc
-    addedType?: TypeName;
-
-    // Base max HP is stats.hp, but max HP may change due to Dynamaxing or Power Contruct etc
-    maxhp: number;
-    hp: number;
-
-    nature?: NatureName;
-    evs?: Partial<StatsTable>;
-    ivs?: Partial<StatsTable>;
-
-    boosts: Partial<BoostsTable>;
-
-    // Use to disambiguate this Pokemon from its allies if included in the Side's active or party
-    position?: number;
-
-    // Required for certain moves which effect switches, the most obvious being Pursuit
-    switching?: 'in' | 'out';
-    // Required for Stomping Tantrum
-    moveLastTurnResult?: false | unknown;
-    // Required for Assurance
-    hurtThisTurn?: boolean;
-  }
-
-  export interface Move extends DMove {
-    crit?: boolean;
-    hits?: number;
-    magnitude?: number;
-    spreadHit?: boolean;
-    numConsecutive?: number;
   }
 }
 
@@ -663,4 +685,36 @@ function getHiddenPowerIVs(gen: Generation, pokemon: Partial<State.Pokemon>, ...
     return ivs;
   }
   return hpTypes[0].HPivs;
+}
+
+function setConditions(
+  gen: Generation,
+  kind: ConditionKind,
+  data: string[] | {[id: string]: unknown } | undefined
+) {
+  const obj: {[id: string]: {level?: number}} = {};
+  if (data) {
+    if (Array.isArray(data)) {
+      for (const d of data) {
+        const condition = Conditions.get(gen, d);
+        if (!condition) invalid(gen, kind, d);
+        const [name, k] = condition;
+        if (k !== kind) {
+          throw new Error(`'${name} is a ${k} not a ${kind} in generation ${gen.num}`);
+        }
+        obj[toID(name)] = {};
+      }
+    } else {
+      for (const d in data) {
+        const condition = Conditions.get(gen, d);
+        if (!condition) invalid(gen, kind, d);
+        const [name, k] = condition;
+        if (k !== kind) {
+          throw new Error(`'${name} is a ${k} not a ${kind} in generation ${gen.num}`);
+        }
+        obj[toID(name)] = data[d] as {level?: number}; // TODO: verify layers?
+      }
+    }
+  }
+  return obj;
 }
