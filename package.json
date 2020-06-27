@@ -16,6 +16,9 @@
   "dependencies": {
     "@pkmn/data": "file:../ps/data"
   },
+  "optionalDependencies": {
+    "@smogon/sets": "^1.0.0"
+  },
   "devDependencies": {
     "@pkmn/dex": "file:../ps/dex",
     "@pkmn/eslint-config": "^0.4.2",

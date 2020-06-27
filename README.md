@@ -15,7 +15,7 @@ architecture and correctness, `@pkmn/dmg` features.
 - sophisticated [**text parsing**](PARSING.md) support and the **ability to canonicalize and encode
   calculations**
 - generalized pre-computation [**state manipulation**](#appliers) through **'application' of effects**
-- **comprehensive multi-hit** support and **KO chance** calculation, enabling ['**chained**'](#chaining) calculations
+- **comprehensive multi-hit** support and [**KO chance**](#ko-chance) calculation, enabling ['**chained**'](#chaining) calculations
 - improved [**programmatic support**](#library) for **recoil and recovery** results
 - **non-intrusive support for [mods](#mods)** overriding data or effects
 - extensive **tests** build on state of the art [**multi-generational testing
@@ -110,7 +110,7 @@ const result = dmg.inGen(gens.get(4) , ({calculate, Pokemon, Move}) =>
 The `Result` returned by `calculate` contains information about damage rolls, recoil or
 drain/recovery information, end of turn residual data, and detailed KO chance breakdowns, all
 available in machine-friendly formats for programmatic usage (compared to `@smogon/calc`, where less
-indepth human-friendly text is provided). The fmailiar human-friendly output can be obtained as
+indepth human-friendly text is provided). The familiar human-friendly output can be obtained as
 well by encoding the `Result` into the desired format.
 
 ### CLI
@@ -128,16 +128,15 @@ $ dmg gen=3 mence @ CB [EQ] vs. cune @ lefties
 252+ Atk Choice Band Salamence Earthquake vs. 252 HP / 252+ Def Suicune: 121-143 (29.9 - 35.3%) -- guaranteed 4HKO after Leftovers recovery
 ```
 
-Like the https://calc.pokemonshowdown.com, the CLI relies on predefined sets and heuristics to
-minimize the amount of information that needs to be specified in order to perform a calculation. The
-[parsing documentation](PARSING.md) covers the syntax in more details. The optional
-[`@pokemon-showdown/sets`](https://www.npmjs.com/package/@pokemon-showdown/sets) dependency must be
-installed to run `dmg`.
+Like [calc.pokemonshowdown.com](https://calc.pokemonshowdown.com), the CLI relies on predefined sets
+and heuristics to minimize the amount of information that needs to be specified in order to perform
+a calculation. The [parsing documentation](PARSING.md) covers the syntax in more details. The
+optional [`@smogon/sets`](https://www.npmjs.com/package/@smogon/sets) dependency must be installed
+to run `dmg`.
 
 While not required, the first positional argument to `dmg` can be the format ID (eg. `gen7ou` or
-`gen8anythinggoes`) which will scope the sets from
-[`@pokemon-showdown/sets`](https://www.npmjs.com/package/@pokemon-showdown/sets) to be drawn from
-that particular format (which is especially useful for VGC or Little Cup calculations).
+`gen8anythinggoes`) which will scope the sets from `@smogon/sets` to be drawn from that particular
+format (which is especially useful for VGC or Little Cup calculations).
 
 ### Browser
 
@@ -160,18 +159,49 @@ loaded your data layer **before** loading the calc:
 
 ### Appliers
 
-`@pkmn/dmg`'s handling of state and the concept of 'Appliers' and their `apply` functions are
-perhaps the largest innovation `@pkmn/dmg` provides over previous damage calculators.
+`@pkmn/dmg`'s handling of state and the concept of 'appliers' and their `apply` functions are
+perhaps the largest innovation `@pkmn/dmg` provides over previous damage calculators. `@pkmn/dmg`'s
+appliers are a comphrensive generalization for the ad hoc convenience functionality provided by
+existing calculators which contain things like toggles to turn 'on' an ability or buttons to boost
+stats as if a move like 'Geomancy' or 'Extreme Evoboost' were applied.
 
-
-TODO
+Abilities/conditions/items/moves which have an effect can have their effect `apply`-ed to modify the
+`State` which is then used to perform a damage calculation. This is useful for a UI, as a set with
+a move like 'Swords Dance' can be turned into a convenience button to provide a +2 Attack boost when
+clicked, or Knock Off's effect can be `apply`-ed to remove a Pokémon's item for future calculations
+etc. **There are limitations to `apply`** - `@pkmn/dmg` does not intend to embed a full simulator /
+battle engine inside to be able to perfectly update its state. **`apply` is intended for convenience
+purposes** - `@pkmn/dmg` aims to be accurate and comprehensive with respect to the `State` it is
+provided with, but does not guarantee `apply` will always result in the exact `State` that happened
+in battle.
 
 ### Chaining
 
-TODO
-- multihit
-- ohko
-- recoil and recovery
+`@pkmn/dmg` handles hits differently than previous calculators - each hit is run through the entire
+damage formula (though certain optimizations may be detected) and in between hits, **the context of
+the calculation updates based on effects which may be `apply`-ed after each hit**. This design
+naturally handles Parental Bond or multihit moves (including interactions like Stamina raising
+Defense in between hits or the second hit of Parental Bond benefitting from Power Up Punch's Attack
+boost) but also **allows for abitrary moves to be chained together to compute the the result of a
+serious of attacks**.
+
+Chaining handles the common case of wanting to see what the results of a repeated Overheat or Draco
+Meteor might be, but also covers things like Scizor U-turn into Gengar Focus Blast \- any results
+can be linked together and the expected KO chance of the joint `Result` handles in exactly the same
+way it handles 2 hits from a Breloom's Bullet Seed. At the extreme, this design scales to handle
+scenarios like Gluttony Sitrus Berry kicking in after a few hits or recoil Defeatist activating
+after recoil drops the attacker into the requisite HP range. Chained moves only deal with
+**guaranteed** scenarios - ie. effects are only `apply`-ed between moves if they are guaranteed to
+occur, either because they have a 100% chance of activating or the min ranges involve guarantee that
+a certain event would occur.
+
+### KO Chance
+
+== TODO ==
+- OHKO chance exact not approx
+- pre and post EOT separated out
+- rich breakdowns of all results - recoils, multi stages, etc
+
 
 ### Mods
 

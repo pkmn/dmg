@@ -48,6 +48,8 @@ const KNOWN = {
   move: ['name', 'hits', 'usez', 'usemax', 'crit'],
 };
 
+// TODO: treat charge/fairyaura etc as side conditions
+
 const PHRASE = new RegExp([
   // Attacker Boosts
   /^(?:((?:\+|-)[1-6])?\s+)?/, // 1

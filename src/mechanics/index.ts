@@ -1,4 +1,4 @@
-import type {GameType, Generation, Generations, MoveName, TypeName} from '@pkmn/data';
+import type {GameType, Generation, Generations, ID, MoveName, TypeName} from '@pkmn/data';
 
 import {State} from '../state';
 import {Context} from '../context';
@@ -12,7 +12,7 @@ import {Items} from './items';
 import {Moves} from './moves';
 
 export interface Applier {
-  apply(state: State): void;
+  apply(state: State, guaranteed?: boolean): void;
 }
 
 export interface Handler {
@@ -32,8 +32,55 @@ export interface Handler {
   onResidual(context: Context): number | undefined;
 }
 
+export type HandlerKind = 'Abilities' | 'Items' | 'Moves' | 'Conditions';
 export type Handlers = typeof HANDLERS;
-export const HANDLERS = {Abilities, Conditions, Items, Moves};
+export const HANDLERS = {
+  Abilities,
+  Conditions,
+  Items,
+  Moves,
+};
+
+export class Appliers {
+  private handlers: Handlers;
+
+  constructor(handlers: Handlers) {
+    this.handlers = handlers;
+  }
+
+  apply(kind: HandlerKind, id: ID, state: State, guaranteed?: boolean) {
+    switch (kind) {
+    case 'Abilities': return this.handlers.Abilities[id]?.apply?.(state, guaranteed);
+    case 'Items': return this.handlers.Items[id]?.apply?.(state, guaranteed);
+    case 'Conditions': return this.handlers.Conditions[id]?.apply?.(state, guaranteed);
+    case 'Moves': {
+      // If a Move handler is defined, use it, otherwise try to see if an 'apply' function can
+      // can be inferred based purely on information from the data files
+      const handler = this.handlers.Moves[id];
+      if (handler?.apply) return handler.apply(state, guaranteed);
+
+      const move = state.gen.moves.get(id);
+      if (!move) return;
+
+      const secondaries = move.secondaries
+        ? move.secondaries
+        : move.secondary ? [move.secondary] : undefined;
+      if (!secondaries) return;
+
+      for (const secondary of secondaries) {
+        if (guaranteed && secondary.chance && secondary.chance < 100) continue;
+        // TODO apply secondary! need to take into account Simple etc for boosts, other affects
+        // for slot conditions etc
+      }
+
+      return;
+    }
+    default: throw new Error(`Invalid handler kind: '${kind}'`);
+    }
+  }
+}
+
+export const APPLIERS = new Appliers(HANDLERS);
 
 export const HANDLER_FNS: Set<keyof Handler> = new Set([
   'basePowerCallback', 'damageCallback', 'onModifyBasePower', 'onModifyAtk',

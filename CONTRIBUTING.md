@@ -58,6 +58,20 @@ Not satisfied with just one `Pokemon` class, `@pkmn/dmg` has *several* concepts 
   are purely syntactic sugar. There is no `Field` helper method because `Field` is trivial to
   create, almost always optional, and does not require a `Generation` parameter.
 
+### Handlers
+
+`@pkmn/dmg`'s mechanics handlers looks similar to Pokémon Showdown's event handlers (and are even
+named similarly), but contain several differences:
+
+- handlers only implement a small number of methods instead of the hundreds of the full fledged
+  simulator
+- a handler's parameters and return values differ from in Pokémon Showdown
+- a single handler function is responsible for **all generations** of behavior - ie. `@pkmn/dmg`
+  uses `if (gen.num === N)` statements ito keep all the functionality localized instead of split
+  across multiple files
+- common code should be shared between game objects as much as possible - abstract out common
+  functionality into helper functions and share the logic between objects
+
 ### `p1` and `p2`
 
 `@pkmn/dmg`'s convention for side naming is to use `'p1'` and `'p2'`. These are the `SideID`s from

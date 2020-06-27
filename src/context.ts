@@ -22,7 +22,7 @@ import type {
 } from '@pkmn/data';
 
 import {WeatherName, TerrainName} from './conditions';
-import {Handlers, Handler, HANDLER_FNS, HANDLERS} from './mechanics';
+import {Handlers, Handler, HANDLER_FNS, HANDLERS, HandlerKind} from './mechanics';
 import {Relevancy} from './result';
 import {DeepReadonly, extend, toID} from './utils';
 import {State} from './state';
@@ -445,7 +445,7 @@ export namespace Context {
 function reify<T>(
   obj: T & Partial<Handler>,
   id: ID,
-  handlers: Handlers[keyof Handlers],
+  handlers: Handlers[HandlerKind],
   cbfn?: (k: keyof Handler) => void
 ) {
   const handler = handlers[id];

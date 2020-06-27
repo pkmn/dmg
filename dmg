@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 
 try {
-  require.resolve('@pokemon-showdown/sets');
+  require.resolve('@smogon/sets');
 } catch (err) {
   if (err.code !== 'MODULE_NOT_FOUND') throw err;
-  console.error('@pokemon-showdown/sets must be installed to use the CLI');
+  console.error('@smogon/sets must be installed to use the CLI');
   process.exit(2);
 }
 
 const {Dex} = require('@pkmn/dex');
 const {Generations} = require('@pkmn/data');
-const defaultSets = require('@pokemon-showdown/sets');
+const defaultSets = require('@smogon/sets');
 const dmg = require('./build');
 
 const gens = new Generations(Dex);
@@ -59,7 +59,7 @@ try {
     const state = dmg.parse(gen || gens, argv.join(' '));
     gen = gen || state.gen;
 
-    const sets = await defaultSets.forGen(gen.num);
+    const sets = await defaultSets.forGen(gen);
     dmg.State.mergeSet(
       state.p1.pokemon, state.move.id, ...findSets(gen, sets,state.p1.pokemon.species, format));
     dmg.State.mergeSet(

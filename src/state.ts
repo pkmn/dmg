@@ -55,6 +55,8 @@ export interface FieldOptions {
 
 export interface SideOptions {
   sideConditions?: string[] | State.Side['sideConditions'];
+  abilities?: string[];
+  atks?: number[];
 }
 
 export namespace State {
@@ -192,14 +194,16 @@ export class State {
     return {
       sideConditions: setConditions(gen, 'Side Condition', options.sideConditions),
       pokemon,
-    }as State.Side;
+      active: options.abilities?.map((a, i) => ({ability: toID(a), position: i})),
+      party: options.atks?.map((atk, i) => ({species: {baseStats: {atk}}, position: i})),
+    } as State.Side;
   }
 
   static createPokemon(
     gen: Generation,
     name: string,
     options: PokemonOptions = {},
-    move: string | {name?: string} = {},
+    move: string | {name: string} = '',
   ) {
     const pokemon: Partial<State.Pokemon> = {};
 
@@ -220,7 +224,7 @@ export class State {
     // Weight
     pokemon.weighthg =
       options.weighthg ? options.weighthg
-      : options.weightkg ? options.weightkg / 10 : species.weighthg;
+      : options.weightkg ? options.weightkg * 10 : species.weighthg;
     if (pokemon.weighthg < 1) throw new Error(`weighthg of ${pokemon.weighthg} must be at least 1`);
 
     // Item
@@ -229,7 +233,7 @@ export class State {
 
     // Ability
     pokemon.ability = undefined;
-    setAbility(gen, pokemon, options.ability);
+    setAbility(gen, pokemon as {species: Specie; ability?: ID}, options.ability);
 
     // Happiness
     pokemon.happiness = bounded('happiness', options.happiness || 0) || undefined;
@@ -248,7 +252,7 @@ export class State {
       if (pokemon.status === 'tox') pokemon.statusData = {toxicTurns: 0};
     }
 
-    // Status
+    // Status Data
     if (options.statusData) {
       if (options.statusData.toxicTurns) {
         const turns = options.statusData.toxicTurns;
@@ -289,7 +293,8 @@ export class State {
     setSpc(gen, pokemon.ivs!, 'ivs', options.dvs);
 
     if (move) {
-      // TODO HIDDEN POWER
+      move = typeof move === 'string' ? move : move.name;
+      setHiddenPowerIVs(gen, pokemon as {level: number; ivs: StatsTable}, [move]);
     }
 
     // Boosts
@@ -306,11 +311,16 @@ export class State {
 
     // Gender (depends on DVs)
     const setAtkDV = typeof (options.dvs?.atk ?? options.ivs?.atk) === 'number';
-    setGender(gen, pokemon, options.gender, setAtkDV);
+    setGender(
+      gen,
+      pokemon as {species: Specie; ivs: StatsTable; gender?: GenderName},
+      options.gender,
+      setAtkDV
+    );
 
     // HP (depends on stats)
     const setHPDV = typeof (options.dvs?.hp ?? options.ivs?.hp) === 'number';
-    correctHPDV(gen, pokemon, setHPDV);
+    correctHPDV(gen, pokemon as {species: Specie; ivs: StatsTable}, setHPDV);
     pokemon.maxhp =
       gen.stats.calc('hp', species.baseStats.hp, pokemon.ivs!.hp, pokemon.evs!.hp, pokemon.level);
     if (options.maxhp) {
@@ -349,7 +359,7 @@ export class State {
     if (options.name && options.name !== base.name) {
       throw new Error(`Move mismatch: '${options.name}' does not match '${base.name}'`);
     }
-    const move: Partial<State.Move> = {};
+    const move: Partial<State.Move> = {hits: 1};
 
     if (typeof pokemon === 'string') {
       const species = gen.species.get(pokemon);
@@ -361,10 +371,11 @@ export class State {
       pokemon.species = species;
     }
 
-    if (options.useMax && options.useZ) {
+    const useMax = options.useMax || pokemon.volatiles?.dynamax;
+    if (useMax && options.useZ) {
       throw new Error(`Cannot use ${base.name} as both a Z-Move and a Max Move simulataneously`);
     }
-    if (options.useMax || pokemon.volatiles?.dynamax) {
+    if (useMax) {
       if (options.hits && options.hits > 1) {
         throw new Error(`'${options.hits}' hits requested but Max Moves cannot be multi-hit`);
       }
@@ -398,13 +409,16 @@ export class State {
       }
       move.magnitude = bounded('magnitude', options.magnitude);
     }
+    if (move.id === 'magnitude' && !move.magnitude) {
+      throw new Error('The move Magnitude must have a magnitude specified');
+    }
     if (gen.num <= 3 && options.spreadHit) {
       throw new Error(`Spread moves do not exist in generation ${gen.num}`);
     } else {
       move.spreadHit = options.spreadHit;
     }
-    if (options.numConsecutive && pokemon.item && toID(pokemon.item) !== 'metronome') {
-      throw new Error(`numConsecutive has no meaning with '${pokemon.item}'`);
+    if (options.numConsecutive && toID(pokemon.item) !== 'metronome') {
+      throw new Error(`numConsecutive has no meaning unless the Pokemon is holding a Metronome'`);
     }
     move.numConsecutive = options.numConsecutive;
 
@@ -427,10 +441,13 @@ export class State {
     setNature(gen, pokemon, set.nature, gen.num >= 3);
 
     setValues(gen, pokemon, 'evs', set.evs);
-
-    // TODO: what about hidden power dynamics
-
     setValues(gen, pokemon, 'ivs', set.ivs);
+    setHiddenPowerIVs(
+      gen,
+      pokemon as {level: number; ivs: StatsTable},
+      [typeof move === 'string' ? move : '', ...(set.moves ?? [])],
+      true
+    );
 
     if ( // Marowak hack, cribbed from Pokémon Showdown's sim/team-validator.ts
       gen.num === 2 &&
@@ -453,9 +470,18 @@ export class State {
         `shiny in generation 2 given its DVs.`
       );
     }
-    setGender(gen, pokemon, set.gender as GenderName, typeof set.ivs?.atk === 'number');
+    setGender(
+      gen,
+      pokemon as {species: Specie; ivs: StatsTable; gender?: GenderName},
+      set.gender as GenderName,
+      typeof set.ivs?.atk === 'number'
+    );
 
-    correctHPDV(gen, pokemon, typeof set.ivs?.hp === 'number');
+    correctHPDV(
+      gen,
+      pokemon as {species: Specie; ivs: StatsTable},
+      typeof set.ivs?.hp === 'number'
+    );
 
     // We can't validate HP here, but we can attempt to preserve the same percentage
     // of health while adjusting the HP values to be legal.
@@ -555,14 +581,13 @@ function setItem(gen: Generation, pokemon: Partial<State.Pokemon>, name?: string
   }
 }
 
-// PRECONDITION: pokemon.species must be set
-function setAbility(gen: Generation, pokemon: Partial<State.Pokemon>, name?: string) {
+function setAbility(gen: Generation, pokemon: {species: Specie; ability?: ID}, name?: string) {
   if (name) {
     const ability = gen.abilities.get(name);
     if (!ability) invalid(gen, 'ability', ability);
     pokemon.ability = ability.id;
   } else if (gen.num >= 3) {
-    pokemon.ability = toID(pokemon.species!.abilities[0]);
+    pokemon.ability = toID(pokemon.species.abilities[0]);
   }
 }
 
@@ -614,15 +639,14 @@ function setSpc(
   }
 }
 
-// PRECONDITION: pokemon.species and pokemon.ivs must be set
 function setGender(
   gen: Generation,
-  pokemon: Partial<State.Pokemon>,
+  pokemon: {species: Specie; ivs: StatsTable; gender?: GenderName},
   name?: GenderName,
   setAtkDV = false
 ) {
-  const ivs = pokemon.ivs!;
-  const species = pokemon.species!;
+  const ivs = pokemon.ivs;
+  const species = pokemon.species;
   const atkDV = gen.stats.toDV(ivs.atk!);
   // AtkDV determing gender is only at thing in generation 2, but we can use it as the default
   const gender = gen.num === 1 ? undefined : species.genderRatio.F * 16 >= atkDV ? 'M' : 'F';
@@ -640,51 +664,80 @@ function setGender(
   }
 }
 
-// PRECONDITION: pokemon.species and pokemon.ivs must be set
 function correctHPDV(
   gen: Generation,
-  pokemon: Partial<State.Pokemon>,
+  pokemon: {species: Specie; ivs: StatsTable},
   setHPDV = false
 ) {
-  const expectedHPDV = gen.stats.getHPDV(pokemon.ivs!);
-  const actualHPDV = gen.stats.toDV(pokemon.ivs!.hp!);
+  const expectedHPDV = gen.stats.getHPDV(pokemon.ivs);
+  const actualHPDV = gen.stats.toDV(pokemon.ivs.hp!);
   if (gen.num <= 2 && expectedHPDV !== actualHPDV) {
     if (setHPDV) {
       throw new Error(
-        `${pokemon.species!.name} is required to have an HP DV of ` +
+        `${pokemon.species.name} is required to have an HP DV of ` +
         `${expectedHPDV} in generations 1 and 2 but it is ${actualHPDV}`
       );
     }
-    pokemon.ivs!.hp = gen.stats.toIV(expectedHPDV);
+    pokemon.ivs.hp = gen.stats.toIV(expectedHPDV);
   }
 }
 
-// TODO handle Hidden Power '' and mismatched types
-function getHiddenPowerIVs(gen: Generation, pokemon: Partial<State.Pokemon>, ...moves: string[]) {
-  const hpTypes: Type[] = [];
+function setHiddenPowerIVs(
+  gen: Generation,
+  pokemon: {level: number; ivs: StatsTable},
+  moves: string[],
+  override = false
+) {
+  let hpType: Type | 'infer' | undefined = undefined;
   for (const move of moves) {
     const id = toID(move);
     if (id.startsWith('hiddenpower')) {
+      if (hpType) throw new Error('Cannot have more than one Hidden Power on a set');
       const type = gen.types.get(id.slice(11));
       if (gen.num === 1 || gen.num === 8 || !type || is(type.name, '???', 'Normal', 'Fairy')) {
-        invalid(gen, 'Hidden Power', type);
+        if (id === 'hiddenpower') {
+          hpType = 'infer';
+        } else {
+          invalid(gen, 'Hidden Power', type);
+        }
+      } else {
+        hpType = type;
       }
-      hpTypes.push(type);
     }
   }
-  if (!hpTypes.length) return {};
-  if (hpTypes.length > 1) {
-    throw new Error(`Cannot have more than one Hidden Power on a set`);
-  }
-  if (gen.num >= 7 && pokemon.level === 100) return {};
+  if (!hpType || hpType === 'infer') return;
+  if (gen.num >= 7 && pokemon.level === 100) return;
+  if (gen.types.getHiddenPower(pokemon.ivs).type === hpType.name) return;
+
+  let ivs = hpType.HPivs;
   if (gen.num <= 2) {
-    const ivs: Partial<StatsTable> = {};
-    for (const stat in hpTypes[0].HPdvs) {
-      ivs[stat as StatName] = gen.stats.toIV(hpTypes[0].HPdvs[stat as StatName]!);
+    ivs = {};
+    for (const stat in hpType.HPdvs) {
+      ivs[stat as StatName] = gen.stats.toIV(hpType.HPdvs[stat as StatName]!);
     }
-    return ivs;
   }
-  return hpTypes[0].HPivs;
+
+  if (override) {
+    for (const stat of gen.stats) {
+      pokemon.ivs[stat] = ivs[stat] || 31;
+    }
+  } else {
+    const max = gen.num <= 2 ? 30 : 31;
+    let maxed = true;
+    for (const stat of gen.stats) {
+      if (!(pokemon.ivs[stat] >= max)) {
+        maxed = false;
+        break;
+      }
+    }
+    if (maxed) {
+      for (const stat of gen.stats) {
+        pokemon.ivs[stat] = ivs[stat] || 31;
+      }
+    } else {
+      throw new Error('Cannot set Hidden Power IVs over non-default IVs');
+    }
+  }
 }
 
 function setConditions(
