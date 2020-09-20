@@ -2,7 +2,7 @@
 name: Improvement
 about: Provide an improvement for this project
 title: ''
-labels: featue
+labels: feature
 assignees: ''
 
 ---

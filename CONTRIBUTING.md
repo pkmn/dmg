@@ -1,7 +1,7 @@
 # Contributing
 
 Please read through the [README](README.md) and [pkmn.cc/@pkmn](https://pkmn.cc/@pkmn/) for general
-information about `@pkmn/dmg` about development on `@pkmn` projects respectively. When opening
+information about `@pkmn/dmg` and about development on `@pkmn` projects respectively. When opening
 issues or pull requests, please use one of the existing templates and fill them out to the best of
 your ability. Pull requests will not be merged without tests, please read the [testing
 documentation](TESTING.md) about how to get started with testing.
