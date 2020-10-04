@@ -1,9 +1,8 @@
 # `@pkmn/dmg`
 
 ![Test Status](https://github.com/pkmn/dmg/workflows/Tests/badge.svg)
-[![npm
-version](https://img.shields.io/npm/v/@pkmn/dmg.svg)](https://www.npmjs.com/package/@pkmn/dmg)
-
+![License](https://img.shields.io/badge/License-MIT-blue.svg)
+[![npm version](https://img.shields.io/npm/v/@pkmn/dmg.svg)](https://www.npmjs.com/package/@pkmn/dmg)
 
 The most accurate and complete multi-generational Pokémon damage calculator package.
 
@@ -20,7 +19,6 @@ architecture and correctness, `@pkmn/dmg` features.
 - **non-intrusive support for [mods](#mods)** overriding data or effects
 - extensive **tests** build on state of the art [**multi-generational testing
   infrastructure**](TESTING.md)
-
 
 ## Installation
 
@@ -202,7 +200,6 @@ a certain event would occur.
 - pre and post EOT separated out
 - rich breakdowns of all results - recoils, multi stages, etc
 
-
 ### Mods
 
 `@pkmn` packages do not intend to ever provide first class support for mods (non-canonical data or
@@ -258,5 +255,4 @@ justification, core parts of the algorithm may be broken up and made moddable in
 
 ## License
 
-This package is distributed under the terms of the [MIT
-License](https://github.com/pkmn/dmg/blob/master/LICENSE).
+This package is distributed under the terms of the [MIT License](LICENSE).

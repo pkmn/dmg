@@ -145,7 +145,7 @@ export const Terrains: {[id: string]: [TerrainName, GenerationNum]} = {
 
 export type PseudoWeatherName =
   'Fairy Lock' | 'Gravity' | 'Ion Deluge' |
-  'Mud Sport' | 'Water Sport' |
+  'Mud Sport' | 'Water Sport' | 'Echoed Voice' |
   'Trick Room' | 'Magic Room' | 'Wonder Room';
 
 export const PseudoWeathers: {[id: string]: [PseudoWeatherName, GenerationNum]} = {
@@ -155,6 +155,7 @@ export const PseudoWeathers: {[id: string]: [PseudoWeatherName, GenerationNum]} 
   trickroom: ['Trick Room', 4],
   magicroom: ['Magic Room', 5],
   wonderroom: ['Wonder Room', 5],
+  echoedvoice: ['Echoed Voice', 5],
   // Before Gen 6 these were treated as volatiles
   mudsport: ['Mud Sport', 6],
   watersport: ['Water Sport', 6],
@@ -177,7 +178,7 @@ export const SideConditions: {[id: string]: [SideConditionName, GenerationNum, P
   steelsurge: ['Steelsurge', 8, 'p2'],
   volcalith: ['Volcalith', 8, 'p2'],
   wildfire: ['Wildfire', 8, 'p2'],
-  sitckyweb: ['Sticky Web', 6],
+  stickyweb: ['Sticky Web', 6],
   // Before Gen 2 these were treated as a volatiles
   lightscreen: ['Light Screen', 2, 'p2'],
   reflect: ['Reflect', 2, 'p2'],
@@ -188,7 +189,10 @@ export const SideConditions: {[id: string]: [SideConditionName, GenerationNum, P
   quickguard: ['Quick Guard', 5, 'p2'],
   craftyshield: ['Crafty Shield', 6],
   mist: ['Mist', 6],
+  // TODO lunardance luckychant waterpledge pursuit
 };
+
+// TODO Slot Condition futuremove wish healingwish
 
 // Volatile Status
 

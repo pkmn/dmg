@@ -32,7 +32,7 @@ export namespace Relevancy {
     pokemon: Pokemon;
     sideConditions: {[id: string]: boolean};
     active?: boolean;
-    party?: boolean;
+    team?: boolean;
   }
 
   export interface Pokemon {
@@ -218,7 +218,7 @@ export class HitResult {
       pokemon: this.simplifyPokemon(state.pokemon, relevant.pokemon),
       sideConditions: {},
       active: relevant.active ? state.active!.map(p => extend({}, p)) : undefined,
-      party: relevant.party ? state.party!.map(p => extend({}, p)) : undefined,
+      team: relevant.team ? state.team!.map(p => extend({}, p)) : undefined,
     };
     for (const id in state.sideConditions) {
       if (relevant.sideConditions[id]) {

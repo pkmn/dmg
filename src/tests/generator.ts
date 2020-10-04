@@ -129,9 +129,9 @@ function smogonSideAndPokemon(gen: Generation, state: pkmn.State.Side) {
   const isLightScreen =
     !!(gen.num <= 2 ? state.pokemon.volatiles.lightscreen : state.sideConditions.lightscreen);
   const isFriendGuard = !!state.active?.some(p =>
-    p.ability === 'friendguard' && !p.fainted && p.position !== state.pokemon.position);
+    p?.ability === 'friendguard' && !p.fainted && p.position !== state.pokemon.position);
   const isBattery = !!state.active?.some(p =>
-    p.ability === 'battry' && !p.fainted && p.position !== state.pokemon.position);
+    p?.ability === 'battery' && !p.fainted && p.position !== state.pokemon.position);
 
   const side = new smogon.Side({
     spikes: state.sideConditions.spikes?.level ?? 0,

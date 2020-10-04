@@ -63,7 +63,7 @@ export namespace State {
   export interface Field {
     weather?: WeatherName;
     terrain?: TerrainName;
-    pseudoWeather: {[id: string]: unknown};
+    pseudoWeather: {[id: string]: {level?: number}};
   }
 
   export interface Side {
@@ -79,12 +79,12 @@ export namespace State {
       // Used to exclude allies which are fainted (alternatively they can just be left
       // out of the active array)
       fainted?: boolean;
-    }>;
+    } | null>;
     // Similarly niche, Beat Up etc requires information about the entire team. Must be a subset
     // of State.Pokemon so that a State.Pokemon object could be used in this array
-    party?: Array<{
+    team?: Array<{
       // Fields required for Beat Up mechanics
-      species: {baseStat: {atk: number}};
+      species: {baseStats: {atk: number}};
       // Fields used to exclude certain team members per the mechanics
       status?: StatusName;
       fainted?: boolean;
@@ -195,7 +195,7 @@ export class State {
       sideConditions: setConditions(gen, 'Side Condition', options.sideConditions),
       pokemon,
       active: options.abilities?.map((a, i) => ({ability: toID(a), position: i})),
-      party: options.atks?.map((atk, i) => ({species: {baseStats: {atk}}, position: i})),
+      team: options.atks?.map((atk, i) => ({species: {baseStats: {atk}}, position: i})),
     } as State.Side;
   }
 
@@ -203,7 +203,7 @@ export class State {
     gen: Generation,
     name: string,
     options: PokemonOptions = {},
-    move: string | {name: string} = '',
+    move: string | {name?: string} = '',
   ) {
     const pokemon: Partial<State.Pokemon> = {};
 
@@ -293,7 +293,7 @@ export class State {
     setSpc(gen, pokemon.ivs!, 'ivs', options.dvs);
 
     if (move) {
-      move = typeof move === 'string' ? move : move.name;
+      move = typeof move === 'string' ? move : (move.name || '');
       setHiddenPowerIVs(gen, pokemon as {level: number; ivs: StatsTable}, [move]);
     }
 

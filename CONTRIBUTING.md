@@ -148,6 +148,6 @@ runtime dependency**. `dmg` / `generate-test` and `tests` ultimately need to dep
 implementation to actually do useful work, but `@pkmn/dmg` should not depend on `@pkmn/data` for
 anything other than its interfaces (enforceable through `import type` instead of `import`). This
 is only particularly relevant in the case of `toID` - depend on the (duplicated) implementation in
-[`src/utils.ts`](src/utils.ts) instead of from `@pkmn/data`. Avoid any runtime dependencies means
+[`src/utils.ts`](src/utils.ts) instead of from `@pkmn/data`. Avoiding any runtime dependencies means
 that the bundled code is self contained and much easier for an end user to include in their
 projects.

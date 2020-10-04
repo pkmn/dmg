@@ -4,7 +4,7 @@ import type {ID} from '@pkmn/data';
  * Converts `text` into an `ID` (lowercase alphanumeric identifier).
  *
  * `toID` copy and pasted from `@pkmn/data` (and this Pokémon Showdown), this implementation must
- * be dependended on instead of `@pkmn/data`'s `toID` to avoid creating a runtime dependency on
+ * be depended on instead of `@pkmn/data`'s `toID` to avoid creating a runtime dependency on
  * `@pkmn/data`.
  */
 export function toID(text: any): ID {

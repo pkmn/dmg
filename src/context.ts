@@ -1,5 +1,6 @@
 import type {
   BoostsTable,
+  ConditionData,
   GameType,
   GenderName,
   Generation,
@@ -10,15 +11,14 @@ import type {
   MoveCategory,
   MoveName,
   MoveTarget,
+  NatureName,
   Nonstandard,
-  PureEffectData,
   SecondaryEffect,
   Specie,
   SpeciesName,
   StatsTable,
   StatusName,
   TypeName,
-  NatureName,
 } from '@pkmn/data';
 
 import {WeatherName, TerrainName} from './conditions';
@@ -125,8 +125,8 @@ export namespace Context {
       ability?: ID;
       position?: number;
       fainted?: boolean;
-    }>;
-    party?: Array<{
+    } | null>;
+    team?: Array<{
       species: {baseStat: {atk: number}};
       status?: StatusName;
       fainted?: boolean;
@@ -155,7 +155,7 @@ export namespace Context {
           });
       }
       this.active = this.active?.map(p => extend({}, p));
-      this.party = this.party?.map(p => extend({}, p));
+      this.team = this.team?.map(p => extend({}, p));
     }
 
     toState(): State.Side {
@@ -167,7 +167,7 @@ export namespace Context {
         pokemon: this.pokemon.toState(),
         sideConditions,
         active: this.active?.map(p => extend({}, p)),
-        party: this.party?.map(p => extend({}, p)),
+        team: this.team?.map(p => extend({}, p)),
       };
     }
   }
@@ -356,7 +356,7 @@ export namespace Context {
     category!: MoveCategory;
 
     realMove?: string;
-    effect?: Partial<PureEffectData>;
+    condition?: Partial<ConditionData>;
     damage?: number | 'level' | false | null;
     noPPBoosts?: boolean;
 

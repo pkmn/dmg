@@ -20,7 +20,7 @@ describe('State', () => {
 
     test('pseudoWeather', () => {
       expect(() => State.createField(gens.get(1), {pseudoWeather: ['foo']})).toThrow('invalid');
-      expect(() => State.createField(gens.get(3), {pseudoWeather: {trickroom: 1}}))
+      expect(() => State.createField(gens.get(3), {pseudoWeather: {trickroom: {}}}))
         .toThrow('invalid');
 
       expect(State.createField(gens.get(7), {pseudoWeather: ['gravity']}).pseudoWeather)
