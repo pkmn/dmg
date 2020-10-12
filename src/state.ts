@@ -124,6 +124,11 @@ export namespace State {
     evs?: Partial<StatsTable>;
     ivs?: Partial<StatsTable>;
 
+    // Computed stats can be provided directly, but without spread information the result
+    // description will be limited. This option exists primarly as an optimization for @pkmn/gmd
+    // and other programmatic use cases.
+    stats?: StatsTable;
+
     boosts: Partial<BoostsTable>;
 
     // Use to disambiguate this Pokemon from its allies if included in the Side's active or party
@@ -340,7 +345,7 @@ export class State {
     pokemon.moveLastTurnResult = options.moveLastTurnResult;
     pokemon.hurtThisTurn = options.hurtThisTurn;
 
-    return pokemon as State.Pokemon;
+    return validateStats(gen, pokemon as State.Pokemon);
   }
 
   static createMove(
@@ -491,7 +496,7 @@ export class State {
     pokemon.hp = pokemon.hp * floor(maxhp / pokemon.maxhp);
     pokemon.maxhp = maxhp;
 
-    return pokemon;
+    return validateStats(gen, pokemon);;
   }
 }
 
@@ -770,4 +775,26 @@ function setConditions(
     }
   }
   return obj;
+}
+
+function validateStats(
+  gen: Generation,
+  pokemon: State.Pokemon,
+) {
+  if (!pokemon.stats) return pokemon;
+  for (const stat of gen.stats) {
+    const actual = gen.stats.calc(
+      stat,
+      pokemon.species.baseStats[stat],
+      pokemon.ivs?.[stat] ?? 31,
+      pokemon.evs?.[stat] ?? (gen.num <= 2 ? 252 : 0),
+      pokemon.level,
+      gen.natures.get(pokemon.nature!)!
+    );
+    if (actual !== pokemon.stats[stat]) {
+      const s = gen.stats.display(stat);
+      throw new Error(`Expected a ${s} stat of ${pokemon.stats[stat]}, received: ${actual}`);
+    }
+  }
+  return pokemon;
 }

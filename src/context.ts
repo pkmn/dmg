@@ -261,16 +261,20 @@ export namespace Context {
       this.evs = state.evs;
       this.ivs = state.ivs;
 
-      this.stats = {} as StatsTable;
-      for (const stat of gen.stats) {
-        this.stats[stat] = gen.stats.calc(
-          stat,
-          this.species.baseStats[stat],
-          state.ivs?.[stat] ?? 31,
-          state.evs?.[stat] ?? (gen.num <= 2 ? 252 : 0),
-          state.level,
-          gen.natures.get(state.nature!)!
-        );
+      if (state.stats) {
+        this.stats = extend({}, state.stats);
+      } else {
+        this.stats = {} as StatsTable;
+        for (const stat of gen.stats) {
+          this.stats[stat] = gen.stats.calc(
+            stat,
+            this.species.baseStats[stat],
+            state.ivs?.[stat] ?? 31,
+            state.evs?.[stat] ?? (gen.num <= 2 ? 252 : 0),
+            state.level,
+            gen.natures.get(state.nature!)!
+          );
+        }
       }
       this.boosts = extend({}, state.boosts);
 
@@ -303,6 +307,7 @@ export namespace Context {
         nature: this.nature,
         evs: this.evs && extend({}, this.evs),
         ivs: this.ivs && extend({}, this.ivs),
+        stats: extend({}, this.stats),
         boosts: extend({}, this.boosts),
         position: this.position,
         switching: this.switching,
