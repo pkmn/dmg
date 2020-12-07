@@ -10,12 +10,12 @@ describe('State', () => {
     test('weather', () => {
       expect(() => State.createField(gens.get(5), {weather: 'heat'})).toThrow('invalid');
       expect(State.createField(gens.get(5), {weather: 'sun'}).weather).toBe('Sun');
-      expect(State.createField(gens.get(5)).weather).toEqual({});
+      expect(State.createField(gens.get(5)).weather).toBeUndefined();
     });
 
     test('terrain', () => {
       expect(() => State.createField(gens.get(1), {terrain: 'electric'})).toThrow('invalid');
-      expect(State.createField(gens.get(7), {terrain: 'electric'})).toBe('Electric');
+      expect(State.createField(gens.get(7), {terrain: 'electric'}).terrain).toBe('Electric');
     });
 
     test('pseudoWeather', () => {
@@ -24,7 +24,7 @@ describe('State', () => {
         .toThrow('invalid');
 
       expect(State.createField(gens.get(7), {pseudoWeather: ['gravity']}).pseudoWeather)
-        .toEqual({gravity: 1});
+        .toEqual({gravity: {}});
       expect(State.createField(gens.get(7), {pseudoWeather: {trickroom: {}}}).pseudoWeather)
         .toEqual({trickroom: {}});
     });
@@ -38,9 +38,9 @@ describe('State', () => {
         .toThrow('invalid');
       expect(() => State.createSide(gens.get(3), pokemon, {sideConditions: {foo: {}}}))
         .toThrow('invalid');
-      expect(() => State.createSide(gens.get(1), pokemon, {sideConditions: ['spikes']}))
+      expect(() => State.createSide(gens.get(1), pokemon, {sideConditions: ['reflect']}))
         .toThrow('not a Side Condition');
-      expect(() => State.createSide(gens.get(3), pokemon, {sideConditions: {trickroom: {}}}))
+      expect(() => State.createSide(gens.get(3), pokemon, {sideConditions: {mudsport: {}}}))
         .toThrow('not a Side Condition');
 
       let side = State.createSide(gens.get(7), pokemon);
@@ -60,7 +60,7 @@ describe('State', () => {
     });
 
     test('atks', () => {
-      expect(State.createSide(gens.get(7), pokemon, {atks: [50, 100, 80]}).active).toEqual([
+      expect(State.createSide(gens.get(7), pokemon, {atks: [50, 100, 80]}).team).toEqual([
         {species: {baseStats: {atk: 50}}, position: 0},
         {species: {baseStats: {atk: 100}}, position: 1},
         {species: {baseStats: {atk: 80}}, position: 2},
@@ -72,7 +72,7 @@ describe('State', () => {
     test('species', () => {
       expect((() => State.createPokemon(gens.get(1), 'Tyranitar'))).toThrow('invalid');
       expect((() => State.createPokemon(gens.get(2), 'Tyranitar', {
-        species: gens.get(2).species.get('Pikachu')}))).toThrow('invalid');
+        species: gens.get(2).species.get('Pikachu')}))).toThrow('mismatch');
       expect(State.createPokemon(gens.get(2), 'Tyranitar').species.name).toBe('Tyranitar');
     });
 
@@ -91,8 +91,8 @@ describe('State', () => {
       expect(() => State.createPokemon(gens.get(4), 'Jirachi', {weightkg: 0}))
         .toThrow('must be at least 1');
       expect(State.createPokemon(gens.get(4), 'Jirachi', {weightkg: 9}).weighthg).toBe(90);
-      expect(State.createPokemon(gens.get(4), 'Jirachi', {weighthg: 9})).toBe(9);
-      expect(State.createPokemon(gens.get(4), 'Jirachi')).toBe(11);
+      expect(State.createPokemon(gens.get(4), 'Jirachi', {weighthg: 9}).weighthg).toBe(9);
+      expect(State.createPokemon(gens.get(4), 'Jirachi').weighthg).toBe(11);
     });
 
     test('item', () => {
@@ -105,7 +105,7 @@ describe('State', () => {
     test('ability', () => {
       expect(() => State.createPokemon(gens.get(4), 'Jirachi', {ability: 'Sereen Grace'}))
         .toThrow('invalid');
-      expect(State.createPokemon(gens.get(4), 'Jirachi', {ability: 'Serence Grace'}).ability)
+      expect(State.createPokemon(gens.get(4), 'Jirachi', {ability: 'Serene Grace'}).ability)
         .toBe('serenegrace');
       expect(State.createPokemon(gens.get(4), 'Jirachi').ability).toBe('serenegrace');
     });
@@ -113,7 +113,7 @@ describe('State', () => {
     test('happiness', () => {
       expect((() => State.createPokemon(gens.get(3), 'Charmander', {happiness: -1})))
         .toThrow('is not within [0,255]');
-      expect((() => State.createPokemon(gens.get(3), 'Charmander', {level: 300})))
+      expect((() => State.createPokemon(gens.get(3), 'Charmander', {happiness: 300})))
         .toThrow('is not within [0,255]');
       expect(State.createPokemon(gens.get(3), 'Charmander').happiness).toBeUndefined();
       expect(State.createPokemon(gens.get(3), 'Charmander', {happiness: 200}).happiness).toBe(200);
@@ -125,7 +125,7 @@ describe('State', () => {
       expect(pokemon.statusData).toBeUndefined();
       expect(() => State.createPokemon(gens.get(1), 'Bulbasaur', {status: 'foo'}))
         .toThrow('invalid');
-      expect(() => State.createPokemon(gens.get(1), 'Bulbasaur', {status: 'spikes'}))
+      expect(() => State.createPokemon(gens.get(1), 'Bulbasaur', {status: 'reflect'}))
         .toThrow('not a Status');
       pokemon = State.createPokemon(gens.get(1), 'Bulbasaur', {status: 'Asleep'});
       expect(pokemon.status).toBe('slp');
@@ -133,7 +133,7 @@ describe('State', () => {
 
       pokemon = State.createPokemon(gens.get(1), 'Bulbasaur', {status: 'tox'});
       expect(pokemon.status).toBe('tox');
-      expect(pokemon.statusData).toEqual({toxicTurns: 1});
+      expect(pokemon.statusData).toEqual({toxicTurns: 0});
 
 
       expect(() => State.createPokemon(gens.get(1), 'Bulbasaur', {statusData: {toxicTurns: -1}}))
@@ -156,9 +156,9 @@ describe('State', () => {
       expect(() => State.createPokemon(gens.get(4), 'Mew', {volatiles: {foo: {}}}))
         .toThrow('invalid');
       expect(() =>
-        State.createPokemon(gens.get(2), 'Mew', {volatiles: ['Aqua Ring']})).toThrow('not a Volatile Status');
+        State.createPokemon(gens.get(2), 'Mew', {volatiles: ['Spikes']})).toThrow('not a Volatile Status');
       expect(() =>
-        State.createPokemon(gens.get(1), 'Mew', {volatiles: {protect: {}}})).toThrow('not a Volatile Status');
+        State.createPokemon(gens.get(1), 'Mew', {volatiles: {sleep: {}}})).toThrow('not a Volatile Status');
 
       expect(
         State.createPokemon(gens.get(4), 'Mew', {volatiles: ['Aqua Ring', 'Protect']}).volatiles
@@ -182,8 +182,7 @@ describe('State', () => {
 
     test('nature', () => {
       expect(() => State.createPokemon(gens.get(6), 'Arbok', {nature: 'foo'})).toThrow('invalid');
-      expect(() => State.createPokemon(gens.get(6), 'Arbok', {nature: 'hardy'}).nature)
-        .toBe('Hardy');
+      expect(State.createPokemon(gens.get(6), 'Arbok', {nature: 'hardy'}).nature).toBe('Hardy');
     });
 
     test('evs', () => {
@@ -267,13 +266,13 @@ describe('State', () => {
         .toThrow('Z-Moves cannot be multi-hit');
 
       expect(() => State.createMove(gens.get(8), 'Tackle', {hits: 3}))
-        .toThrow('is not multi-hit');
+        .toThrow('Tackle is not multi-hit');
 
       expect(State.createMove(gens.get(7), 'Tackle').hits).toBe(1);
-      expect(State.createMove(gens.get(7), 'Icicle Crash').hits).toBe(2);
+      expect(State.createMove(gens.get(7), 'Icicle Spear').hits).toBe(3);
       expect(State.createMove(gens.get(7), 'Gear Grind', {}, {ability: 'Skill Link'}).hits)
         .toBe(2);
-      expect(State.createMove(gens.get(7), 'Icicle Crash', {}, {ability: 'Skill Link'}).hits)
+      expect(State.createMove(gens.get(7), 'Icicle Spear', {}, {ability: 'Skill Link'}).hits)
         .toBe(5);
       expect(State.createMove(gens.get(7), 'Bullet Seed', {}, {item: 'Grip Claw'}).hits)
         .toBe(5);
@@ -283,7 +282,7 @@ describe('State', () => {
 
     test('crit', () => {
       expect(State.createMove(gens.get(1), 'Tackle', {crit: true}).crit).toBe(true);
-      expect(State.createMove(gens.get(1), 'Slash').crit).toBe(false); // 255 / 256 != 100%
+      expect(State.createMove(gens.get(1), 'Slash').crit).toBeUndefined(); // 255 / 256 != 100%
       expect(State.createMove(gens.get(7), 'Frost Breath').crit).toBe(true);
     });
 
@@ -291,9 +290,9 @@ describe('State', () => {
       expect(() => State.createMove(gens.get(7), 'Tackle', {magnitude: 5}))
         .toThrow('incorrectly set on move');
       expect(() => State.createMove(gens.get(7), 'Magnitude', {magnitude: 1}))
-        .toThrow('not within [4, 10]');
+        .toThrow('not within [4,10]');
       expect(() => State.createMove(gens.get(7), 'Magnitude', {magnitude: 1}))
-        .toThrow('not within [4, 10]');
+        .toThrow('not within [4,10]');
       expect(() => State.createMove(gens.get(7), 'Magnitude'))
         .toThrow('must have a magnitude specified');
       expect(State.createMove(gens.get(7), 'Magnitude', {magnitude: 5}).magnitude).toBe(5);

@@ -317,7 +317,7 @@ function parsePhrase(s: string) {
 
   const phrase: Phrase = {
     p1: {
-      id: toID(m[5]),
+      id: toID(m[4]),
       boosts: parseInt(m[1]) || undefined,
       level: parseInt(m[2]) || undefined,
       item: toID(m[5]) || undefined,
@@ -348,7 +348,7 @@ function parsePhrase(s: string) {
 
 interface Checks {
   conflict<T>(k: string, a: T | undefined, b: T | undefined, required?: boolean): T | undefined;
-  number<T>(k: string, a: T| undefined, b?: T | undefined, required?: boolean): number | undefined;
+  number<T>(k: string, a: T | undefined, b?: T | undefined, required?: boolean): number | undefined;
   error(condition: boolean, msg: string): void;
 }
 
@@ -515,7 +515,7 @@ function buildSide(
   };
   for (const s of [...gen.stats, 'spc'] as (StatName | 'spc')[]) {
     const ev = (p?.evs as StatsTable & {spc: number} | undefined)?.[s];
-    evs[s] = checks.number(`${side} ${s} EVs`, `${ev}`, f[`${s}dvs`]);
+    evs[s] = checks.number(`${side} ${s} EVs`, ev, f[`${s}evs`] as unknown);
     dvs[s] = checks.number(`${side} ${s} DVs`, f[`${s}dvs`]);
     ivs[s] = checks.number(`${side} ${s} IVs`, f[`${s}ivs`]);
 
@@ -538,7 +538,7 @@ function buildSide(
   }
 
   const pokemon = State.createPokemon(gen, name, {
-    level: checks.number(`${side} level`, `${p?.level}`, f.level),
+    level: checks.number(`${side} level`, p?.level, f.level as unknown),
     item: checks.conflict(`${side} item`, p?.item, f.item),
     ability: f.ability,
     gender,

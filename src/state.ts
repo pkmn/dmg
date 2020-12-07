@@ -181,13 +181,13 @@ export class State {
     if (options.weather) {
       const c = Conditions.get(gen, options.weather);
       if (!c) invalid(gen, 'weather', options.weather);
-      field.weather = c[1] as WeatherName;
+      field.weather = c[0] as WeatherName;
     }
 
     if (options.terrain) {
       const c = Conditions.get(gen, options.terrain);
       if (!c) invalid(gen, 'terrain', options.terrain);
-      field.terrain = c[1] as TerrainName;
+      field.terrain = c[0] as TerrainName;
     }
 
     field.pseudoWeather = setConditions(gen, 'Pseudo Weather', options.pseudoWeather);
@@ -216,7 +216,7 @@ export class State {
     const species = gen.species.get(name);
     if (!species) invalid(gen, 'species', name);
     if (options.species && options.species !== species) {
-      throw new Error(`Species mismatch: ${options.species} does not match ${species}`);
+      throw new Error(`Species mismatch: ${options.species.name} does not match ${species.name}`);
     }
     pokemon.species = species;
 
@@ -228,8 +228,8 @@ export class State {
 
     // Weight
     pokemon.weighthg =
-      options.weighthg ? options.weighthg
-      : options.weightkg ? options.weightkg * 10 : species.weighthg;
+      typeof options.weighthg === 'number' ? options.weighthg
+      : typeof options.weightkg === 'number' ? options.weightkg * 10 : species.weighthg;
     if (pokemon.weighthg < 1) throw new Error(`weighthg of ${pokemon.weighthg} must be at least 1`);
 
     // Item
@@ -361,7 +361,7 @@ export class State {
   ) {
     const base = gen.moves.get(name);
     if (!base) invalid(gen, 'move', name);
-    if (options.name && options.name !== base.name) {
+    if (options.name && toID(options.name) !== base.id) {
       throw new Error(`Move mismatch: '${options.name}' does not match '${base.name}'`);
     }
     const move: Partial<State.Move> = {hits: 1};
@@ -402,7 +402,7 @@ export class State {
             : base.multihit[0] + 1;
         }
       } else if (options.hits) {
-        throw new Error(`'${options.hits}' hits requested but ${move.name} in not multi-hit`);
+        throw new Error(`'${options.hits}' hits requested but ${base.name} is not multi-hit`);
       }
     }
 
@@ -518,7 +518,7 @@ function invalid(gen: Generation, k: string, v: any): never {
 
 export function bounded(key: keyof typeof BOUNDS, val: number, die = true) {
   const ok = val >= BOUNDS[key][0] && val <= BOUNDS[key][1];
-  if (!ok && die) throw new RangeError(`${key} ${val} is not within [${BOUNDS[key].join(', ')}]`);
+  if (!ok && die) throw new RangeError(`${key} ${val} is not within [${BOUNDS[key].join(',')}]`);
   return val;
 }
 
