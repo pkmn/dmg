@@ -8,7 +8,7 @@ try {
   process.exit(2);
 }
 
-const {Dex} = require('@pkmn/dex');
+const {Dex} = require('@pkmn/sim');
 const {Generations} = require('@pkmn/data');
 const defaultSets = require('@smogon/sets');
 const dmg = require('./build');
@@ -61,7 +61,7 @@ try {
 
     const sets = await defaultSets.forGen(gen);
     dmg.State.mergeSet(
-      state.p1.pokemon, state.move.id, ...findSets(gen, sets,state.p1.pokemon.species, format));
+      state.p1.pokemon, state.move.id, ...findSets(gen, sets, state.p1.pokemon.species, format));
     dmg.State.mergeSet(
       state.p2.pokemon, ...findSets(gen, sets, state.p2.pokemon.species, format));
 

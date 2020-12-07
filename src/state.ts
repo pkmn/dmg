@@ -21,7 +21,7 @@ import {floor} from './math';
 import {is, has, extend, DeepPartial, toID} from './utils';
 
 type OverriddenFields =
-  'name' | 'item' | 'ability' | 'nature' | 'status' | 'volatiles' | 'ivs' | 'evs' | 'boosts';
+  'item' | 'ability' | 'nature' | 'status' | 'volatiles' | 'ivs' | 'evs' | 'boosts';
 export interface PokemonOptions extends Partial<Omit<State.Pokemon, OverriddenFields>> {
   name?: string;
   weightkg?: number;
@@ -417,7 +417,7 @@ export class State {
     if (move.id === 'magnitude' && !move.magnitude) {
       throw new Error('The move Magnitude must have a magnitude specified');
     }
-    if (gen.num <= 3 && options.spreadHit) {
+    if (gen.num < 3 && options.spreadHit) {
       throw new Error(`Spread moves do not exist in generation ${gen.num}`);
     } else {
       move.spreadHit = options.spreadHit;

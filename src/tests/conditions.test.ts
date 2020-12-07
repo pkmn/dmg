@@ -1,9 +1,9 @@
 import {Generations} from '@pkmn/data';
-import {Dex} from '@pkmn/dex';
+import {Dex} from '@pkmn/sim';
 
 import {Conditions} from '../conditions';
 
-const gens = new Generations(Dex);
+const gens = new Generations(Dex as any);
 
 describe('Conditions', () => {
   test('get', () => {

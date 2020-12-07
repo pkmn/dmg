@@ -1,9 +1,9 @@
 import {Generation, Generations} from '@pkmn/data';
-import {Dex} from '@pkmn/dex';
+import {Dex} from '@pkmn/sim';
 
 import * as parser from '../parse';
 
-const gens = new Generations(Dex);
+const gens = new Generations(Dex as any);
 
 const parse = (g: Generation | Generations, s: string, error = '') => {
   if (error) expect(() => parser.parse(g, s, true)).toThrow(error);

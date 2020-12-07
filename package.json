@@ -1,6 +1,6 @@
 {
   "name": "@pkmn/dmg",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "unpkg": "build/index.umd.js",
@@ -14,23 +14,23 @@
     "access": "public"
   },
   "dependencies": {
-    "@pkmn/data": "file:../ps/data"
+    "@pkmn/data": "^0.3.5"
   },
   "devDependencies": {
-    "@pkmn/dex": "file:../ps/dex",
-    "@pkmn/eslint-config": "^0.6.1",
-    "@smogon/calc": "file:../damage-calc/calc",
-    "@types/jest": "^26.0.14",
-    "@types/node": "^14.11.5",
-    "@typescript-eslint/eslint-plugin": "^4.4.0",
-    "@typescript-eslint/parser": "^4.4.0",
-    "eslint": "^7.10.0",
+    "@pkmn/sim": "^0.3.5",
+    "@pkmn/eslint-config": "^1.1.0",
+    "@smogon/calc": "^0.6.0",
+    "@types/jest": "^26.0.16",
+    "@types/node": "^14.14.10",
+    "@typescript-eslint/eslint-plugin": "^4.9.0",
+    "@typescript-eslint/parser": "^4.9.0",
+    "eslint": "^7.15.0",
     "eslint-plugin-import": "^2.22.1",
-    "eslint-plugin-jest": "^24.1.0",
-    "jest": "^26.5.2",
+    "eslint-plugin-jest": "^24.1.3",
+    "jest": "^26.6.3",
     "microbundle": "^0.12.4",
-    "ts-jest": "^26.4.1",
-    "typescript": "^4.0.3"
+    "ts-jest": "^26.4.4",
+    "typescript": "^4.1.2"
   },
   "scripts": {
     "lint": "eslint --cache src --ext ts",
@@ -42,5 +42,28 @@
     "prepare": "npm run build",
     "pretest": "npm run build",
     "posttest": "npm run lint"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "testPathIgnorePatterns": ["node_modules/", "build/"]
+  },
+  "eslintConfig": {
+    "extends": "@pkmn",
+    "overrides": [
+      {
+        "files": ["src/mechanics/*.ts", "!src/test/mechanics/index.ts"],
+        "rules": {
+          "consistent-return": "off",
+          "max-len": "off"
+        }
+      },
+      {
+        "files": ["src/test/mechanics/*.ts"],
+        "rules": {
+          "max-len": "off"
+        }
+      }
+    ]
   }
 }

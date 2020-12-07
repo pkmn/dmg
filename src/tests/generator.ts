@@ -1,5 +1,5 @@
 import {Generation, GenerationNum, Generations} from '@pkmn/data';
-import {Dex} from '@pkmn/dex';
+import {Dex} from '@pkmn/sim';
 
 import {ResultBreakdown} from './helper';
 
@@ -8,7 +8,7 @@ import * as pkmn from '../index';
 
 const KEYS: Array<keyof ResultBreakdown> = ['range', 'recoil', 'recovery', 'desc', 'result'];
 
-const gens = new Generations(Dex);
+const gens = new Generations(Dex as any);
 
 export function generate(s: string, pkg: 'dmg' | 'calc' = 'dmg') {
   let encoded = s;
@@ -104,8 +104,8 @@ function calc(state: pkmn.State): ResultBreakdown {
     isGravity: !!state.field.pseudoWeather.gravity,
   });
 
-  const [attackerSide, attacker] = smogonSideAndPokemon(gen, p1);
-  const [defenderSide, defender] = smogonSideAndPokemon(gen, p2);
+  const [attackerSide, attacker] = calcSideAndPokemon(gen, p1);
+  const [defenderSide, defender] = calcSideAndPokemon(gen, p2);
   field.attackerSide = attackerSide;
   field.defenderSide = defenderSide;
 
@@ -123,7 +123,7 @@ function calc(state: pkmn.State): ResultBreakdown {
   return breakdown;
 }
 
-function smogonSideAndPokemon(gen: Generation, state: pkmn.State.Side) {
+function calcSideAndPokemon(gen: Generation, state: pkmn.State.Side) {
   const isReflect =
     !!(gen.num <= 2 ? state.pokemon.volatiles.reflect : state.sideConditions.reflect);
   const isLightScreen =

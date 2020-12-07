@@ -1,12 +1,12 @@
 /* eslint-env jest */
 
 import {Generation, GenerationNum, Generations} from '@pkmn/data';
-import {Dex} from '@pkmn/dex';
+import {Dex} from '@pkmn/sim';
 
 import {Scope, inGens} from '../gens';
 import {Result} from '../result';
 
-const gens = new Generations(Dex);
+const gens = new Generations(Dex as any);
 
 export function tests(name: string, fn: (scope: Scope) => void, type?: 'skip' | 'only'): void;
 export function tests(
@@ -26,7 +26,7 @@ export function tests(...args: any[]) {
   const name = args[0];
   let from: GenerationNum;
   let to: GenerationNum;
-  let fn: (scooe: Scope) => void;
+  let fn: (scope: Scope) => void;
   let type: 'skip' | 'only' | undefined;
   if (typeof args[1] !== 'number') {
     from = 1;

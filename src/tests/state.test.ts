@@ -1,9 +1,9 @@
 import {Generations} from '@pkmn/data';
-import {Dex} from '@pkmn/dex';
+import {Dex} from '@pkmn/sim';
 
 import {State} from '../state';
 
-const gens = new Generations(Dex);
+const gens = new Generations(Dex as any);
 
 describe('State', () => {
   describe('createField', () => {

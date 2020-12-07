@@ -104,7 +104,7 @@ few if any will have been written by hand - instead, these will have most likely
 The `generate-test` program can be used to automatically write `tests`-style regression tests. The
 `tests` example above can be further reduced to:
 
-```
+```sh
 $ generate-test lax [comet punch] vs vulpix
 ```
 
@@ -132,7 +132,7 @@ relies on returns incorrect results, the generated test will be testing incorrec
 especially obvious if the `@pkmn/dmg` backend is being used, as it effectively means `generate-test`
 will generate a test that just validates the current behavior of `@pkmn/dmg` (behavior which may be
 incorrect). `@smogon/calc` as a backend is slightly better as then there is at least *some*
-independent verificiation for the results produced, but `@smogon/calc` has its own host of bugs and
+independent verification of the results produced, but `@smogon/calc` has its own host of bugs and
 limitations. **You should place very little trust in the results of `generate-test`** - the tests
 passing or failing do not necessarily imply the code being tested is actually correct - verify the
 results against the research and the decompiled source, or failing that Pokémon Showdown and the

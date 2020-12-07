@@ -1,5 +1,5 @@
 import {Generations} from '@pkmn/data';
-import {Dex} from '@pkmn/dex';
+import {Dex} from '@pkmn/sim';
 
 import {Context} from '../context';
 import {State} from '../state';
@@ -8,7 +8,7 @@ import {DeepReadonly} from '../utils';
 
 describe('Context', () => {
   const newContext = () => {
-    const gens = new Generations(Dex);
+    const gens = new Generations(Dex as any);
     const gen = gens.get(7);
     const relevancy = new Relevancy();
     const residual = new Relevancy();
