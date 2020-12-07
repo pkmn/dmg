@@ -12,6 +12,7 @@ describe('Context', () => {
     const gen = gens.get(7);
     const relevancy = new Relevancy();
     const residual = new Relevancy();
+
     const state = new State(
       gen,
       {
@@ -37,6 +38,7 @@ describe('Context', () => {
       State.createMove(gen, 'Sacred Sword'),
       {weather: 'Sand', terrain: 'Misty', pseudoWeather: {gravity: {}}}
     ) as DeepReadonly<State>;
+
     const context = new Context(state, relevancy, residual, {
       Items: {
         choicespecs: {},
@@ -63,12 +65,13 @@ describe('Context', () => {
         sacredsword: {},
       },
     });
+
     return {context, state, relevancy, residual};
   };
 
 
   test('Field', () => {
-    const {context, state, relevancy} = newContext();
+    const {context, state, relevancy, residual} = newContext(); // FIXME residual
     const before = serialize(state);
 
     expect(context.field.weather?.basePowerCallback?.(context)).toBeUndefined();
@@ -92,17 +95,9 @@ describe('Context', () => {
     expect(serialize(state)).toEqual(before);
   });
 
-  // test('Side', () => {
-  //   const {context, state, relevancy} = newContext();
-  // });
-
-  // test('Pokemon', () => {
-  //   const {context, state, relevancy} = newContext();
-  // });
-
-  // test('Move', () => {
-  //   const {context, state, relevancy} = newContext();
-  // });
+  test.todo('Side');
+  test.todo('Pokemon');
+  test.todo('Move');
 });
 
 function serialize(state: DeepReadonly<State>) {

@@ -33,11 +33,14 @@ describe('Math', () => {
     expect(math.trunc(0xFFFFFFFF + 1)).toBe(0);
   });
 
-  // test('chainMod', () => {
-  //   // TODO expect(math.chainMod(...)).toBe(...);
-  // });
+  test('chainMod', () => {
+    expect(math.chainMod(4096, 2732)).toBe(2732);
+    expect(math.chainMod(2732, 2048)).toBe(1366);
+    expect(math.chainMod(1366, 3072)).toBe(1025);
+    expect(math.chainMod(1025, 5324)).toBe(1332);
+  });
 
-  // test('applyMod', () => {
-  //   // TODO expect(math.chainMod(...)).toBe(...);
-  // });
+  test('applyMod', () => {
+    expect(math.applyMod(108, 3072)).toBe(81);
+  });
 });

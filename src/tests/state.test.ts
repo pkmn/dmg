@@ -135,7 +135,6 @@ describe('State', () => {
       expect(pokemon.status).toBe('tox');
       expect(pokemon.statusData).toEqual({toxicTurns: 0});
 
-
       expect(() => State.createPokemon(gens.get(1), 'Bulbasaur', {statusData: {toxicTurns: -1}}))
         .toThrow('is not within [0,15]');
       expect(() => State.createPokemon(gens.get(1), 'Bulbasaur', {statusData: {toxicTurns: 20}}))
@@ -155,10 +154,10 @@ describe('State', () => {
         .toThrow('invalid');
       expect(() => State.createPokemon(gens.get(4), 'Mew', {volatiles: {foo: {}}}))
         .toThrow('invalid');
-      expect(() =>
-        State.createPokemon(gens.get(2), 'Mew', {volatiles: ['Spikes']})).toThrow('not a Volatile Status');
-      expect(() =>
-        State.createPokemon(gens.get(1), 'Mew', {volatiles: {sleep: {}}})).toThrow('not a Volatile Status');
+      expect(() => State.createPokemon(gens.get(2), 'Mew', {volatiles: ['Spikes']}))
+        .toThrow('not a Volatile Status');
+      expect(() => State.createPokemon(gens.get(1), 'Mew', {volatiles: {sleep: {}}}))
+        .toThrow('not a Volatile Status');
 
       expect(
         State.createPokemon(gens.get(4), 'Mew', {volatiles: ['Aqua Ring', 'Protect']}).volatiles
@@ -186,15 +185,49 @@ describe('State', () => {
     });
 
     test('evs', () => {
-      // TODO
+      expect(() => State.createPokemon(gens.get(4), 'Pikachu', {evs: {spa: 300}}))
+        .toThrow('is not within [0,255]');
+      expect(() => State.createPokemon(gens.get(1), 'Pikachu', {evs: {spa: 40, spc: 48}}))
+        .toThrow('Spc and SpA evs mismatch');
+      expect(() => State.createPokemon(gens.get(1), 'Pikachu', {evs: {spd: 32, spc: 36}}))
+        .toThrow('Spc and SpD evs mismatch');
+      expect(() => State.createPokemon(gens.get(1), 'Pikachu', {evs: {spa: 24, spd: 20}}))
+        .toThrow('SpA and SpD evs must match');
+      expect(() => State.createPokemon(gens.get(2), 'Pikachu', {evs: {spa: 16, spc: 28}}))
+        .toThrow('Spc does not exist');
+
+      expect(State.createPokemon(gens.get(1), 'Pikachu', {evs: {spc: 0}}).evs)
+        .toEqual({hp: 252, atk: 252, def: 252, spa: 0, spd: 0, spe: 252});
+      expect(State.createPokemon(gens.get(7), 'Pikachu', {evs: {spa: 200, hp: 128}}).evs)
+        .toEqual({hp: 128, atk: 0, def: 0, spa: 200, spd: 0, spe: 0});
     });
 
     test('ivs', () => {
-      // TODO
+      expect(() => State.createPokemon(gens.get(4), 'Pikachu', {ivs: {spa: 32}}))
+        .toThrow('is not within [0,31]');
+      expect(() => State.createPokemon(gens.get(1), 'Pikachu', {ivs: {spa: 30, spc: 28}}))
+        .toThrow('Spc and SpA ivs mismatch');
+      expect(() => State.createPokemon(gens.get(1), 'Pikachu', {ivs: {spd: 30, spc: 26}}))
+        .toThrow('Spc and SpD ivs mismatch');
+      expect(() => State.createPokemon(gens.get(1), 'Pikachu', {ivs: {spa: 24, spd: 20}}))
+        .toThrow('SpA and SpD ivs must match');
+      expect(() => State.createPokemon(gens.get(2), 'Pikachu', {ivs: {spa: 16, spc: 28}}))
+        .toThrow('Spc does not exist');
+
+      expect(State.createPokemon(gens.get(1), 'Pikachu', {ivs: {spc: 0}}).ivs)
+        .toEqual({hp: 29, atk: 31, def: 31, spa: 0, spd: 0, spe: 31});
+      expect(State.createPokemon(gens.get(7), 'Pikachu', {ivs: {spa: 5, hp: 30}}).ivs)
+        .toEqual({hp: 30, atk: 31, def: 31, spa: 5, spd: 31, spe: 31});
     });
 
     test('dvs', () => {
-      // TODO
+      expect(() => State.createPokemon(gens.get(1), 'Pikachu', {dvs: {spa: 16}}))
+        .toThrow('is not within [0,15]');
+      expect(() => State.createPokemon(gens.get(1), 'Pikachu', {ivs: {spa: 31}, dvs: {spa: 10}}))
+        .toThrow('does not match IV');
+      expect(State.createPokemon(gens.get(1), 'Pikachu', {
+        dvs: {atk: 14, spc: 10}, ivs: {atk: 28},
+      }).ivs).toEqual({hp: 13, atk: 29, def: 31, spa: 21, spd: 21, spe: 31});
     });
 
     test('hidden power', () => {
@@ -202,15 +235,47 @@ describe('State', () => {
     });
 
     test('boosts', () => {
-      // TODO
+      expect(() => State.createPokemon(gens.get(4), 'Pikachu', {boosts: {spa: 7}}))
+        .toThrow('is not within [-6,6]');
+      expect(() => State.createPokemon(gens.get(1), 'Pikachu', {boosts: {spa: 4, spc: 5}}))
+        .toThrow('Spc and SpA boosts mismatch');
+      expect(() => State.createPokemon(gens.get(1), 'Pikachu', {boosts: {spd: 2, spc: 1}}))
+        .toThrow('Spc and SpD boosts mismatch');
+      expect(() => State.createPokemon(gens.get(1), 'Pikachu', {boosts: {spa: -1, spd: -3}}))
+        .toThrow('SpA and SpD boosts must match');
+      expect(() => State.createPokemon(gens.get(2), 'Pikachu', {boosts: {spa: 0, spc: 1}}))
+        .toThrow('Spc does not exist');
+
+      expect(State.createPokemon(gens.get(1), 'Pikachu', {boosts: {spc: 2}}).boosts)
+        .toEqual({spa: 2, spd: 2});
+      expect(State.createPokemon(gens.get(7), 'Pikachu', {boosts: {evasion: 5}}).boosts)
+        .toEqual({evasion: 5});
     });
 
     test('gender', () => {
-      // TODO
+      expect(() => State.createPokemon(gens.get(1), 'Chansey', {gender: 'F'}))
+        .toThrow('Gender does not exist');
+      expect(() => State.createPokemon(gens.get(2), 'Chansey', {gender: 'M'}))
+        .toThrow('must be \'F\'');
+      expect(() => State.createPokemon(gens.get(2), 'Charizard', {gender: 'F', dvs: {atk: 3}}))
+        .toThrow('Atk DVs must be \'M\'');
+      expect(State.createPokemon(gens.get(3), 'Charizard', {gender: 'F'}).gender).toBe('F');
     });
 
     test('hp', () => {
-      // TODO
+      expect(() => State.createPokemon(gens.get(1), 'Chansey', {dvs: {hp: 15, atk: 0}}))
+        .toThrow('required to have an HP DV');
+      expect(State.createPokemon(gens.get(1), 'Chansey', {dvs: {atk: 0}}).ivs!.hp).toEqual(15);
+      expect(State.createPokemon(gens.get(3), 'Suicune', {evs: {hp: 252}}).maxhp).toEqual(404);
+      expect(() => State.createPokemon(gens.get(3), 'Suicune', {maxhp: 300, evs: {hp: 252}}))
+        .toThrow('less than calculated max HP');
+      expect(State.createPokemon(gens.get(3), 'Suicune', {maxhp: 500, evs: {hp: 252}}).maxhp)
+        .toEqual(500);
+      expect(State.createPokemon(gens.get(3), 'Suicune', {evs: {hp: 252}}).hp).toEqual(404);
+      expect(State.createPokemon(gens.get(3), 'Suicune', {hp: 300, evs: {hp: 252}}).hp)
+        .toEqual(300);
+      expect(() => State.createPokemon(gens.get(3), 'Suicune', {hp: -1, evs: {hp: 252}}))
+        .toThrow('is not within [0,404]');
     });
 
     test('misc', () => {
@@ -252,6 +317,7 @@ describe('State', () => {
     test('Z + Max', () => {
       expect(() => State.createMove(gens.get(8), 'Tackle', {useMax: true, useZ: true}))
         .toThrow('Z-Move and a Max Move simulataneously');
+      // TODO ???
     });
 
     test('hits', () => {

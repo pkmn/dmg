@@ -292,10 +292,10 @@ export class State {
         if (typeof options.ivs?.[stat] === 'number' && gen.stats.toDV(options.ivs[stat]!) !== dv) {
           throw new Error(`${stat} DV of '${dv}' does not match IV of '${options.ivs[stat]}'`);
         }
-        pokemon.ivs![stat] = gen.stats.toDV(dv);
+        pokemon.ivs![stat] = gen.stats.toIV(dv);
       }
     }
-    setSpc(gen, pokemon.ivs!, 'ivs', options.dvs);
+    setSpc(gen, pokemon.ivs!, 'ivs', options.dvs, gen.stats.toIV.bind(gen.stats));
 
     if (move) {
       move = typeof move === 'string' ? move : (move.name || '');
@@ -502,7 +502,7 @@ export class State {
 
 const BOUNDS: {[key: string]: [number, number]} = {
   level: [1, 100],
-  evs: [0, 252],
+  evs: [0, 255],
   ivs: [0, 31],
   dvs: [0, 15],
   gen: [1, 8],
@@ -626,7 +626,8 @@ function setSpc(
   gen: Generation,
   existing: Partial<{spc: number; spa: number; spd: number}>,
   type: 'evs' | 'ivs' | 'boosts',
-  vals?: Partial<{spc: number; spa: number; spd: number}>
+  vals?: Partial<{spc: number; spa: number; spd: number}>,
+  fn?: (n: number) => number,
 ) {
   const spc = vals?.spc;
   if (typeof spc === 'number') {
@@ -637,7 +638,7 @@ function setSpc(
     if (typeof vals!.spd === 'number' && vals!.spd !== spc) {
       throw new Error(`Spc and SpD ${type} mismatch: ${spc} vs. ${vals!.spd}`);
     }
-    existing.spa = existing.spd = bounded(type, spc);
+    existing.spa = existing.spd = bounded(type, fn ? fn(spc) : spc);
   }
   if (gen.num <= 2 && existing.spa !== existing.spd) {
     throw new Error(`SpA and SpD ${type} must match before generation 3`);
@@ -654,11 +655,11 @@ function setGender(
   const species = pokemon.species;
   const atkDV = gen.stats.toDV(ivs.atk!);
   // AtkDV determing gender is only at thing in generation 2, but we can use it as the default
-  const gender = gen.num === 1 ? undefined : species.genderRatio.F * 16 >= atkDV ? 'M' : 'F';
+  const gender = gen.num === 1 ? undefined : atkDV >= species.genderRatio.F * 16 ? 'M' : 'F';
   if (name) {
     if (gen.num === 1) throw new Error('Gender does not exist in generation 1');
     if (species.gender && name !== species.gender) {
-      throw new Error(`${species.name} must be ${species.gender} in generation ${gen.num}`);
+      throw new Error(`${species.name} must be '${species.gender}' in generation ${gen.num}`);
     }
     if (gen.num === 2 && setAtkDV && name !== gender) {
       throw new Error(`A ${species.name} with ${atkDV} Atk DVs must be '${gender}' in gen 2`);

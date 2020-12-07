@@ -25,4 +25,4 @@ export const trunc = (n: number, bits = 0) => bits ? (n >>> 0) % (2 ** bits) : n
 export const chainMod = (m: number, n: number) => round(m * n + 0x800) >> 12;
 
 /** Apply the mod `m` to the number `n` per the cartridge mechanics. */
-export const applyMod = (n: number, mod: number) => roundDown(trunc(n * mod) / 0x1000);
+export const applyMod = (n: number, m: number) => roundDown(trunc(n * m) / 0x1000);
