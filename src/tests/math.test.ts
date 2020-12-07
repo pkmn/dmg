@@ -13,10 +13,10 @@ describe('Math', () => {
     expect(math.round(2.6)).toBe(3);
   });
 
-  test('pokeRound', () => {
-    expect(math.pokeRound(2.4)).toBe(2);
-    expect(math.pokeRound(2.5)).toBe(2);
-    expect(math.pokeRound(2.6)).toBe(3);
+  test('roundDown', () => {
+    expect(math.roundDown(2.4)).toBe(2);
+    expect(math.roundDown(2.5)).toBe(2);
+    expect(math.roundDown(2.6)).toBe(3);
   });
 
   test('clamp', () => {

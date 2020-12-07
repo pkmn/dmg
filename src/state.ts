@@ -249,11 +249,11 @@ export class State {
     if (options.status) {
       const condition = Conditions.get(gen, options.status);
       if (!condition) invalid(gen, 'status', options.status);
-      const [name, kind] = condition;
+      const [status, kind] = condition;
       if (kind !== 'Status') {
-        throw new Error(`'${name} is a ${kind} not a Status in generation ${gen.num}`);
+        throw new Error(`'${status} is a ${kind} not a Status in generation ${gen.num}`);
       }
-      pokemon.status = name as StatusName;
+      pokemon.status = status as StatusName;
       if (pokemon.status === 'tox') pokemon.statusData = {toxicTurns: 0};
     }
 
@@ -423,7 +423,7 @@ export class State {
       move.spreadHit = options.spreadHit;
     }
     if (options.numConsecutive && toID(pokemon.item) !== 'metronome') {
-      throw new Error(`numConsecutive has no meaning unless the Pokemon is holding a Metronome'`);
+      throw new Error('numConsecutive has no meaning unless the Pokemon is holding a Metronome\'');
     }
     move.numConsecutive = options.numConsecutive;
 
@@ -472,7 +472,7 @@ export class State {
     if (gen.num === 2 && (shiny !== !!set.shiny)) {
       throw new Error(
         `${pokemon.species.name} is required to ${shiny ? '' : 'not '}be ` +
-        `shiny in generation 2 given its DVs.`
+        'shiny in generation 2 given its DVs.'
       );
     }
     setGender(
@@ -496,7 +496,7 @@ export class State {
     pokemon.hp = pokemon.hp * floor(maxhp / pokemon.maxhp);
     pokemon.maxhp = maxhp;
 
-    return validateStats(gen, pokemon);;
+    return validateStats(gen, pokemon);
   }
 }
 
@@ -518,7 +518,7 @@ function invalid(gen: Generation, k: string, v: any): never {
 
 export function bounded(key: keyof typeof BOUNDS, val: number, die = true) {
   const ok = val >= BOUNDS[key][0] && val <= BOUNDS[key][1];
-  if (!ok && die) throw new RangeError(`${key} ${val} is not within [${BOUNDS[key].join(',')}]`);
+  if (!ok && die) throw new RangeError(`${key} ${val} is not within [${BOUNDS[key].join(', ')}]`);
   return val;
 }
 
@@ -656,7 +656,7 @@ function setGender(
   // AtkDV determing gender is only at thing in generation 2, but we can use it as the default
   const gender = gen.num === 1 ? undefined : species.genderRatio.F * 16 >= atkDV ? 'M' : 'F';
   if (name) {
-    if (gen.num === 1) throw new Error(`Gender does not exist in generation 1`);
+    if (gen.num === 1) throw new Error('Gender does not exist in generation 1');
     if (species.gender && name !== species.gender) {
       throw new Error(`${species.name} must be ${species.gender} in generation ${gen.num}`);
     }
@@ -789,7 +789,7 @@ function validateStats(
       pokemon.ivs?.[stat] ?? 31,
       pokemon.evs?.[stat] ?? (gen.num <= 2 ? 252 : 0),
       pokemon.level,
-      gen.natures.get(pokemon.nature!)!
+      gen.natures.get(pokemon.nature!)
     );
     if (actual !== pokemon.stats[stat]) {
       const s = gen.stats.display(stat);

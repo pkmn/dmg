@@ -2,21 +2,20 @@
 
 Most logic, in particular damange calculation results, should be [incredibly easy to
 test](#generate-test) and thus **tests are expected to accompany all pull requests**. The `master`
-branch of `@pkmn/dmg` is [protected, may not be pushed to directly and requires status checks to
+branch of `@pkmn/dmg` is [protected, may not be pushed to directly, and requires status checks to
 pass before merging](https://github.blog/2015-09-03-protected-branches-and-required-status-checks/).
 
-- Unit tests for logic in `foo.ts` should exist in a file  named `foo.test.ts` and be placed in the
-  `src/tests/` directory with a **hierarchy mirroring the location of `foo.ts` in `src/`**. The
-  majority of tests will should be in one of the files in `src/tests/mechanics/`, as the majority of
-  code lives there.
+- Unit tests for logic in `foo.ts` should exist in a file  named `foo.test.ts` in the `src/tests/`
+  directory with a **hierarchy mirroring the location of `foo.ts` in `src/`**. The majority of tests
+  should be in one of the files in `src/tests/mechanics/`, as the majority of code lives there.
 - Tests should ideally be **as focused as possible and only test one 'variable'** (species,
   abilities, EVs, items, moves, etc), however, this is often impossible given how interlinked
   Pokémon's mechanics are.
 - Tests should be **named after the primary trigger/mechanic/interaction** they are meant to be
   testing.
-- **Prefer realistic test setups** - chose Pokémon / Move / Ability / Item combos that are valid and
-  occur during regular battles. This is not strictly required, but makes for much more intuitive
-  test cases.
+- **Prefer realistic test setups** - chose Pokémon / move / ability / item combinations that are
+  valid and occur during regular battles. This is not strictly required, but makes for much more
+  intuitive test cases.
 - **Favor [table driven testing](https://github.com/golang/go/wiki/TableDrivenTests)** - Jest has
   support for table driven tests with `.each(...)`, but `inGens`/`tests`/`toMatch` should be
   preferred in `@pkmn/dmg`
@@ -54,18 +53,18 @@ inGens(1, 8, ({gen, calculate, Pokemon, Move}) => {
 
 `inGens` calls `inGen` under the hood which calls a function with a `Scope` that includes helper
 functions for `calculate` / `Pokemon` / `Move` / etc which already have `gen: Generation` bound,
-allowing the developer not have to pass in a `gen` all over the place. Note: in general you should
-prefer `calculate` parsing instead of manually using `Pokemon` / `Move` calls, and in scenarios
-where that is not sufficient you should prefer `state = parse('...')` and then modify `state`
-directly.
+allowing the developer not to have to pass in a `gen` all over the place. Note: in general you
+should prefer `calculate` parsing instead of manually using `Pokemon` / `Move` calls, and in
+scenarios where that is not sufficient you should prefer `state = parse('...')` and then modify
+`state` directly.
 
 One 'gotcha' with multi-generational tests in general is that **the data types being referenced in
-the test must exist for the entirety of the generation range**. Amoung other implications, this
+the test must exist for the entirety of the generation range**. Among other implications, this
 means:
 
 - tests with held items cannot include Generation 1
 - tests with abilities cannot include Generation 1 or 2
-- tests with Pokémon/Items/Abilities/Moves which were removed in Generation 8 will need to stop at
+- tests with Pokémon/items/abilities/moves which were removed in Generation 8 will need to stop at
   Generation 7.
 
 Tests with IVs/EVs still work in Generations 1 and 2, though they are a little artificial because it
@@ -118,7 +117,7 @@ To use `generate-test`:
    argument to `generate-test` or don't pass in a backend) or `@smogon/calc` (by using `calc` as
    the first positional argument to `generate-test`).
 2. Describe the testing scenario as minimally as possible and pass it to `generate-test`.
-3. Copy the output of `generate-test` into the approriate file in `src/test/mechanics/` and rename
+3. Copy the output of `generate-test` into the appropriate file in `src/test/mechanics/` and rename
    the test from `'TODO'` to something more informative.
 4. **VERIFY THAT THE OUTPUT OF `generate-test` IS CORRECT** - `generate-test` is **not** perfect,
    and neither are the backends. Blindly copying `generate-test` output and expecting it to work
@@ -150,6 +149,10 @@ Long Form Damage Calculator (the latter two which *also* could be incorrect).
 - `generate-test` <s>may have</s> almost certainly has bugs - pay close attention to the generation
   ranges selected and that the breakdowns are minimal and logical. You may find it necessary to fix
   `generate-test` itself in the process of testing something else.
+
+## Integration
+
+TODO - also cover above how `generate-test` performs integration testing on the spot?
 
 ## Coverage
 

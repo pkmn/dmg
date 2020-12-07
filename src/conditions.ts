@@ -52,7 +52,7 @@ const ALIASES: {[id: string]: string} = {
  *   - Pokemon conditions (status, 'volatile' statuses)
  *
  * There is a 4th category of 'slot' conditions which are approximately side conditions but
- * only affect a particular slot on a given side, not the entire side (eg. Wish). There are
+ * only affect a particular slot on a given side, not the entire side (eg. Wish). These are
  * elided as irrelevant for our purposes.
  *
  * Pokémon Showdown treats everything as IDs, but UI's need a more human-friendly way of referencing
@@ -65,7 +65,7 @@ export const Conditions = new class {
   /**
    * Similar to `Dex#getEffect` but restricted to conditions (so more like `Dex#getPureEffectByID`),
    * searches for a condition named `name` in the respective `gen` and returns the canonical name,
-   * kind and optionally what its 'implict' scope is for the purposes of relevance to damage
+   * kind and optionally what the 'implict' scope is for the purposes of relevance to damage
    * calculations. `gen` is required because certain conditions change categories across generations
    * (Reflect/Light Screen, Mud/Water Sport), as well as to filter out conditions which were not
    * present in the provided generation. Like with other data-getters, this function also handles
@@ -189,10 +189,7 @@ export const SideConditions: {[id: string]: [SideConditionName, GenerationNum, P
   quickguard: ['Quick Guard', 5, 'p2'],
   craftyshield: ['Crafty Shield', 6],
   mist: ['Mist', 6],
-  // TODO lunardance luckychant waterpledge pursuit
 };
-
-// TODO Slot Condition futuremove wish healingwish
 
 // Volatile Status
 
@@ -200,7 +197,7 @@ export type VolatileStatusName =
   'Slow Start' | 'Unburden' | 'Zen Mode' | 'Flash Fire' | 'Parental Bond' | 'Charge' |
   'Leech Seed' | 'Beak Blast' | 'Stall' | 'Gastro Acid' | 'Aqua Ring' | 'Magnet Rise' |
   'Autotomize' | 'Curse' | 'Baneful Bunker' | 'Defense Curl' | 'Protect' | 'Electrify' |
-  'Foresight' | 'Helping Hand' | 'Ingrain' | "King's Shield" | 'Max Guard' | 'Dynamax' |
+  'Foresight' | 'Helping Hand' | 'Ingrain' | 'King\'s Shield' | 'Max Guard' | 'Dynamax' |
   'Miracle Eye' | 'Minimize' | 'Obstruct' | 'Octolock' | 'Roost' | 'Smack Down' | 'Spiky Shield' |
   'Stockpile' | 'Tar Shot' | 'Uproar' | 'Light Screen' | 'Reflect' | 'Mud Sport' | 'Water Sport';
 
@@ -225,7 +222,7 @@ export const Volatiles: {[id: string]: [VolatileStatusName, GenerationNum, Playe
   foresight: ['Foresight', 2, 'p1'],
   helpinghand: ['Helping Hand', 3, 'p1'],
   ingrain: ['Ingrain', 3, 'p2'],
-  kingsshield: ["King's Shield", 6, 'p2'],
+  kingsshield: ['King\'s Shield', 6, 'p2'],
   maxguard: ['Max Guard', 8, 'p2'],
   dynamax: ['Dynamax', 8],
   miracleeye: ['Miracle Eye', 4, 'p2'],

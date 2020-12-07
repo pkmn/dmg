@@ -8,13 +8,15 @@ The most accurate and complete multi-generational Pokémon damage calculator pac
 
 `@pkmn/dmg` is the spiritual successor of the `@smogon/calc` library, designed from scratch to be
 compatible with the [`@pkmn`](https://github.com/pkmn) ecosystem and based around a scalable
-architecture familar with Pokémon Showdown developers. In addition to the improvements made to
-architecture and correctness, `@pkmn/dmg` features.
+architecture familar to Pokémon Showdown developers. In addition to the improvements made to
+architecture and correctness, `@pkmn/dmg` features:
 
 - sophisticated [**text parsing**](PARSING.md) support and the **ability to canonicalize and encode
   calculations**
-- generalized pre-computation [**state manipulation**](#appliers) through **'application' of effects**
-- **comprehensive multi-hit** support and [**KO chance**](#ko-chance) calculation, enabling ['**chained**'](#chaining) calculations
+- generalized pre-computation [**state manipulation**](#appliers) through the **'application' of
+  effects**
+- **comprehensive multi-hit** support and [**KO chance**](#ko-chance) calculation, enabling
+  ['**chained**'](#chaining) calculations
 - improved [**programmatic support**](#library) for **recoil and recovery** results
 - **non-intrusive support for [mods](#mods)** overriding data or effects
 - extensive **tests** build on state of the art [**multi-generational testing
@@ -43,19 +45,19 @@ convenient way to get started, simply depend on a transpiled and minified versio
 `@pkmn/dmg`'s main API is the `calculate` function takes in [`State`](src/state.ts) and returns a
 [`Result`](src/result.ts).
 
-`@pkmn/dmg` is data-layer agnostic thanks to its dependency on
-[`@pkmn/data`](https://github.com/pkmn/ps/blob/master/data), it simply requires a Pokémon Showdown
+`@pkmn/dmg` is data-layer agnostic - thanks to its dependency on
+[`@pkmn/data`](https://github.com/pkmn/ps/blob/master/data) it simply requires a Pokémon Showdown
 compatible `Dex`-type implementation to be provided to `@pkmn/data`'s `Generations` constructor
 ([`@pkmn/dex`](https://github.com/pkmn/ps/blob/master/dex) is the recommended choice here, though
 note that as it is fully featured it is ~4x the size of `@smogon/calc/data` and certain applications
 may wish to preprocess the JSON files to trim unnecessary fields).
 
-`State`'s helper functions, `State#createPokemon` and `State.createMove` are the recommended ways
+`State`'s helper functions, `State#createPokemon` and `State#createMove` are the recommended ways
 to initialize the input data structures required for `calculate` - these functions provide a
 convenient way to avoid having to specify all of the fields while also performing basic integrity
 checking. Objects compatible with the `State` interface can be provided instead, though this is
 mostly relevant for applications which already have their own battle state representation
-(eg. `@pkmn/client`).
+(eg. [`@pkmn/client`](https://github.com/pkmn/ps/tree/master/client)).
 
 ```ts
 import {Dex} from '@pkmn/dex'
@@ -66,12 +68,12 @@ const gens = new Generations(Dex);
 const gen = gens.get(4);
 const result = dmg.calculate(
   gen,
-  State.createPokemon(gen, 'Gengar', {item: 'Choice Specs', nature: 'Modest', evs: {spa: 252}}),
+  dmg.State.createPokemon(gen, 'Gengar', {item: 'Choice Specs', nature: 'Modest', evs: {spa: 252}}),
   {
-    pokemon: State.createPokemon(gen, 'Blissey', {evs: {hp: 252, spd: 252}}),
+    pokemon: dmg.State.createPokemon(gen, 'Blissey', {evs: {hp: 252, spd: 252}}),
     sideConditions: {spikes: {level: 2}, stealthrock: {}},
   }
-  State.createMove(gen, 'Focus Blast'),
+  dmg.State.createMove(gen, 'Focus Blast'),
   {weather: 'Sandstorm', pseudoWeather: {}}
 );
 ```
@@ -129,23 +131,23 @@ $ dmg gen=3 mence @ CB [EQ] vs. cune @ lefties
 Like [calc.pokemonshowdown.com](https://calc.pokemonshowdown.com), the CLI relies on predefined sets
 and heuristics to minimize the amount of information that needs to be specified in order to perform
 a calculation. The [parsing documentation](PARSING.md) covers the syntax in more details. The
-optional [`@smogon/sets`](https://www.npmjs.com/package/@smogon/sets) dependency must be installed
+optional [`@pkmn/smogon`](https://www.npmjs.com/package/@pkmn/smogon) dependency must be installed
 to run `dmg`.
 
 While not required, the first positional argument to `dmg` can be the format ID (eg. `gen7ou` or
-`gen8anythinggoes`) which will scope the sets from `@smogon/sets` to be drawn from that particular
+`gen8anythinggoes`) which will scope the sets from `@pkmn/smogon` to be drawn from that particular
 format (which is especially useful for VGC or Little Cup calculations).
 
 ### Browser
 
-The recommended way of using `@smogon/calc` in a web browser is to **configure your bundler**
+The recommended way of using `@pkmn/dmg` in a web browser is to **configure your bundler**
 ([Webpack](https://webpack.js.org/), [Rollup](https://rollupjs.org/),
 [Parcel](https://parceljs.org/), etc) to minimize it and package it with the rest of your
 application. If you do not use a bundler, a convenience `production.min.js` is included in the
 package. You simply need to depend on `./node_modules/@pkmn/dmg/build/production.min.js` in a
 `script` tag (which is what the unpkg shortcut above is doing), after which **`calc` will be
 accessible as a global.** You must also have a `Generations` implementation provided, and it must be
-loaded your data layer **before** loading the calc:
+loaded before **before** loading the calc:
 
 ```html
 <script src="./node_modules/@pkmn/dex/build/production.min.js"></script>
@@ -157,11 +159,11 @@ loaded your data layer **before** loading the calc:
 
 ### Appliers
 
-`@pkmn/dmg`'s handling of state and the concept of 'appliers' and their `apply` functions are
+`@pkmn/dmg`'s handling of state and the concept of 'appliers' and their `apply` functions is
 perhaps the largest innovation `@pkmn/dmg` provides over previous damage calculators. `@pkmn/dmg`'s
 appliers are a comphrensive generalization for the ad hoc convenience functionality provided by
 existing calculators which contain things like toggles to turn 'on' an ability or buttons to boost
-stats as if a move like 'Geomancy' or 'Extreme Evoboost' were applied.
+stats for moves like 'Geomancy' or 'Extreme Evoboost'.
 
 Abilities/conditions/items/moves which have an effect can have their effect `apply`-ed to modify the
 `State` which is then used to perform a damage calculation. This is useful for a UI, as a set with
@@ -181,16 +183,16 @@ the calculation updates based on effects which may be `apply`-ed after each hit*
 naturally handles Parental Bond or multihit moves (including interactions like Stamina raising
 Defense in between hits or the second hit of Parental Bond benefitting from Power Up Punch's Attack
 boost) but also **allows for abitrary moves to be chained together to compute the the result of a
-serious of attacks**.
+series of attacks**.
 
 Chaining handles the common case of wanting to see what the results of a repeated Overheat or Draco
-Meteor might be, but also covers things like Scizor U-turn into Gengar Focus Blast \- any results
-can be linked together and the expected KO chance of the joint `Result` handles in exactly the same
-way it handles 2 hits from a Breloom's Bullet Seed. At the extreme, this design scales to handle
-scenarios like Gluttony Sitrus Berry kicking in after a few hits or recoil Defeatist activating
+Meteor might be, but also covers things like Scizor U-turn into Gengar Focus Blast - any results can
+be linked together and the expected KO chance of the joint `Result` is handled in exactly the same
+way 2 consectutive hits from a Breloom's Bullet Seed is handled. At the extreme, this design scales
+to handle scenarios like Gluttony Sitrus Berry kicking in after a few hits or Defeatist activating
 after recoil drops the attacker into the requisite HP range. Chained moves only deal with
 **guaranteed** scenarios - ie. effects are only `apply`-ed between moves if they are guaranteed to
-occur, either because they have a 100% chance of activating or the min ranges involve guarantee that
+occur, either because they have a 100% chance of activating or the ranges involved guarantee that
 a certain event would occur.
 
 ### KO Chance
@@ -207,15 +209,15 @@ mechanics), however, `@pkmn/dmg` was carefully designed to make it much more ext
 than `@smogon/calc`. Changes to `@pkmn/dmg`'s **data** can be accomplished via:
 
 - the `override` method exposed, which allows for modifying or adding fields to existing data (this
-  is effectively the same as the `overrides` parameters some of `@smogon/calc`'s constructors took)
+  is effectively the same as the `overrides` parameters some of `@smogon/calc`'s constructors take)
 - exposing additional non-canonical data from `@pkmn/data`'s `Generations` class by providing its
   constructor with a custom `exists` function implementation (useful for National Dex or CAP)
-- implementing a custom `@pkmn/dex-types` implementation (possibly with wraps `@pkmn/dex` and add
-  in additional data) to implement completely new data.
+- wrapping `@pkmn/dex` and adding in additional data (cf.
+  [`@pkmn/mods`](https://github.com/pkmn/ps/tree/master/mods))
 
-Depending on the what your modifications entail, you will likely not be able to make use of the
-convenience factory methods `State` provides, as they perform some verification of fundamental
-Pokémon mechanics, however, you can always build up a `State` object without using these methods.
+Depending on the what your modifications entail you may not be able to make use of the convenience
+factory methods `State` provides as they perform some verification of fundamental Pokémon mechanics.
+Note, however, that you can always build up a `State` object without using these methods.
 
 `@pkmn/dmg` will only use the `@pkmn/dex-types` fields it is aware of, so additional data fields
 should not cause problems. However, if you wish to make use of any new fields or if you simply
@@ -250,7 +252,8 @@ justification, core parts of the algorithm may be broken up and made moddable in
   contributors
 - [Long Form Damage
   Calculator](https://docs.google.com/spreadsheets/d/14XBTYYRp1OK5epQzB3SF2ccdSkuA6Jv7UlRQi66pxkY/edit#gid=1621823916)
-  by SadisticMystic
+  \- SadisticMystic
+- [sulcalc](https://github.com/sulcata/sulcalc/) - sulcata
 - [`@smogon/calc`](https://github.com/smogon/damage-calc) - Honko, Austin and contributors
 
 ## License

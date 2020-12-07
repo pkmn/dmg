@@ -72,8 +72,7 @@ describe('State', () => {
     test('species', () => {
       expect((() => State.createPokemon(gens.get(1), 'Tyranitar'))).toThrow('invalid');
       expect((() => State.createPokemon(gens.get(2), 'Tyranitar', {
-        species: gens.get(2).species.get('Pikachu')}
-      ))).toThrow('invalid');
+        species: gens.get(2).species.get('Pikachu')}))).toThrow('invalid');
       expect(State.createPokemon(gens.get(2), 'Tyranitar').species.name).toBe('Tyranitar');
     });
 
@@ -91,7 +90,7 @@ describe('State', () => {
         .toThrow('must be at least 1');
       expect(() => State.createPokemon(gens.get(4), 'Jirachi', {weightkg: 0}))
         .toThrow('must be at least 1');
-        expect(State.createPokemon(gens.get(4), 'Jirachi', {weightkg: 9}).weighthg).toBe(90);
+      expect(State.createPokemon(gens.get(4), 'Jirachi', {weightkg: 9}).weighthg).toBe(90);
       expect(State.createPokemon(gens.get(4), 'Jirachi', {weighthg: 9})).toBe(9);
       expect(State.createPokemon(gens.get(4), 'Jirachi')).toBe(11);
     });
@@ -142,8 +141,7 @@ describe('State', () => {
       expect(() => State.createPokemon(gens.get(1), 'Bulbasaur', {statusData: {toxicTurns: 20}}))
         .toThrow('is not within [0,15]');
       expect(() =>
-        State.createPokemon(gens.get(1), 'Bulbasaur', {status: 'slp', statusData: {toxicTurns: 4}})
-      ).toThrow(`status is not 'tox'`);
+        State.createPokemon(gens.get(1), 'Bulbasaur', {status: 'slp', statusData: {toxicTurns: 4}})).toThrow('status is not \'tox\'');
       pokemon =
         State.createPokemon(gens.get(1), 'Bulbasaur', {status: 'tox', statusData: {toxicTurns: 4}});
       expect(pokemon.statusData).toEqual({toxicTurns: 4});
@@ -158,11 +156,9 @@ describe('State', () => {
       expect(() => State.createPokemon(gens.get(4), 'Mew', {volatiles: {foo: {}}}))
         .toThrow('invalid');
       expect(() =>
-        State.createPokemon(gens.get(2), 'Mew', {volatiles: ['Aqua Ring']})
-      ).toThrow('not a Volatile Status');
+        State.createPokemon(gens.get(2), 'Mew', {volatiles: ['Aqua Ring']})).toThrow('not a Volatile Status');
       expect(() =>
-        State.createPokemon(gens.get(1), 'Mew', {volatiles: {protect: {}}})
-      ).toThrow('not a Volatile Status');
+        State.createPokemon(gens.get(1), 'Mew', {volatiles: {protect: {}}})).toThrow('not a Volatile Status');
 
       expect(
         State.createPokemon(gens.get(4), 'Mew', {volatiles: ['Aqua Ring', 'Protect']}).volatiles

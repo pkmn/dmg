@@ -2,7 +2,7 @@ import {GenerationNum, Generations, Generation, GameType, toID, StatsTable, Natu
 import {Pokemon, PRNG} from '@pkmn/sim';
 
 import {calculate} from '../mechanics';
-import {State, FieldOptions, SideOptions, PokemonOptions,  MoveOptions} from '../state';
+import {State, FieldOptions, SideOptions, PokemonOptions, MoveOptions} from '../state';
 import {Weathers, Terrains, PseudoWeathers, SideConditions, Statuses, Volatiles} from '../conditions';
 import {is} from '../utils';
 
@@ -23,7 +23,7 @@ export function run(gens: Generations, prng: PRNG) {
   } catch (err) {
     throw err; // TODO
   }
-};
+}
 
 function generate(gens: Generations, prng: PRNG) {
   const gen = gens.get(prng.next(1, 8) as GenerationNum);
@@ -69,7 +69,7 @@ function generateSide(gen: Generation, gameType: GameType, prng: PRNG) {
     // TODO abilities
   }
   const pokemon = generatePokemon(gen, prng);
-  return State.createSide(gen, pokemon, options)
+  return State.createSide(gen, pokemon, options);
 }
 
 const BOOSTS = ['atk', 'def', 'spa', 'spd', 'spe', 'accuracy', 'evasion'];
@@ -118,10 +118,11 @@ function generatePokemon(gen: Generation, prng: PRNG) {
     options.ivs[stat] = stat === 'hp' && gen.num < 3
       ? gen.stats.toIV(gen.stats.getHPDV(options.ivs))
       : prng.next(0, 31);
-      options.evs[stat] = prng.next(0, gen.num >= 3 ? Math.min(total, 252) : 252);
+    options.evs[stat] = prng.next(0, gen.num >= 3 ? Math.min(total, 252) : 252);
     total -= options.evs[stat]!;
     stats[stat] = gen.stats.calc(
-      stat, species.baseStats[stat]!, options.ivs[stat], options.evs[stat], options.level, nature);
+      stat, species.baseStats[stat]!, options.ivs[stat], options.evs[stat], options.level, nature
+    );
   }
 
   // TODO maxhp
@@ -129,6 +130,7 @@ function generatePokemon(gen: Generation, prng: PRNG) {
 
   options.boosts = {};
   const boosts = BOOSTS.slice() as BoostName[];
+  // eslint-disable-next-line no-unmodified-loop-condition
   while (boosts && prng.randomChance(1, 10)) {
     options.boosts[sample(prng, boosts, true)] = prng.next(1, 6);
   }

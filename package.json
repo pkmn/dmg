@@ -63,6 +63,23 @@
         "rules": {
           "max-len": "off"
         }
+      },
+      {
+        "files": ["src/**/*.ts"],
+        "rules": {
+          "@typescript-eslint/restrict-template-expressions": 0,
+          "@typescript-eslint/ban-types": [
+            "error",
+            {
+              "types": {
+                "object": false,
+                "{}": false,
+                "Function": false
+              },
+              "extendDefaults": true
+            }
+          ]
+        }
       }
     ]
   }

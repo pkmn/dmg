@@ -9,7 +9,7 @@ export const floor = Math.floor;
 export const round = Math.round;
 
 /** Game Freaks version of rounding which rounds *down* on 0.5. */
-export const pokeRound = (n: number) => n % 1 > 0.5 ? ceil(n) : floor(n);
+export const roundDown = (n: number) => n % 1 > 0.5 ? ceil(n) : floor(n);
 
 /** Returns `n` as an integer greater than `a` and less than `b`. */
 export const clamp = (a: number, n: number, b: number) => min(max(floor(n), a), b);
@@ -25,4 +25,4 @@ export const trunc = (n: number, bits = 0) => bits ? (n >>> 0) % (2 ** bits) : n
 export const chainMod = (m: number, n: number) => round(m * n + 0x800) >> 12;
 
 /** Apply the mod `m` to the number `n` per the cartridge mechanics. */
-export const applyMod = (n: number, mod: number) => pokeRound(trunc(n * mod) / 0x1000);
+export const applyMod = (n: number, mod: number) => roundDown(trunc(n * mod) / 0x1000);

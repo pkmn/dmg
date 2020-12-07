@@ -34,12 +34,7 @@ export interface Handler {
 
 export type HandlerKind = 'Abilities' | 'Items' | 'Moves' | 'Conditions';
 export type Handlers = typeof HANDLERS;
-export const HANDLERS = {
-  Abilities,
-  Conditions,
-  Items,
-  Moves,
-};
+export const HANDLERS = {Abilities, Conditions, Items, Moves};
 
 export class Appliers {
   private handlers: Handlers;
@@ -50,9 +45,10 @@ export class Appliers {
 
   apply(kind: HandlerKind, id: ID, state: State, guaranteed?: boolean) {
     switch (kind) {
-    case 'Abilities': return this.handlers.Abilities[id]?.apply?.(state, guaranteed);
-    case 'Items': return this.handlers.Items[id]?.apply?.(state, guaranteed);
-    case 'Conditions': return this.handlers.Conditions[id]?.apply?.(state, guaranteed);
+    case 'Abilities':
+    case 'Items':
+    case 'Conditions':
+      return this.handlers[kind][id]?.apply?.(state, guaranteed);
     case 'Moves': {
       // If a Move handler is defined, use it, otherwise try to see if an 'apply' function can
       // can be inferred based purely on information from the data files
@@ -72,10 +68,10 @@ export class Appliers {
         // TODO apply secondary! need to take into account Simple etc for boosts, other affects
         // for slot conditions etc
       }
-
       return;
     }
-    default: throw new Error(`Invalid handler kind: '${kind}'`);
+    default:
+      throw new Error(`Invalid handler kind: '${kind}'`);
     }
   }
 }

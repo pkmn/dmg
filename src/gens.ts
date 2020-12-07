@@ -15,7 +15,7 @@ const pokemon = (gen: Generation) => (
 const move = (gen: Generation) => (
   name: string,
   options: MoveOptions = {},
-  // eslint-disable-next-line no-shadow
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   pokemon: string | {
     species?: string | Specie;
     item?: string;

@@ -19,16 +19,16 @@ const WEATHERS: {[id: string]: ID} = {
 };
 
 export function verify(state: State, breakdown: ResultBreakdown, num = N, seed = SEED) {
- const prng = new PRNG(seed);
- const gameType = state.gameType === 'singles' ? '' : state.gameType;
- const format = Dex.getFormat(`gen${state.gen.num}${gameType}customgame`);
+  const prng = new PRNG(seed);
+  const gameType = state.gameType === 'singles' ? '' : state.gameType;
+  const format = Dex.getFormat(`gen${state.gen.num}${gameType}customgame`);
   for (let i = 0; i < num; i++, prng.next()) {
     const battle = new Battle({format, formatid: format.id, seed: prng.seed});
-    battle.trunc = Dex.trunc; // Custom Game formats don't use proper truncation...
+    battle.trunc = Dex.trunc.bind(Dex); // Custom Game formats don't use proper truncation...
 
     const p1 = setSide('p1', battle, state);
     const p2 = setSide('p2', battle, state);
-    setField(battle, state.field)
+    setField(battle, state.field);
 
     const hp = {p1: p1.pokemon.hp, p2: p2.pokemon.hp};
     battle.makeChoices(p1.choice, p2.choice);
@@ -39,13 +39,13 @@ export function verify(state: State, breakdown: ResultBreakdown, num = N, seed =
         p1.pokemon.hp + (breakdown.recoil?.[0] || 0) + (breakdown.recovery?.[1] || 0),
       ];
       if (p1.pokemon.hp < range[0] || p1.pokemon.hp > range[1]) {
-        throw new Error(``);
+        throw new Error('');
       }
     }
     if (breakdown.range) {
       const damage = hp.p2 - p2.pokemon.hp;
       if (damage < breakdown.range[0] || damage > breakdown.range[1]) {
-        throw new Error(``);
+        throw new Error('');
       }
     }
   }
@@ -83,7 +83,7 @@ function setSide(player: 'p1' | 'p2', battle: Battle, state: State) {
   // TODO active
   // TODO team
 
-   // TODO switching
+  // TODO switching
   const pokemon = side.active[0];
   pokemon.weighthg = p.weighthg;
   // FIXME status, statusData
@@ -95,12 +95,12 @@ function setSide(player: 'p1' | 'p2', battle: Battle, state: State) {
     }
   }
   pokemon.setType(p.types, true);
-  if (p.addedType) pokemon.addType(p.addedType!);
+  if (p.addedType) pokemon.addType(p.addedType);
   if (p.hp) pokemon.maxhp = p.hp;
   pokemon.hp = p.hp;
   pokemon.boostBy(p.boosts);
   if (p.moveLastTurnResult === false) pokemon.moveLastTurnResult = false;
-  pokemon.hurtThisTurn = !!p.hurtThisTurn;
+  // FIXME pokemon.hurtThisTurn = !!p.hurtThisTurn;
 
   // TODO crit etc
   return {choice: player === 'p2' ? 'move splash' : `move ${state.move.id}`, pokemon};

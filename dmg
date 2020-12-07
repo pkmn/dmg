@@ -1,54 +1,46 @@
 #!/usr/bin/env node
+'use strict';
 
 try {
-  require.resolve('@smogon/sets');
+  require.resolve('@pkmn/smogon');
+  require.resolve('@pkmn/sim');
 } catch (err) {
   if (err.code !== 'MODULE_NOT_FOUND') throw err;
-  console.error('@smogon/sets must be installed to use the CLI');
+  console.error('@pkmn/smogon and @pkmn/sim must be installed to use the CLI');
   process.exit(2);
 }
 
+const https = require('https');
+const url = require('url');
+
 const {Dex} = require('@pkmn/sim');
 const {Generations} = require('@pkmn/data');
-const defaultSets = require('@smogon/sets');
+const {Smogon} = require('@pkmn/smogon');
 const dmg = require('./build');
 
-const gens = new Generations(Dex);
-
-const ORDERED = ['ag', 'uber', 'ou', 'uu', 'ru', 'nu', 'pu'];
-const tierToFormat = tier => tier === 'ag' ? 'anythinggoes' : tier; // sigh
-
-const findSets = (gen, sets, species, format) => {
-  const found = [];
-  const add = format => {
-    if (sets[format]) {
-      for (const source of ['smogon.com/dex', 'smogon.com/stats']) {
-        if (sets[source] && sets[source][species.id]) found.push(sets[source][species.id]);
+function fetch(u) {
+  return new Promise((resolve, reject) => {
+    let data = '';
+    const req = https.get(u, res => {
+      if (res.statusCode !== 200) {
+        if (res.statusCode >= 300 && res.statusCode <= 400 && res.headers.location) {
+          return resolve(fetch(url.resolve(u, res.headers.location)));
+        } else {
+          return reject(new Error(`HTTP ${res.statusCode}`));
+        }
       }
-    }
-    return found;
-  };
+      res.on('data', d => {
+        data += d;
+      });
+      res.on('end', () => resolve({json: () => Promise.resolve(data)}));
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
 
-  if (format && add(format).length) return found;
-  const tier = toID(species.tier);
-  if (add(`gen${gen.num}${tierToFormat(tier)}`).length) return found;
-
-  const i = ORDERED.indexOf(tier);
-  const formats = new Set(Object.keys(sets));
-  for (const [tier, j] of ORDERED.entries()) {
-    if (j < i) continue;
-    format = `gen${gen.num}${tierToFormat(tier)}`;
-    if (formats.has(format)) {
-      add(format);
-      formats.delete(format);
-    }
-  }
-  for (const format of formats) {
-   add(format);
-  }
-
-  return found;
-};
+const gens = new Generations(Dex);
+const smogon = new Smogon(fetch);
 
 try {
   (async () => {
@@ -59,11 +51,15 @@ try {
     const state = dmg.parse(gen || gens, argv.join(' '));
     gen = gen || state.gen;
 
-    const sets = await defaultSets.forGen(gen);
     dmg.State.mergeSet(
-      state.p1.pokemon, state.move.id, ...findSets(gen, sets, state.p1.pokemon.species, format));
+      state.p1.pokemon,
+      state.move.id,
+      ...(await smogon.sets(gen, state.p1.pokemon.species, format, true))
+    );
     dmg.State.mergeSet(
-      state.p2.pokemon, ...findSets(gen, sets, state.p2.pokemon.species, format));
+      state.p2.pokemon,
+      ...(await smogon.sets(gen, state.p2.pokemon.species, format, true))
+    );
 
     const result = dmg.calculate(state);
     if (process.stdout.isTTY) console.log(`\x1b[90m(${dmg.encode(result.state)})\x1b[0m`);

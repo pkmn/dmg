@@ -40,6 +40,7 @@ export function has<T extends string>(x: T[] | undefined, ...xs: (T | undefined)
 
 // https://github.com/krzkaczor/ts-essentials v6.0.5
 // MIT License Copyright 2018-2019 Chris Kaczor
+/* eslint-disable @typescript-eslint/no-unused-vars */
 export type Primitive = string | number | boolean | bigint | symbol | undefined | null;
 export type Builtin = Primitive | Function | Date | Error | RegExp;
 
@@ -87,6 +88,7 @@ export type DeepPartial<T> =
   : Partial<T>;
 
 export type Buildable<T> = DeepPartial<DeepWritable<T>>;
+/* eslint-enable @typescript-eslint/no-unused-vars */
 
 // jQuery JavaScript Library v2.0.3
 // MIT License Copyright 2005, 2013 jQuery Foundation, Inc. and other contributors

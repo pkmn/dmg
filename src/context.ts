@@ -27,6 +27,8 @@ import {Relevancy} from './result';
 import {DeepReadonly, extend, toID} from './utils';
 import {State} from './state';
 
+const relevancy = (handler: keyof Handler) => handler === 'onResidual' ? 'residual' : 'relevant';
+
 export class Context {
   gameType: GameType;
   gen: Generation;
@@ -87,20 +89,20 @@ export namespace Context {
       if (state.weather) {
         const id = toID(state.weather);
         this.weather = reify({name: state.weather}, id, handlers.Conditions, handler => {
-          this[handler === 'onResidual' ? 'residual' : 'relevant'].weather = true;
+          this[relevancy(handler)].weather = true;
         });
       }
       if (state.terrain) {
         const id = toID(state.terrain);
         this.terrain = reify({name: state.terrain}, id, handlers.Conditions, handler => {
-          this[handler === 'onResidual' ? 'residual' : 'relevant'].terrain = true;
+          this[relevancy(handler)].terrain = true;
         });
       }
       this.pseudoWeather = {};
       for (const pw in state.pseudoWeather) {
         this.pseudoWeather[pw] =
           reify({data: state.pseudoWeather[pw]}, pw as ID, handlers.Conditions, handler => {
-            this[handler === 'onResidual' ? 'residual' : 'relevant'].pseudoWeather[pw] = true;
+            this[relevancy(handler)].pseudoWeather[pw] = true;
           });
       }
     }
@@ -151,7 +153,7 @@ export namespace Context {
       for (const sc in state.sideConditions) {
         this.sideConditions[sc] =
           reify(extend({}, state.sideConditions[sc]), sc as ID, handlers.Conditions, handler => {
-            this[handler === 'onResidual' ? 'residual' : 'relevant'].sideConditions[sc] = true;
+            this[relevancy(handler)].sideConditions[sc] = true;
           });
       }
       this.active = this.active?.map(p => extend({}, p));
@@ -225,12 +227,12 @@ export namespace Context {
 
       if (state.item) {
         this.item = reify({id: state.item}, state.item, handlers.Items, handler => {
-          this[handler === 'onResidual' ? 'residual' : 'relevant'].item = true;
+          this[relevancy(handler)].item = true;
         });
       }
       if (state.ability) {
         this.ability = reify({id: state.ability}, state.ability, handlers.Abilities, handler => {
-          this[handler === 'onResidual' ? 'residual' : 'relevant'].ability = true;
+          this[relevancy(handler)].ability = true;
         });
       }
       this.gender = state.gender;
@@ -239,7 +241,7 @@ export namespace Context {
       if (state.status) {
         this.status =
           reify({name: state.status}, state.status as ID, handlers.Conditions, handler => {
-            this[handler === 'onResidual' ? 'residual' : 'relevant'].status = true;
+            this[relevancy(handler)].status = true;
           });
       }
       this.statusData = this.statusData && extend({}, state.statusData);
@@ -247,7 +249,7 @@ export namespace Context {
       for (const v in state.volatiles) {
         this.volatiles[v] =
           reify(extend({}, state.volatiles[v]), v as ID, handlers.Conditions, handler => {
-            this[handler === 'onResidual' ? 'residual' : 'relevant'].volatiles[v] = true;
+            this[relevancy(handler)].volatiles[v] = true;
           });
       }
 
@@ -272,7 +274,7 @@ export namespace Context {
             state.ivs?.[stat] ?? 31,
             state.evs?.[stat] ?? (gen.num <= 2 ? 252 : 0),
             state.level,
-            gen.natures.get(state.nature!)!
+            gen.natures.get(state.nature!)
           );
         }
       }

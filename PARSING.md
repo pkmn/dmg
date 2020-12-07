@@ -5,9 +5,10 @@ perform computation on. The rules for encoding a damage calculation scenario wer
 similar as possible to the human readable output of a damage calculation, though certain rules have
 to be added to making parsing easier (technically, because there is a set number of possible
 Pokémon/items/moves/abilities/conditions and relatively little overlap between data types one could
-use an algorithm relying on bruteforcing via prefix tries and a small number of disambiguation
-rules). The result should be a syntax with is relatively intutive and familar, though incredibly
-flexible (perhaps overly so).
+use an algorithm relying on bruteforcing via [prefix tries](https://en.wikipedia.org/wiki/Trie) and
+a small number of disambiguation rules but this is considered out of scope for `@pkmn/dmg`). The
+result is a syntax which is relatively intutive and familar, though incredibly flexible (perhaps
+overly so).
 
 ## Format
 
@@ -16,14 +17,14 @@ comprehensive, are more often going to be used to describe the bulk of damage ca
 
 ### Flags
 
-Every configuration option is possible to set programmatically can be specified as a **flag**. Flags
-are very flexible in how they can be specified: any thing in the form `key:value` or `key=value`
-(where the key can optionally be prefixed with `+`, `-` or `--`, i.e. `-key=value` or `--key:value`,
-etc) gets interpreted as a flag. Some flag values (`Choice Band`) may contain spaces - you may
-either completely remove spaces (`attackerItem:ChoiceBand` or `attackerItem=choiceband`), replace
-spaces with underscores (`attackerItem=Choice_Band`) or quote the space using if the parser in an
-environment where spaces are allowed in the input (eg. `--attackerItem='Choice Band'` on the command
-line, though this wouldn't be allowed in a browser URL).
+Every configuration option that is possible to set programmatically can be specified as a **flag**.
+Flags are very flexible in how they can be specified: any thing in the form `key:value` or
+`key=value` (where the key can optionally be prefixed with `+`, `-` or `--`, i.e. `-key=value` or
+`--key:value`, etc) gets interpreted as a flag. Some flag values (`Choice Band`) contain spaces -
+you must either completely remove spaces (`attackerItem:ChoiceBand` or `attackerItem=choiceband`),
+replace the spaces with underscores (`attackerItem=Choice_Band`), or quote the space using if the
+parser in an environment where spaces are allowed in the input (eg. `--attackerItem='Choice Band'`
+on the command line, though this wouldn't be allowed in a browser URL).
 
 #### Implicits
 
@@ -34,10 +35,10 @@ defender, there are certain cases where the side a property is for is implicit a
 based on the context. In these circumstances (or for properties not associated with sides at all,
 like field conditions or move flags etc), the disambiguating prefix can be elided (e.g.
 `--isSR=true` and `sr:1` both set Stealth Rock on the defender's side). In the cases where a
-property's scope is not implicit, the `attacker` / `p1` or `defender` / `p2` *flags* can be used to
-explicitly scope a property as belonging to a certain side. Multiple ambiguous flags may be passed
-to these dismabiguators, and in these scenarios, boolean flags can drop their prefix enitrely
- eg. `p2:spikes:3,auroraveil` or `--attacker=flashfire+foresight+helpinghand`.
+property's scope is not implicit, the `attacker` / `p1` or `defender` / `p2` *flags* can also be
+used to explicitly scope a property as belonging to a certain side. Multiple ambiguous flags may be
+passed to these dismabiguators, and in these scenarios, boolean flags can drop their prefix enitrely
+eg. `p2:spikes:3,auroraveil` or `--attacker=flashfire+foresight+helpinghand`.
 
 #### Booleans
 
@@ -93,7 +94,7 @@ implicitly if disambiguous.
 | `attackerToxicCounter` / `defenderToxicCounter` | the current toxic counter of the attacker / defender |
 
 Pokémon conditions (volatiles and statuses) may be set using the general `attacker` / `defender`
-flags to indicate the side, or implicitly if disambiguous. `attackerVolatile` or
+flags to indicate the side, or implicitly if they are not ambiguous. `attackerVolatile` or
 `defenderSideCondition` etc may also be used, though don't offer any benefits over
 `attacker` / `p1` or `defender` / `p2` or implicits and only exist for consistency.
 
@@ -113,8 +114,8 @@ All move fields only apply to the attacker, so the `attacker` prefix is unnecess
 
 In addition to flags, the parser supports **phrases**. The specification for the phrases it
 understands is similar to the output description, with the main difference being that the move name
-requirings a slight modification (ie. to be surrounded by `[`+`]`) in order to [make
-parsing easier](https://en.wikipedia.org/wiki/Regular_language):
+requires a slight modification (ie. to be surrounded by `[`+`]`) in order to [make parsing
+easier](https://en.wikipedia.org/wiki/Regular_language):
 
 ```txt
 <ATTACKER_BOOST>? <ATTACKER_LEVEL>? <ATTACKER_EVS>? <ATTACKER_POKEMON> (@ <ATTACKER_ITEM>)?
