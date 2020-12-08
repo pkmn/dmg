@@ -139,7 +139,7 @@ export namespace State {
     // Required for Stomping Tantrum
     moveLastTurnResult?: false | unknown;
     // Required for Assurance
-    hurtThisTurn?: boolean;
+    hurtThisTurn?: false | unknown;
   }
 
   export interface Move extends DMove {

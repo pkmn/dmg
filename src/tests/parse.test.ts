@@ -5,16 +5,23 @@ import * as parser from '../parse';
 
 const gens = new Generations(Dex as any);
 
+const SCENARIO = 'gengar [lick] vs. clefable';
+
 const parse = (g: Generation | Generations, s: string, error = '') => {
   if (error) expect(() => parser.parse(g, s, true)).toThrow(error);
   return parser.parse(g, s, false);
 };
 
-const SCENARIO = 'gengar [lick] vs. clefable';
+// FIXME Type: Null
 
 describe('parse', () => {
-  test('empty', () => {
+  test('misc', () => {
     expect(() => parse(gens, '', 'must have a value')).toThrow('must have a value');
+    parse(
+      gens,
+      'foo attackerSpecies:gengar defenderSpecies:clefable move:lick sr:1',
+      'Unable to parse phrase: \'foo\''
+    );
   });
 
   test('gen', () => {
@@ -31,4 +38,12 @@ describe('parse', () => {
   });
 
   // TODO...
+
+  // --key=true -key:1 +key=yes key:y +val
+  // --isKey=true +hasKey
+  // no TODO
+
+  // --key=false -key:0 +key=no key:n
+  // -hasKey=n hasKey:false
+  // no TODO
 });

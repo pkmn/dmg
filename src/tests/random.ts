@@ -21,6 +21,7 @@ export function run(gens: Generations, prng: PRNG) {
       recovery: result.recovery,
     });
   } catch (err) {
+    console.log(seed);
     throw err; // TODO
   }
 }

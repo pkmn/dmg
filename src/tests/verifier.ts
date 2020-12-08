@@ -39,13 +39,17 @@ export function verify(state: State, breakdown: ResultBreakdown, num = N, seed =
         p1.pokemon.hp + (breakdown.recoil?.[0] || 0) + (breakdown.recovery?.[1] || 0),
       ];
       if (p1.pokemon.hp < range[0] || p1.pokemon.hp > range[1]) {
-        throw new Error('');
+        throw new Error(
+          `Expected p1's ${p1.pokemon.species.name} HP to be within` +
+          `[${range[0]},${range[1]}] but it was ${p1.pokemon.hp}`);
       }
     }
     if (breakdown.range) {
       const damage = hp.p2 - p2.pokemon.hp;
       if (damage < breakdown.range[0] || damage > breakdown.range[1]) {
-        throw new Error('');
+        throw new Error(
+          `Expected damage to be within` +
+          `[${breakdown.range[0]},${breakdown.range[1]}] but it was ${damage}`);
       }
     }
   }
@@ -100,7 +104,7 @@ function setSide(player: 'p1' | 'p2', battle: Battle, state: State) {
   pokemon.hp = p.hp;
   pokemon.boostBy(p.boosts);
   if (p.moveLastTurnResult === false) pokemon.moveLastTurnResult = false;
-  // FIXME pokemon.hurtThisTurn = !!p.hurtThisTurn;
+  pokemon.hurtThisTurn = p.hurtThisTurn ? 1 : null;
 
   // TODO crit etc
   return {choice: player === 'p2' ? 'move splash' : `move ${state.move.id}`, pokemon};

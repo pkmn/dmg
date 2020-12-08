@@ -202,7 +202,7 @@ export namespace Context {
 
     switching?: 'in' | 'out';
     moveLastTurnResult?: false | unknown;
-    hurtThisTurn?: boolean;
+    hurtThisTurn?: false | unknown;
 
     readonly relevant: Relevancy.Pokemon;
     readonly residual: Relevancy.Pokemon;

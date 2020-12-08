@@ -24,7 +24,7 @@ const SPLIT_SUBFLAG = /[^0-9a-zA-Z_'’":= ]/;
 // This is perhaps an overly cute trick to allow us to repurpose the existing nesting of the Flags
 // structure without causing collisions - no input flag can ever match this unique symbol ('_' was
 // chosen because '_' usually refers to "the rest" as well as "private" things, and 'conditions' is
-// too anonying to continuously type).
+// too annoying to continuously type).
 const _ = Symbol('_');
 interface Flags {
   general: {[id: string]: string};
@@ -45,7 +45,7 @@ const KNOWN = {
   field: ['weather', 'terrain', 'pseudoweather', _],
   p1: PLAYER_KNOWN,
   p2: PLAYER_KNOWN,
-  move: ['name', 'hits', 'usez', 'usemax', 'crit'],
+  move: ['name', 'hits', 'usez', 'usemax', 'crit'], // FIXME +z +max
 };
 
 // TODO: treat charge/fairyaura etc as side conditions
@@ -133,9 +133,9 @@ export function parse(gens: Generation | Generations, s: string, strict = false)
   const gen = 'num' in gens ? gens : gens.get(g || 8);
   const flags = parseFlags(gen, raw, strict);
   const phrase = fragments.join(' ');
-  // Useful to include in error messages to reveal how `s` was parsed
-  const context = JSON.stringify({phrase, flags});
 
+  // Useful to include in error messages to reveal how `s` was parsed
+  const context = toContext(phrase, flags);
   const parsed = phrase ? parsePhrase(phrase) : undefined;
   if (phrase && !parsed && strict) {
     throw new Error(`Unable to parse phrase: '${phrase}': ${context}`);
@@ -168,6 +168,7 @@ function parseFlags(gen: Generation, raw: Array<[ID, string]>, strict: boolean) 
   const flags: Flags = {general: {}, field: {[_]: {}}, p1: {[_]: {}}, p2: {[_]: {}}, move: {}};
 
   const setFlag = (k: keyof Flags, id: ID, val: string) => {
+    if (k === 'move' && id === 'move') id = 'name' as ID;
     if (KNOWN[k].includes(id)) {
       // NOTE: all booleans should have been converted to '1' or '0' by parseFlag before this
       if (strict && flags[k][id] && toID(flags[k][id]) !== toID(val)) {
@@ -562,6 +563,63 @@ function asBoolean(s: string) {
   if (is(id, 'true', '1', 'yes', 'y')) return true;
   if (is(id, 'false', '0', 'no', 'n')) return false;
   throw new TypeError(`Invalid boolean flag value: ${s}`);
+}
+
+function toContext(phrase: string, flags: Flags) {
+  const field: {[k: string]: unknown} = {...flags.field};
+  if (Object.keys(flags.field[_]).length) field._ = flags.field[_];
+  const p1: {[k: string]: unknown} = {...flags.p1};
+  if (Object.keys(flags.p1[_]).length) p1._ = flags.p1[_];
+  const p2: {[k: string]: unknown} = {...flags.p2};
+  if (Object.keys(flags.p2[_]).length) p2._ = flags.p2[_];
+  return stringify({phrase, flags: { general: flags.general, field, p1, p2, move: flags.move}});
+}
+
+function stringify(value: any, depth = 10): string {
+  if (value === undefined) return 'undefined';
+  if (value === null) return 'null';
+  if (typeof value === 'number' || typeof value === 'boolean') return `${value}`;
+  if (typeof value === 'string') return '"${value}"'; // NOTE: NOT ESCAPED
+  if (typeof value === 'symbol') return value.toString();
+  if (Array.isArray(value)) {
+    if (!depth) return '[array]';
+    return `[${value.map(elem => stringify(elem, depth - 1)).join(', ')}]`;
+  }
+  if (value instanceof RegExp || value instanceof Date || value instanceof Function) {
+    if (!depth && value instanceof Function) return 'Function';
+    return `${value}`;
+  }
+  let constructor = '';
+  if (value.constructor && value.constructor.name && typeof value.constructor.name === 'string') {
+    constructor = value.constructor.name;
+    if (constructor === 'Object') constructor = '';
+  } else {
+    constructor = 'null';
+  }
+  if (value.toString) {
+    try {
+      const stringValue = value.toString();
+      if (typeof stringValue === 'string' &&
+          stringValue !== '[object Object]' &&
+          stringValue !== `[object ${constructor}]`) {
+        return `${constructor}(${stringValue})`;
+      }
+    } catch (e) {}
+  }
+  let buf = '';
+  for (const key in value) {
+    if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+    if (depth < 2 || (!depth && constructor)) {
+      buf = '...';
+      break;
+    }
+    if (buf) buf += ', ';
+    let displayedKey = key;
+    if (!/^[A-Za-z0-9_$]+$/.test(key)) displayedKey = JSON.stringify(key);
+    buf += `${displayedKey}: ${stringify(value[key], depth - 1)}`;
+  }
+  if (constructor && !buf && constructor !== 'null') return constructor;
+  return `${constructor}{${buf}}`;
 }
 
 // https://github.com/mccormicka/string-argv v0.3.0
