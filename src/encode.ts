@@ -1,5 +1,7 @@
+import type {BoostName, StatName} from '@pkmn/data';
 import {State} from './state';
-import {is, toID} from './utils';
+import {PseudoWeathers, SideConditions, VolatileStatuses} from './conditions';
+import {toID} from './utils';
 
 const FORWARD = {'/': '$', '[': '(', ']': ')', '@': '*', ':': '=', ' ': '_'};
 const BACKWARD = {'\\$': '/', '\\(': '[', '\\)': ']', '\\*': '@', '=': ':', '_': ' '};
@@ -30,22 +32,19 @@ export function encode(state: State, type: 'parse' | 'desc' | 'url' = 'parse') {
   const desc = type === 'desc';
   const {gen, gameType, p1, p2, move, field} = state;
 
-  // FIXME note if status we cant find relevant attack stat = just return min
-  // if (move.category === 'Status') {
-  //   // TODO use z/use max
-  //   return `${p1.pokemon.species.name} [${move.name}] vs. ${p2.pokemon.species.name}`;
-  // }
-
-  // const atkStat = move.category === 'Special' ? 'spa' :
-  //   is(move.name, 'Body Press') ? 'def' : 'atk';
-  // const defStat = (move.defensiveCategory || move.category) === 'Special' ? 'spd' : 'def';
-  // if (is(move.name, 'Foul Play')) {}
+  // FIXME  if (move.name === 'Foul Play')
+  const stats = getStats(p1.pokemon, p2.pokemon, move);
 
   const buf: string[] = [];
   const levels = getLevels(p1.pokemon, p2.pokemon, desc);
-  // TODO p1 atk boosts
+  if (stats && p1.pokemon.boosts[stats.p1]) {
+    const b = p1.pokemon.boosts[stats.p1]!;
+    buf.push(b > 0 ? `+${b}` : `${b}`);
+  }
   if (levels.p1) buf.push(`Lvl ${levels.p1}`);
-  // TODO p1 atk evs
+  if (stats) {
+    // TODO p1 atk evs
+  }
   if (desc) {
     if (p1.pokemon.item) buf.push(p1.pokemon.item);
     if (p1.pokemon.ability) buf.push(p1.pokemon.ability);
@@ -70,9 +69,14 @@ export function encode(state: State, type: 'parse' | 'desc' | 'url' = 'parse') {
   }
   buf.push('vs.');
 
-  // TODO p2 def boosts
+  if (stats && p2.pokemon.boosts[stats.p2]) {
+    const b = p2.pokemon.boosts[stats.p2]!;
+    buf.push(b > 0 ? `+${b}` : `${b}`);
+  }
   if (levels.p2) buf.push(`Lvl ${levels.p2}`);
-  // TODO p2 def evs
+  if (stats) {
+    // TODO p2 hp/def evs
+  }
   if (desc) {
     if (p2.pokemon.item) buf.push(p2.pokemon.item);
     if (p2.pokemon.ability) buf.push(p2.pokemon.ability);
@@ -108,17 +112,52 @@ export function encode(state: State, type: 'parse' | 'desc' | 'url' = 'parse') {
     if (gameType === 'doubles') buf.push('+doubles');
 
     // Field
-    if (field.weather) buf.push(`+${camelcase(field.weather)}`);
+    if (field.weather) buf.push(`+${camelCase(field.weather)}`);
     if (field.terrain) buf.push(`+${toID(field.terrain)}Terrain`);
-    // TODO pseudoweather
+    for (const id in field.pseudoWeather) {
+      const pw = field.pseudoWeather[id];
+      const name = camelCase(PseudoWeathers[id][0]);
+      buf.push(pw.level && pw.level > 1 ? `${name}:${pw.level}` : `+${name}`);
+    }
 
     // Sides
-    // TODO
+    for (const side of ['p1', 'p2'] as const) {
+      const p = side === 'p1' ? 'attacker' : 'defender';
+      const pokemon = state[side].pokemon;
+      if (pokemon.ability) buf.push(`${p}Ability:${pokemon.ability}`);
+      if (pokemon.gender) buf.push(`${p}Gender:${pokemon.gender}`);
+      // if (pokemon.weighthg) buf.push(`${side}Weight:${pokemon.weighthg}`);
+      if (typeof pokemon.happiness === 'number') buf.push(`${p}Happiness:${pokemon.happiness}`);
+      // TODO ivs/dvs/evs
+      for (const b in pokemon.boosts) {
+        const boost = b as BoostName;
+        if (!pokemon.boosts[boost] || stats?.[side] === boost) continue;
+        buf.push(`${p}${TODO}Boosts:${pokemon.boosts[boost]}`)
+      }
+      // TODO current HP
+      if (pokemon.statusData?.toxicTurns) {
+        buf.push(`${p}ToxicCounter:${pokemon.statusData.toxicTurns}`);
+      }
+
+      const scoped: string[] = [];
+      for (const id in state[side].sideConditions) {
+        const sc = state[side].sideConditions[id];
+        const name = camelCase(SideConditions[id][0]);
+        scoped.push(sc.level && sc.level > 1 ? `${name}:${sc.level}` : name);
+      }
+      for (const id in state[side].pokemon.volatiles) {
+        const v = state[side].pokemon.volatiles[id];
+        const name = camelCase(VolatileStatuses[id][0]);
+        scoped.push(v.level && v.level > 1 ? `${name}:${v.level}` : name);
+      }
+      if (scoped.length) buf.push(`${p}:${scoped.join(',')}`);
+      // TODO active, team
+    }
 
     // Move
     if (move.crit) buf.push('+crit');
-    // FIXME if (move.useZ) buf.push('+z');
-    // FIXME if (move.useMax) buf.push('+max');
+    // if (move.useZ) buf.push('+z');
+    // if (move.useMax) buf.push('+max');
     if (move.spreadHit) buf.push('+spread');
     if (move.hits) buf.push(`hits:${move.hits}`);
     if (move.magnitude) buf.push(`magnitude:${move.magnitude}`);
@@ -130,7 +169,7 @@ export function encode(state: State, type: 'parse' | 'desc' | 'url' = 'parse') {
 }
 
 const RE = /[^a-zA-Z0-9]+(.)/g;
-function camelcase(s: string) {
+function camelCase(s: string) {
   return s.toLowerCase().replace(RE, (_, chr) => chr.toUpperCase());
 }
 
@@ -144,4 +183,30 @@ function getLevels(p1: State.Pokemon, p2: State.Pokemon, elide: boolean) {
   elide = elide ? [100, 50, 5].includes(p1.level) : p1.level === 100;
   const level = elide ? undefined : p1.level;
   return {p1: level, p2: level};
+}
+
+function getStats(
+  p1: State.Pokemon, p2: State.Pokemon, move: State.Move
+): {p1: Exclude<StatName, 'hp'>, p2: Exclude<StatName, 'hp'>} | undefined {
+  if (move.category === 'Status') return undefined;
+  switch (move.name) {
+    // case 'Foul Play':
+      // TODO
+    case 'Photon Geyser':
+    case 'Light That Burns The Sky':
+      // TODO
+      break;
+    case 'Shell Side Arm':
+      // TODO
+      break;
+    case 'Body Press':
+      return {p1: 'def', p2: 'def'};
+    default:
+      return {
+        p1: move.category === 'Special' ? 'spa' : 'atk',
+        p2: move.defensiveCategory
+          ? move.defensiveCategory === 'Special' ? 'spd' : 'def'
+          : move.category === 'Special' ? 'spd' : 'def',
+      }
+  }
 }

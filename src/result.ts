@@ -1,4 +1,4 @@
-import type {Generation, Specie, StatsTable, BoostsTable} from '@pkmn/data';
+import type {Generation, Specie, StatsTable, BoostsTable, StatName, BoostName} from '@pkmn/data';
 
 import {State} from './state';
 import {Context} from './context';
@@ -67,12 +67,14 @@ export namespace Relevancy {
   }
 
   export interface Move {
-    // TODO useZ/useMax?
     crit?: boolean;
     hits?: boolean;
     magnitude?: boolean;
     spreadHit?: boolean;
     numConsecutive?: boolean;
+    // TODO
+    // useZ?: boolean;
+    // useMax?: boolean;
   }
 }
 
@@ -84,7 +86,14 @@ export class Result {
   }
 
   get range() {
-    return null! as [number, number]; // TODO
+    let min = 0;
+    let max = 0;
+    for (const hit of this.hits) {
+      const range = hit.range;
+      min += range[0];
+      max += range[1];
+    }
+    return [min, max];
   }
 
   get desc() {
@@ -155,7 +164,17 @@ export class HitResult {
   }
 
   get range() {
-    return null! as [number, number]; // TODO
+    if (!Array.isArray(this.damage)) return [this.damage, this.damage];
+    let min = this.damage[0];
+    let max = min;
+    for (let i = 1; i < this.damage.length; i++) {
+      if (this.damage[i] < min) {
+        min = this.damage[i];
+      } else if (this.damage[i] > max) {
+        max = this.damage[i];
+      }
+    }
+    return [min, max];
   }
 
   get desc() {
@@ -187,13 +206,15 @@ export class HitResult {
   }
 
   simplified(): State {
+    const state = this.state; // FIXME this.context.toState();
+    const gen = state.gen as Generation;
     return {
-      gameType: this.relevant.gameType ? this.state.gameType : 'singles',
-      gen: this.state.gen as Generation,
-      p1: this.simplifySide(this.state.p1, this.relevant.p1),
-      p2: this.simplifySide(this.state.p2, this.relevant.p2),
-      move: this.simplifyMove(this.state.move, this.relevant.move),
-      field: this.simplifyField(this.state.field, this.relevant.field),
+      gen,
+      gameType: this.relevant.gameType ? state.gameType : 'singles',
+      p1: this.simplifySide(gen, state.p1, this.relevant.p1),
+      p2: this.simplifySide(gen, state.p2, this.relevant.p2),
+      move: this.simplifyMove(state.move, this.relevant.move),
+      field: this.simplifyField(state.field, this.relevant.field),
     };
   }
 
@@ -213,9 +234,9 @@ export class HitResult {
     return field;
   }
 
-  private simplifySide(state: DeepReadonly<State.Side>, relevant: Relevancy.Side) {
+  private simplifySide(gen: Generation, state: DeepReadonly<State.Side>, relevant: Relevancy.Side) {
     const side: State.Side = {
-      pokemon: this.simplifyPokemon(state.pokemon, relevant.pokemon),
+      pokemon: this.simplifyPokemon(gen, state.pokemon, relevant.pokemon),
       sideConditions: {},
       active: relevant.active ? state.active!.map(p => extend({}, p)) : undefined,
       team: relevant.team ? state.team!.map(p => extend({}, p)) : undefined,
@@ -228,7 +249,11 @@ export class HitResult {
     return side;
   }
 
-  private simplifyPokemon(state: DeepReadonly<State.Pokemon>, relevant: Relevancy.Pokemon) {
+  private simplifyPokemon(
+    gen: Generation,
+    state: DeepReadonly<State.Pokemon>,
+    relevant: Relevancy.Pokemon
+  ) {
     const pokemon: State.Pokemon = {
       species: state.species as Specie,
       level: state.level,
@@ -241,7 +266,7 @@ export class HitResult {
       types: state.types as State.Pokemon['types'],
       maxhp: state.maxhp,
       hp: state.hp,
-      nature: undefined,
+      nature: state.nature,
       evs: {},
       ivs: {},
       boosts: {},
@@ -249,9 +274,17 @@ export class HitResult {
       moveLastTurnResult: relevant.moveLastTurnResult ? state.moveLastTurnResult : undefined,
       hurtThisTurn: relevant.hurtThisTurn ? state.hurtThisTurn : undefined,
     };
-    // TODO nature / evs / ivs / boosts
     for (const id in state.volatiles) {
       if (relevant.volatiles[id]) pokemon.volatiles[id] = extend({}, state.volatiles[id]);
+    }
+    for (const s in relevant.stats) {
+      const stat = s as StatName;
+      pokemon.evs![stat] = state.evs?.[stat] ?? (gen.num < 3 ? 252 : 0);
+      pokemon.ivs![stat] = state.ivs?.[stat] ?? 31;
+    }
+    for (const b in relevant.boosts) {
+      const boost = b as BoostName;
+      pokemon.boosts[boost] = state.boosts[boost];
     }
     return pokemon;
   }
