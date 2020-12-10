@@ -1,5 +1,7 @@
+import {decodeURL} from '../encode';
+
 describe('encode', () => {
-  test('true', () => {
-    expect(true).toBe(true);
+  test('decodeURL', () => {
+    expect(decodeURL('{5}')).toBe('[5]');
   });
 });

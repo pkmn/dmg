@@ -93,7 +93,7 @@ export class Result {
       min += range[0];
       max += range[1];
     }
-    return [min, max];
+    return [min, max] as [number, number];
   }
 
   get desc() {
@@ -174,7 +174,7 @@ export class HitResult {
         max = this.damage[i];
       }
     }
-    return [min, max];
+    return [min, max] as [number, number];
   }
 
   get desc() {
@@ -279,7 +279,7 @@ export class HitResult {
     }
     for (const s in relevant.stats) {
       const stat = s as StatName;
-      pokemon.evs![stat] = state.evs?.[stat] ?? (gen.num < 3 ? 252 : 0);
+      pokemon.evs![stat] = state.evs?.[stat] ?? (gen.num <= 2 ? 252 : 0);
       pokemon.ivs![stat] = state.ivs?.[stat] ?? 31;
     }
     for (const b in relevant.boosts) {

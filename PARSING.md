@@ -143,6 +143,13 @@ where:
 The `.` in the `vs.` is optional. Flags may appear anywhere within the phrase (as well as before and
 / or after, though after is most common).
 
+#### Generation
+
+The generation used for the calculation can be specified as a flag as [detailed above](#Flags),
+though it can also be specified as part of the phrase in the form of `[Gen N]` or simply `[N]`.
+Matching braces and or parentheses are allowed as an alternative to brackets, so `(Gen 1)` or `{5}`
+appearing anywhere in the phrase will serve to change the generation of the calculation as well.
+
 ### URL encoding
 
 [RFC1738](https://www.ietf.org/rfc/rfc1738.txt) and [RFC3986](https://www.ietf.org/rfc/rfc3986.txt)
@@ -152,6 +159,7 @@ certain characters may be substituted for their equivalent, URL-safe counterpart
 | **character** | **substitution** |
 | ------------- | -----------------|
 |      `/`      |        `$`       |
+|     `{ }`     |       `( )`      |
 |     `[ ]`     |       `( )`      |
 |      `@`      |        `*`       |
 |      `:`      |        `=`       |
@@ -178,7 +186,7 @@ const encode = str => str.replace(REGEX, match => REPLACE[match]);
 ```ts
 import {parse} from `@pkmn/dmg`;
 
-const state = parse(`252 SpA Gengar @ Choice Specs [Focus Blast] vs. 0 HP / 172+ SpD Blissey --gen=4`);
+const state = parse(`(Gen 4) 252 SpA Gengar @ Choice Specs [Focus Blast] vs. 0 HP / 172+ SpD Blissey`);
 ```
 
 [`encode.ts`](src/encode.ts) can be used to encode [`State`](src/state.ts) into a format parseable

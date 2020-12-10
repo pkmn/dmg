@@ -116,23 +116,16 @@ export function parse(gens: Generation | Generations, s: string, strict = false)
 
     const [id, val] = parsed;
     if (id === 'gen') {
-      const n = Number(val);
-      if (isNaN(n) || !bounded('gen', n)) {
-        if (strict) throw new Error(`Invalid generation flag '${val}'`);
-      } else if ((strict || 'num' in gens) && g && g !== n) {
-        throw new Error(`Conflicting values for flag '${id}': '${g}' vs. '${val}'`);
-      } else {
-        g = n as GenerationNum;
-      }
+      const n = validateGen(gens, g, val, strict);
+      if (n) g = n;
       continue;
     }
     raw.push([id, val]);
   }
 
-  // If no generation flag was specified we can default to the current generation
-  const gen = 'num' in gens ? gens : gens.get(g || 8);
+  const joined = fragments.join(' ');
+  const [gen, phrase] = parseGen(gens, g, joined, strict);
   const flags = parseFlags(gen, raw, strict);
-  const phrase = fragments.join(' ');
 
   // Useful to include in error messages to reveal how `s` was parsed
   const context = toContext(phrase, flags);
@@ -142,6 +135,40 @@ export function parse(gens: Generation | Generations, s: string, strict = false)
   }
 
   return build(gen, parsed, flags, context, strict);
+}
+
+// Generation can be specificed as [Gen 4] or [4] as well
+const GEN = /\[\s*(?:(?:G|g)en)?\s*(\d)\s*\]/gi;
+
+// Gen can be specificied by a flag or by passing in a specific Generation object in addition to
+// as part of the phrase. We pull any generation information out of the phrase in addition to
+// returning the correct Generation object
+function parseGen(
+  gens: Generation | Generations, g: GenerationNum | undefined, s: string, strict: boolean
+) {
+  let m;
+  while ((m = GEN.exec(s))) {
+    const n = validateGen(gens, g, m[1], strict);
+    if (n) g = n;
+    s = s.slice(0, m.index) + s.slice(m.index + m[0].length + 1);
+  }
+
+  // If no generation flag was specified we can default to the current generation
+  const gen = 'num' in gens ? gens : gens.get(g || 8);
+  return [gen, s] as const;
+}
+
+function validateGen(
+  gens: Generation | Generations, g: GenerationNum | undefined, val: string, strict: boolean
+) {
+  const n = Number(val);
+  if (isNaN(n) || !bounded('gen', n)) {
+    if (strict) throw new Error(`Invalid generation flag '${val}'`);
+  } else if ((strict || 'num' in gens) && g && g !== n) {
+    throw new Error(`Conflicting values for flag generation: '${g}' vs. '${val}'`);
+  } else {
+    return n as GenerationNum;
+  }
 }
 
 // Map from unambiguous flags to the flag namespace they belong to
