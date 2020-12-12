@@ -137,10 +137,10 @@ export function parse(gens: Generation | Generations, s: string, strict = false)
   return build(gen, parsed, flags, context, strict);
 }
 
-// Generation can be specificed as [Gen 4] or [4] as well
+// Generation can be specified as [Gen 4] or [4] as well
 const GEN = /\[\s*(?:(?:G|g)en)?\s*(\d)\s*\]/gi;
 
-// Gen can be specificied by a flag or by passing in a specific Generation object in addition to
+// Gen can be specified by a flag or by passing in a specific Generation object in addition to
 // as part of the phrase. We pull any generation information out of the phrase in addition to
 // returning the correct Generation object
 function parseGen(

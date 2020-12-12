@@ -27,8 +27,6 @@ import {Relevancy} from './result';
 import {DeepReadonly, extend, toID} from './utils';
 import {State} from './state';
 
-const relevancy = (handler: keyof Handler) => handler === 'onResidual' ? 'residual' : 'relevant';
-
 export class Context {
   gameType: GameType;
   gen: Generation;
@@ -38,22 +36,19 @@ export class Context {
   field: Context.Field;
 
   readonly relevant: Relevancy;
-  readonly residual: Relevancy;
 
   constructor(
     state: DeepReadonly<State>,
     relevant: Relevancy,
-    residual: Relevancy,
     handlers: Handlers = HANDLERS
   ) {
     this.gameType = state.gameType;
     this.gen = state.gen as Generation;
-    this.p1 = new Context.Side(this.gen, state.p1, relevant.p1, residual.p1, handlers);
-    this.p2 = new Context.Side(this.gen, state.p2, relevant.p2, residual.p2, handlers);
-    this.move = new Context.Move(state.move, relevant.move, residual.move, handlers);
-    this.field = new Context.Field(state.field, relevant.field, residual.field, handlers);
+    this.p1 = new Context.Side(this.gen, state.p1, relevant.p1, handlers);
+    this.p2 = new Context.Side(this.gen, state.p2, relevant.p2, handlers);
+    this.move = new Context.Move(state.move, relevant.move, handlers);
+    this.field = new Context.Field(state.field, relevant.field, handlers);
     this.relevant = relevant;
-    this.residual = residual;
   }
 
   toState() {
@@ -75,34 +70,31 @@ export namespace Context {
     pseudoWeather: {[id: string]: {data: object} & Partial<Handler>};
 
     readonly relevant: Relevancy.Field;
-    readonly residual: Relevancy.Field;
 
     constructor(
       state: DeepReadonly<State.Field>,
       relevant: Relevancy.Field,
-      residual: Relevancy.Field,
       handlers: Handlers
     ) {
       this.relevant = relevant;
-      this.residual = residual;
 
       if (state.weather) {
         const id = toID(state.weather);
         this.weather = reify({name: state.weather}, id, handlers.Conditions, handler => {
-          this[relevancy(handler)].weather = true;
+          this.relevant.weather = true;
         });
       }
       if (state.terrain) {
         const id = toID(state.terrain);
         this.terrain = reify({name: state.terrain}, id, handlers.Conditions, handler => {
-          this[relevancy(handler)].terrain = true;
+          this.relevant.terrain = true;
         });
       }
       this.pseudoWeather = {};
       for (const pw in state.pseudoWeather) {
         this.pseudoWeather[pw] =
           reify({data: state.pseudoWeather[pw]}, pw as ID, handlers.Conditions, handler => {
-            this[relevancy(handler)].pseudoWeather[pw] = true;
+            this.relevant.pseudoWeather[pw] = true;
           });
       }
     }
@@ -136,24 +128,21 @@ export namespace Context {
     }>;
 
     readonly relevant: Relevancy.Side;
-    readonly residual: Relevancy.Side;
 
     constructor(
       gen: Generation,
       state: DeepReadonly<State.Side>,
       relevant: Relevancy.Side,
-      residual: Relevancy.Side,
       handlers: Handlers
     ) {
       this.relevant = relevant;
-      this.residual = residual;
 
-      this.pokemon = new Pokemon(gen, state.pokemon, relevant.pokemon, residual.pokemon, handlers);
+      this.pokemon = new Pokemon(gen, state.pokemon, relevant.pokemon, handlers);
       this.sideConditions = {};
       for (const sc in state.sideConditions) {
         this.sideConditions[sc] =
           reify(extend({}, state.sideConditions[sc]), sc as ID, handlers.Conditions, handler => {
-            this[relevancy(handler)].sideConditions[sc] = true;
+            this.relevant.sideConditions[sc] = true;
           });
       }
       this.active = this.active?.map(p => extend({}, p));
@@ -205,7 +194,6 @@ export namespace Context {
     hurtThisTurn?: false | unknown;
 
     readonly relevant: Relevancy.Pokemon;
-    readonly residual: Relevancy.Pokemon;
 
     private nature?: NatureName;
     private evs?: Partial<StatsTable>;
@@ -215,11 +203,9 @@ export namespace Context {
       gen: Generation,
       state: DeepReadonly<State.Pokemon>,
       relevant: Relevancy.Pokemon,
-      residual: Relevancy.Pokemon,
       handlers: Handlers
     ) {
       this.relevant = relevant;
-      this.residual = residual;
 
       this.species = state.species as Specie;
       this.level = state.level;
@@ -227,12 +213,12 @@ export namespace Context {
 
       if (state.item) {
         this.item = reify({id: state.item}, state.item, handlers.Items, handler => {
-          this[relevancy(handler)].item = true;
+          this.relevant.item = true;
         });
       }
       if (state.ability) {
         this.ability = reify({id: state.ability}, state.ability, handlers.Abilities, handler => {
-          this[relevancy(handler)].ability = true;
+          this.relevant.ability = true;
         });
       }
       this.gender = state.gender;
@@ -241,7 +227,7 @@ export namespace Context {
       if (state.status) {
         this.status =
           reify({name: state.status}, state.status as ID, handlers.Conditions, handler => {
-            this[relevancy(handler)].status = true;
+            this.relevant.status = true;
           });
       }
       this.statusData = this.statusData && extend({}, state.statusData);
@@ -249,7 +235,7 @@ export namespace Context {
       for (const v in state.volatiles) {
         this.volatiles[v] =
           reify(extend({}, state.volatiles[v]), v as ID, handlers.Conditions, handler => {
-            this[relevancy(handler)].volatiles[v] = true;
+            this.relevant.volatiles[v] = true;
           });
       }
 
@@ -429,17 +415,14 @@ export namespace Context {
     damageCallback: undefined; // Silence TS2559
 
     readonly relevant: Relevancy.Move;
-    readonly residual: Relevancy.Move;
 
     constructor(
       state: DeepReadonly<State.Move>,
       relevant: Relevancy.Move,
-      residual: Relevancy.Move,
       handlers: Handlers
     ) {
       extend(this, state);
       this.relevant = relevant;
-      this.residual = residual;
       reify(this, this.id, handlers.Moves);
     }
 

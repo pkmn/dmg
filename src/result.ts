@@ -2,8 +2,11 @@ import type {Generation, Specie, StatsTable, BoostsTable, StatName, BoostName} f
 
 import {State} from './state';
 import {Context} from './context';
-import {DeepReadonly, extend} from './utils';
+import {DeepReadonly, extend, is} from './utils';
 import {Handlers, HANDLERS} from './mechanics';
+import * as math from './math';
+
+type Trace = {[key: string]: boolean | Trace | undefined };
 
 export class Relevancy {
   gameType: boolean;
@@ -21,21 +24,23 @@ export class Relevancy {
   }
 }
 
+
+
 export namespace Relevancy {
-  export interface Field {
+  export interface Field extends Trace {
     weather?: boolean;
     terrain?: boolean;
     pseudoWeather: {[id: string]: boolean};
   }
 
-  export interface Side {
+  export interface Side extends Trace {
     pokemon: Pokemon;
     sideConditions: {[id: string]: boolean};
     active?: boolean;
     team?: boolean;
   }
 
-  export interface Pokemon {
+  export interface Pokemon extends Trace {
     // species is always relevant
     // level is always relevant (though sometimes elided from the output)
     // weighthg is relevant for weight based moves, but that's covered by move base power
@@ -66,7 +71,7 @@ export namespace Relevancy {
     hurtThisTurn?: boolean;
   }
 
-  export interface Move {
+  export interface Move extends Trace {
     crit?: boolean;
     hits?: boolean;
     magnitude?: boolean;
@@ -78,11 +83,50 @@ export namespace Relevancy {
   }
 }
 
+function combine(a: Relevancy, b: Relevancy) {
+  a.gameType = a.gameType || b.gameType;
+  merge(a.p1, b.p1);
+  merge(a.p2, b.p2);
+  merge(a.field, b.field);
+  merge(a.move, b.move);
+}
+
+function merge(a: Trace, b?: Trace) {
+  const c: Trace = {};
+  for (const k in a) {
+    const v = a[k];
+    const u = b?.[k];
+    if (typeof v === 'object') {
+      c[k] = u ? v : merge(v, u as Trace | undefined);
+    } else if (typeof u === 'object') {
+      c[k] = u;
+    } else {
+      c[k] = v || u;
+    }
+  }
+  return c;
+}
+
 export class Result {
+  readonly relevant: Relevancy; // rollup of relevancy AND residual accross all hits
+
   readonly hits: [HitResult, ...HitResult[]];
 
   constructor(hit: HitResult) {
+    this.relevant = new Relevancy();
     this.hits = [hit];
+  }
+
+  get state(): DeepReadonly<State> {
+    return this.hits[0].state;
+  }
+
+  get context(): Context {
+    return this.hits[this.hits.length - 1].context;
+  }
+
+  get handlers(): Handlers {
+    return this.hits[0].handlers;
   }
 
   get range() {
@@ -105,6 +149,29 @@ export class Result {
   }
 
   get recovery() {
+    // const damage = this.range;
+    // const recovery = [0, 0] as [number, number];
+    // const {gen, p1, p2, move} = this.context;
+
+    // const ignored = gen.num === 3 && is(move.name, 'Doom Desire', 'Future Sight');
+    // if (p1.pokemon.item?.id === 'shellbell' && !ignored) {
+    //   const max = math.round(p2.pokemon.maxhp / 8);
+    //   recovery[0] += math.min(math.round(damage[0] / 8), max);
+    //   recovery[1] += math.min(math.round(damage[1] / 8), max);
+    // }
+
+    // if (is(move.name, 'G-Max Finale')) {
+    //   recovery[0] = recovery[1] = math.round(p1.pokemon.maxhp / 6);
+
+    // } else if (move.drain) {
+    //   const healed = move.drain[0] / move.drain[1];
+    //   const max = math.round(p2.pokemon.maxhp * healed);
+    //   recovery[0] += math.min(math.round(damage[0] * healed), max);
+    //   recovery[1] += math.min(math.round(damage[1] * healed), max);
+
+    // }
+
+    // return recovery;
     return undefined as [number, number] | undefined; // TODO
   }
 
@@ -133,8 +200,9 @@ export class Result {
     return next;
   }
 
-  add(result: Result | HitResult) {
-    this.hits.push(...('hits' in result ? result.hits : [result]));
+  add(hit: HitResult) {
+    this.hits.push(hit);
+    foo(this.relevant as Trace, hit.relevant);
   }
 
   toString() {
@@ -150,7 +218,6 @@ export class HitResult {
 
   readonly context: Context;
   readonly relevant: Relevancy;
-  readonly residual: Relevancy;
 
   damage: number | number[];
 
@@ -159,8 +226,7 @@ export class HitResult {
     this.state = state;
     this.handlers = handlers;
     this.relevant = new Relevancy();
-    this.residual = new Relevancy();
-    this.context = new Context(state, this.relevant, this.residual, handlers);
+    this.context = new Context(state, this.relevant, handlers);
   }
 
   get range() {
@@ -175,34 +241,6 @@ export class HitResult {
       }
     }
     return [min, max] as [number, number];
-  }
-
-  get desc() {
-    return this.fullDesc();
-  }
-
-  get recoil() {
-    return undefined as [number, number] | undefined; // TODO
-  }
-
-  get recovery() {
-    return undefined as [number, number] | undefined; // TODO
-  }
-
-  fullDesc(notation = '%') {
-    return ''; // TODO
-  }
-
-  moveDesc(notation = '%') {
-    return ''; // TODO
-  }
-
-  recoilDesc(notation = '%') {
-    return ''; // TODO
-  }
-
-  recoveryDesc(notation = '%') {
-    return ''; // TODO
   }
 
   simplified(): State {
