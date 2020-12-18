@@ -1,12 +1,11 @@
 import type {Generation, Specie, StatsTable, BoostsTable, StatName, BoostName} from '@pkmn/data';
 
-import {State} from './state';
 import {Context} from './context';
-import {DeepReadonly, extend, is} from './utils';
+import {encode} from './encode';
 import {Handlers, HANDLERS} from './mechanics';
+import {State} from './state';
+import {DeepReadonly, extend, is} from './utils';
 import * as math from './math';
-
-type Trace = {[key: string]: boolean | Trace | undefined };
 
 export class Relevancy {
   gameType: boolean;
@@ -24,23 +23,21 @@ export class Relevancy {
   }
 }
 
-
-
 export namespace Relevancy {
-  export interface Field extends Trace {
+  export interface Field {
     weather?: boolean;
     terrain?: boolean;
     pseudoWeather: {[id: string]: boolean};
   }
 
-  export interface Side extends Trace {
+  export interface Side {
     pokemon: Pokemon;
     sideConditions: {[id: string]: boolean};
     active?: boolean;
     team?: boolean;
   }
 
-  export interface Pokemon extends Trace {
+  export interface Pokemon {
     // species is always relevant
     // level is always relevant (though sometimes elided from the output)
     // weighthg is relevant for weight based moves, but that's covered by move base power
@@ -71,49 +68,31 @@ export namespace Relevancy {
     hurtThisTurn?: boolean;
   }
 
-  export interface Move extends Trace {
+  export interface Move {
     crit?: boolean;
-    hits?: boolean;
-    magnitude?: boolean;
-    spreadHit?: boolean;
-    numConsecutive?: boolean;
-    // TODO
-    // useZ?: boolean;
-    // useMax?: boolean;
+    hits?: number;
+    magnitude?: number;
+    consecutive?: number;
+    spread?: boolean;
+    useZ?: boolean;
   }
 }
 
-function combine(a: Relevancy, b: Relevancy) {
-  a.gameType = a.gameType || b.gameType;
-  merge(a.p1, b.p1);
-  merge(a.p2, b.p2);
-  merge(a.field, b.field);
-  merge(a.move, b.move);
-}
+// TODO: Single move, potentially multiple hits (which could change the context and the relevance
+// each hit). Include relevancy from residual, but need to be
+// TODO
+// a) context gets chained along (as state)
+// able to display OHKO chances WITH and WITHOUT residual
 
-function merge(a: Trace, b?: Trace) {
-  const c: Trace = {};
-  for (const k in a) {
-    const v = a[k];
-    const u = b?.[k];
-    if (typeof v === 'object') {
-      c[k] = u ? v : merge(v, u as Trace | undefined);
-    } else if (typeof u === 'object') {
-      c[k] = u;
-    } else {
-      c[k] = v || u;
-    }
-  }
-  return c;
-}
-
+/**
+ * The result of a damage calculation. Multi-hit moves or moves affected by Parental Bond etc may
+ * consist of multiple `HitResult` objects. A `Result` always reflects the result of a single move
+ * for a single turn, though multiple `Result` objects may be chained together.
+ */
 export class Result {
-  readonly relevant: Relevancy; // rollup of relevancy AND residual accross all hits
-
   readonly hits: [HitResult, ...HitResult[]];
 
   constructor(hit: HitResult) {
-    this.relevant = new Relevancy();
     this.hits = [hit];
   }
 
@@ -121,12 +100,16 @@ export class Result {
     return this.hits[0].state;
   }
 
-  get context(): Context {
-    return this.hits[this.hits.length - 1].context;
-  }
-
   get handlers(): Handlers {
     return this.hits[0].handlers;
+  }
+
+  get relevant(): Relevancy {
+    return this.hits[this.hits.length - 1].relevant;
+  }
+
+  get context(): Context {
+    return this.hits[this.hits.length - 1].context;
   }
 
   get range() {
@@ -140,93 +123,143 @@ export class Result {
     return [min, max] as [number, number];
   }
 
-  get desc() {
-    return this.fullDesc();
+  get text() {
+    return this.description();
   }
 
   get recoil() {
-    return undefined as [number, number] | undefined; // TODO
+    return undefined as number | [number, number] | undefined; // TODO
   }
 
   get recovery() {
-    // const damage = this.range;
-    // const recovery = [0, 0] as [number, number];
-    // const {gen, p1, p2, move} = this.context;
+    const {gen, p1, p2, move} = this.context;
 
-    // const ignored = gen.num === 3 && is(move.name, 'Doom Desire', 'Future Sight');
-    // if (p1.pokemon.item?.id === 'shellbell' && !ignored) {
-    //   const max = math.round(p2.pokemon.maxhp / 8);
-    //   recovery[0] += math.min(math.round(damage[0] / 8), max);
-    //   recovery[1] += math.min(math.round(damage[1] / 8), max);
-    // }
+    let recovery: number | [number, number] | undefined;
 
-    // if (is(move.name, 'G-Max Finale')) {
-    //   recovery[0] = recovery[1] = math.round(p1.pokemon.maxhp / 6);
+    const ignored = gen.num === 3 && is(move.name, 'Doom Desire', 'Future Sight');
+    if (p1.pokemon.item?.id === 'shellbell' && !ignored) {
+      const max = math.round(p2.pokemon.maxhp / 8);
+      for (const hit of this.hits) {
+        if (Array.isArray(hit.damage)) {
+          if (!recovery) recovery = [0, 0];
+          const range = hit.range;
+          (recovery as [number, number])[0] += math.min(math.round(range[0] / 8), max);
+          (recovery as [number, number])[1] += math.min(math.round(range[1] / 8), max);
+        } else {
+          recovery = (recovery || 0) as number + math.min(math.round(hit.damage / 8), max);
+        }
+      }
+    }
 
-    // } else if (move.drain) {
-    //   const healed = move.drain[0] / move.drain[1];
-    //   const max = math.round(p2.pokemon.maxhp * healed);
-    //   recovery[0] += math.min(math.round(damage[0] * healed), max);
-    //   recovery[1] += math.min(math.round(damage[1] * healed), max);
+    if (is(move.name, 'G-Max Finale')) {
+      const healed =  math.round(p1.pokemon.maxhp / 6);;
+      if (Array.isArray(recovery)) {
+        recovery[0] += healed;
+        recovery[1] += healed;
+      } else {
+        recovery = (recovery || 0) as number + healed;
+      }
+    } else if (move.drain) {
+      const healed = move.drain[0] / move.drain[1];
+      const max = math.round(p2.pokemon.maxhp * healed);
+      for (const hit of this.hits) {
+        if (Array.isArray(hit.damage)) {
+          if (!recovery) recovery = [0, 0];
+          const range = hit.range;
+          (recovery as [number, number])[0] += math.min(math.round(range[0] * healed), max);
+          (recovery as [number, number])[1] += math.min(math.round(range[1] * healed), max);
+        } else {
+          recovery = (recovery || 0) as number + math.min(math.round(hit.damage * healed), max);
+        }
+      }
+    }
 
-    // }
-
-    // return recovery;
-    return undefined as [number, number] | undefined; // TODO
+    return recovery;
   }
 
-  fullDesc(notation = '%') {
-    return ''; // TODO
+  // TODO do we care about which things proc-ed onResidual?
+
+  // chain (if same turn, wont be taking hazards), if second term just nothing / residual
+  get knockout() {
+    // FIXME ko chance : with and without residual
+    return undefined! as {none: number, hazards: number, residual: number, both: number}; // TODO
   }
 
-  moveDesc(notation = '%') {
-    return ''; // TODO
-  }
+  description(notation: '%' | '/48' | 'px' | number = '%') {
+    const text = {desc: '', result: '', move: '', recovery: '', recoil: ''};
 
-  recoilDesc(notation = '%') {
-    return ''; // TODO
-  }
+    const state = encode(this.hits[this.hits.length - 1].simplified());
 
-  recoveryDesc(notation = '%') {
-    return ''; // TODO
+    const recovery = this.recovery;
+    if (recovery !== undefined) {
+      if (Array.isArray(recovery)) {
+        const min = this.display(notation, recovery[0], this.state.p1.pokemon.maxhp);
+        const max = this.display(notation, recovery[1], this.state.p1.pokemon.maxhp);
+        text.recovery = `${min} - ${max}${notation} recovered`;
+      } else {
+        const amount = this.display(notation, recovery, this.state.p1.pokemon.maxhp);
+        text.recovery = `${amount}${notation} recovered`;
+      }
+    }
+
+    return text;
   }
 
   chain() {
     const prev = this.hits[this.hits.length - 1];
     const state = prev.context.toState();
     // TODO call `apply` based on KO probabilities of previous hit(s!) to set state for next hit
-    const next = new HitResult(state as DeepReadonly<State>, prev.handlers);
-    this.add(next);
-    return next;
-  }
-
-  add(hit: HitResult) {
+    const hit = new HitResult(state as DeepReadonly<State>, prev.handlers, prev.relevant);
     this.hits.push(hit);
-    foo(this.relevant as Trace, hit.relevant);
+    return hit;
   }
 
   toString() {
-    // TODO print full desc + rolls, include recoil/recovery if applicable
+    const text = this.text;
+    let end = text.recovery;
+    if (text.recoil) end = end ? `${end}, ${text.recoil}` : text.recoil;
+    if (end) end = ` (${end})`;
+    const rolls = this.hits.map(h =>
+      `[${typeof h.damage === 'number' ? h.damage : h.damage.join(', ')}]`
+    ).join(', ');
+    return `${text.desc}${end}\n${rolls}`
+  }
+
+  private display(notation: '%' | '/48' | 'px' | number, a: number, b: number, f = 1) {
+    if (notation === '%') return Math.floor((a * (1000 / f)) / b) / 10;
+    const g = this.state.gen.num;
+    const px =
+      notation === '/48' ? 48 :
+      notation === 'px' ? (g < 7 ? 48 : g < 8 ? 86 : 400) :
+      notation;
+    return Math.floor((a * (px / f)) / b);
   }
 }
 
-// FIXME ko chance : with and without residual
-
+/**
+ * A `HitResult` represents the damage inflicted by a single hit. This may be a single number
+ * or an entire sequence of rolls. Note that due to overflow the first and last elements of the
+ * damage array may not reflect the damage range, use `HitResult#range`.
+ */
 export class HitResult {
   readonly state: DeepReadonly<State>;
   readonly handlers: Handlers;
 
-  readonly context: Context;
   readonly relevant: Relevancy;
+  readonly context: Context;
 
   damage: number | number[];
 
-  constructor(state: DeepReadonly<State>, handlers: Handlers = HANDLERS) {
+  constructor(
+    state: DeepReadonly<State>,
+    handlers: Handlers = HANDLERS,
+    relevant = new Relevancy(),
+  ) {
     this.damage = 0;
     this.state = state;
     this.handlers = handlers;
-    this.relevant = new Relevancy();
-    this.context = new Context(state, this.relevant, handlers);
+    this.relevant = relevant;
+    this.context = new Context(state, relevant, handlers);
   }
 
   get range() {
@@ -244,7 +277,7 @@ export class HitResult {
   }
 
   simplified(): State {
-    const state = this.state; // FIXME this.context.toState();
+    const state = this.state;
     const gen = state.gen as Generation;
     return {
       gen,
@@ -257,7 +290,9 @@ export class HitResult {
   }
 
   toString() {
-    // TODO print full desc + rolls, include recoil/recovery if applicable
+    const state = encode(this.simplified());
+    const rolls = typeof this.damage === 'number' ? this.damage : this.damage.join(', ');
+    return `${state}: [${rolls}]`;
   }
 
   private simplifyField(state: DeepReadonly<State.Field>, relevant: Relevancy.Field) {
@@ -332,8 +367,9 @@ export class HitResult {
     if (!relevant.crit) move.crit = undefined;
     if (!relevant.hits) move.hits = undefined;
     if (!relevant.magnitude) move.magnitude = undefined;
-    if (!relevant.spreadHit) move.spreadHit = undefined;
-    if (!relevant.numConsecutive) move.numConsecutive = undefined;
+    if (!relevant.spread) move.spread = undefined;
+    if (!relevant.consecutive) move.consecutive = undefined;
+    if (!relevant.useZ) move.useZ = undefined;
     return move;
   }
 }

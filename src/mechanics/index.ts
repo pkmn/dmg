@@ -1,4 +1,4 @@
-import type {GameType, Generation, Generations, ID, MoveName, TypeName} from '@pkmn/data';
+import type {GameType, Generation, Generations, ID, MoveName, TypeName, StatsTable} from '@pkmn/data';
 
 import {State} from '../state';
 import {Context} from '../context';
@@ -10,6 +10,8 @@ import {Abilities} from './abilities';
 import {Conditions} from './conditions';
 import {Items} from './items';
 import {Moves} from './moves';
+
+import {clamp, floor, trunc, max, min, chain, apply, abs} from '../math';
 
 export interface Applier {
   apply(state: State, guaranteed?: boolean): void;
@@ -114,6 +116,78 @@ export function calculate(...args: any[]) {
   // TODO mutate result and actually do calculations - should this part be in mechanics/index?
 
   return new Result(hit); // TODO handle multihit / parental bond etc
+}
+
+ // FIXME: other modifiers beyond just boosts
+export function computeStats(gen: Generation, pokemon: State.Pokemon) {
+  const stats = {} as StatsTable;
+  if (pokemon.stats) {
+    for (const stat of gen.stats) {
+      stats[stat] = stat === 'hp'
+        ? pokemon.stats[stat]
+        : computeBoostedStat(pokemon.stats[stat], pokemon.boosts?.[stat] || 0, gen);
+    }
+    return stats;
+  } else {
+    for (const stat of gen.stats) {
+      stats[stat] = gen.stats.calc(
+        stat,
+        pokemon.species.baseStats[stat],
+        pokemon.ivs?.[stat] ?? 31,
+        pokemon.evs?.[stat] ?? (gen.num <= 2 ? 252 : 0),
+        pokemon.level,
+        gen.natures.get(pokemon.nature!)
+      );
+      if (stat !== 'hp') {
+        stats[stat] = computeBoostedStat(stats[stat], pokemon.boosts?.[stat] || 0, gen);
+      }
+    }
+  }
+  return stats;
+}
+
+const LEGACY_BOOSTS = [25, 28, 33, 40, 50, 66, 100, 150, 200, 250, 300, 350, 400];
+
+function computeBoostedStat(stat: number, mod: number, gen?: Generation) {
+  if (gen && gen.num <= 2) return clamp(1, stat * LEGACY_BOOSTS[mod + 6] / 100, 999);
+  return floor(trunc(stat * mod >= 0 ? 2 + mod : 2, 16) / (mod >= 0 ? 2 : abs(mod) + 2));
+}
+
+function computeModifiedSpeed(context: Context | State) {
+  context = 'relevant' in context ? context : Context.fromState(context);
+  const {gen, p1, p2, field} = context;
+  let spe = computeBoostedStat(p1.pokemon.stats?.spe || 0, p1.pokemon.boosts.spe || 0, gen);
+  let mod = 0x1000;
+
+  const ability = p1.pokemon.ability && Abilities[p1.pokemon.ability.id];
+  if (ability && ability.onModifySpe) spe = chain(mod, ability.onModifySpe(context));
+
+  const item = p1.pokemon.item && Items[p1.pokemon.item.id];
+  if (item && item.onModifySpe) spe = chain(mod, item.onModifySpe(context));
+
+  if (p1.sideConditions['tailwind']) spe = chain(mod, 0x2000);
+  if (p1.sideConditions['grasspledge']) mod = chain(mod, 0x400);
+
+  spe = apply(spe, mod);
+  if (p1.pokemon.status?.name === 'par' && p1.pokemon.ability?.id !== 'quickfeet') {
+    spe = trunc(spe * (gen.num <= 6 ? 0x400 : 0x800)) / 0x1000;
+  }
+  spe = trunc(spe, 16);
+  return gen.num <= 2 ? max(min(spe, 1), 999) : max(spe, 10000);
+}
+
+function computeModifiedWeight(pokemon: Context.Pokemon | State.Pokemon) {
+  const autotomize = pokemon.volatiles.autotomize?.level || 0;
+  let weighthg = Math.max(1, pokemon.weighthg - 1000 * autotomize);
+  if (pokemon.ability === 'heavymetal') {
+    weighthg *= 2;
+  } else if (pokemon.ability === 'lightmetal') {
+    weighthg = floor(weighthg / 2);
+  }
+  if (pokemon.item === 'floatstone') {
+    weighthg = floor(weighthg / 2);
+  }
+  return weighthg;
 }
 
 const Z_MOVES: { [type in Exclude<TypeName, '???'>]: string } = {

@@ -37,8 +37,10 @@
     "fix": "eslint --fix src --ext ts",
     "compile": "tsc -p .",
     "bundle": "microbundle --name dmg --format umd --tsconfig bundle.json --strict",
-    "build": "npm run compile && npm run bundle",
+    "buildX": "npm run compile && npm run bundle",
+    "build": "npm run compile",
     "test": "jest",
+    "jtest": "jest -t parse",
     "prepare": "npm run build",
     "pretest": "npm run build",
     "posttest": "npm run lint"
@@ -59,7 +61,7 @@
         }
       },
       {
-        "files": ["src/test/mechanics/*.ts"],
+        "files": ["src/test/mechanics/*.ts", "src/test/encode.ts", "src/test/parse.ts"],
         "rules": {
           "max-len": "off"
         }

@@ -109,6 +109,7 @@ All move fields only apply to the attacker, so the `attacker` prefix is unnecess
 | `useMax` | whether to use the Max version of the move (or `+max`) |
 | `crit` | whether the move was a critical hit (`+crit` may be used as a special shortcut) |
 | `hits` | the number of times a multi hit move hit |
+| `metronome` | FIXME |
 
 ### Phrases
 

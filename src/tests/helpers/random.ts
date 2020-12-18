@@ -1,39 +1,18 @@
 import {GenerationNum, Generations, Generation, GameType, toID, StatsTable, NatureName, BoostName} from '@pkmn/data';
-import {Pokemon, PRNG} from '@pkmn/sim';
+import {PRNG} from '@pkmn/sim';
 
-import {calculate} from '../mechanics';
-import {State, FieldOptions, SideOptions, PokemonOptions, MoveOptions} from '../state';
-import {Weathers, Terrains, PseudoWeathers, SideConditions, Statuses, Volatiles} from '../conditions';
-import {is} from '../utils';
+import {State, FieldOptions, SideOptions, PokemonOptions, MoveOptions} from '../../state';
+import {Weathers, Terrains, PseudoWeathers, SideConditions, Statuses, Volatiles} from '../../conditions';
+import {is} from '../../utils';
 
-import {verify} from './verifier';
-
-export function run(gens: Generations, prng: PRNG) {
-  const seed = prng.seed;
-
-  const state = generate(gens, prng);
-  const result = calculate(state);
-
-  try {
-    verify(state, {
-      range: result.range,
-      recoil: result.recoil,
-      recovery: result.recovery,
-    });
-  } catch (err) {
-    console.log(seed);
-    throw err; // TODO
-  }
-}
-
-function generate(gens: Generations, prng: PRNG) {
+export function generate(gens: Generations, prng: PRNG) {
   const gen = gens.get(prng.next(1, 8) as GenerationNum);
   const gameType = (gen.num >= 3 && prng.randomChance(1, 4)) ? 'doubles' : 'singles';
 
   const field = generateField(gen, prng);
   const attacker = generateSide(gen, gameType, prng);
   const defender = generateSide(gen, gameType, prng);
-  const move = generateMove(gen, gameType, attacker.pokemon, prng);
+  const move = generateMove(gen, gameType, attacker, prng);
 
   return new State(gen, attacker, defender, move, field, gameType);
 }
@@ -58,6 +37,11 @@ function generateField(gen: Generation, prng: PRNG) {
   return State.createField(gen, options);
 }
 
+const ALLY_ABILITIES = [
+  'flowergift', 'battery', 'powerspot', 'steelyspirit',
+  'friendguard', 'stormdrain', 'aurabreak', 'darkarua', 'fairyaura',
+];
+
 function generateSide(gen: Generation, gameType: GameType, prng: PRNG) {
   const options: SideOptions = {};
   const scs = Object.values(SideConditions).filter(v => v[1] >= gen.num);
@@ -67,8 +51,9 @@ function generateSide(gen: Generation, gameType: GameType, prng: PRNG) {
     options.sideConditions[sc] = {level: sc === 'spikes' && gen.num >= 3 ? prng.next(1, 3) : 1};
   }
   if (gameType === 'doubles' && prng.randomChance(1, 10)) {
-    // TODO abilities
+    options.abilities = [sample(prng, ALLY_ABILITIES)];
   }
+  // NOTE: team is filled in only if Beat Up ends up being the move selected
   const pokemon = generatePokemon(gen, prng);
   return State.createSide(gen, pokemon, options);
 }
@@ -86,13 +71,17 @@ function generatePokemon(gen: Generation, prng: PRNG) {
     options.item = sample(prng, Array.from(gen.items)).name;
   }
   if (gen.num >= 3) options.ability = sample(prng, Object.values(species.abilities));
+  // NOTE: not worth the complexity of setting gender some fraction of the time
+  // NOTE: happiness is set only if Return or Frustration are selected
   if (prng.randomChance(1, 10)) {
     options.status = sample(prng, Object.keys(Statuses));
     if (options.status === 'tox') options.statusData = {toxicTurns: prng.next(1, 16)};
   }
 
-  const volatiles = Object.values(Volatiles).filter(v => v[1] >= gen.num);
+  const volatiles = Object.values(Volatiles).filter(v => v[1] >= gen.num && v[0] !== 'Dynamax');
   options.volatiles = {};
+  // Special case Dynamax to proc more often than other volatiles
+  if (gen.num === 8 && prng.next(1, 4)) options.volatiles.dynamax = {level: 1};
   while (volatiles.length && prng.randomChance(1, 8)) {
     const v = toID(sample(prng, volatiles, true)[0]);
     options.volatiles[v] = {level: is(v, 'autotomize', 'stockpile') ? prng.next(1, 3) : 1};
@@ -126,7 +115,9 @@ function generatePokemon(gen: Generation, prng: PRNG) {
     );
   }
 
-  // TODO maxhp
+  if (options.volatiles.dynamax || options.ability === 'powerconstruct') {
+    options.maxhp = stats.hp! * 1.5 * prng.next();
+  }
   if (prng.randomChance(1, 2)) options.hp = stats.hp! * prng.next();
 
   options.boosts = {};
@@ -136,28 +127,51 @@ function generatePokemon(gen: Generation, prng: PRNG) {
     options.boosts[sample(prng, boosts, true)] = prng.next(1, 6);
   }
 
+  // NOTE: switching/moveLastTurnResult/hurtThisTurn are set when relevant for the particular move
+
   return State.createPokemon(gen, species.name, options);
 }
 
-function generateMove(gen: Generation, gameType: GameType, pokemon: State.Pokemon, prng: PRNG) {
+function generateMove(gen: Generation, gameType: GameType, side: State.Side, prng: PRNG) {
+  const pokemon = side.pokemon;
+
   const options: MoveOptions = {};
   const status = prng.randomChance(1, 200);
+  const item = (pokemon.item || undefined) && gen.items.get(pokemon.item!);
 
-  const move = sample(prng, Array.from(gen.moves).filter(m => status ? m.status : !m.status));
+  const move = item?.zMoveFrom
+    ? gen.moves.get(item.zMoveFrom)!
+    : sample(prng, Array.from(gen.moves).filter(m => status ? m.status : !m.status));
   options.crit = prng.randomChance(1, 16);
   if (move.multihit && typeof move.multihit !== 'number') {
     options.hits = prng.next(move.multihit[0], move.multihit[1]);
   }
-  if (move.id === 'magnitude') options.magnitude = prng.next(4, 10);
-  if (gen.num >= 3 && gameType === 'doubles') options.spreadHit = prng.randomChance(4, 5);
-  if (pokemon.item === 'metronome') options.numConsecutive = prng.next(1, 10);
 
+  if (gen.num >= 3 && gameType === 'doubles') options.spread = prng.randomChance(4, 5);
+  if (pokemon.item === 'metronome') options.consecutive = prng.next(1, 10);
   if (gen.num === 7) {
-    // TODO useZ
-  } else if (gen.num === 8) {
-    // TODO useMax
+    options.useZ = item?.zMove ? prng.randomChance(4, 5) : prng.randomChance(1, 100);
   }
 
+  if (move.id === 'magnitude') {
+    options.magnitude = prng.next(4, 10);
+  } else if (move.id === 'beatup') {
+    const atks = [];
+    for (let i = 0; i < prng.next(0, 5); i++) atks.push(prng.next(30, 150));
+    side = State.createSide(gen, pokemon, {
+      sideConditions: side.sideConditions,
+      abilities: side.active?.map(p => p?.ability).filter(Boolean) as string[] | undefined,
+      atks,
+    });
+  } else if (is(move.id, 'return', 'frustration') && prng.randomChance(1, 10)) {
+    pokemon.happiness = prng.next(0, 255);
+  } else if (move.id === 'stompingtantrum') {
+    pokemon.moveLastTurnResult = prng.randomChance(1, 2);
+  } else if (move.id === 'assurance') {
+    pokemon.hurtThisTurn = prng.randomChance(1, 2);
+  } else if (move.id === 'pursuit' && prng.randomChance(1, 2)) {
+    pokemon.switching = prng.randomChance(1, 2) ? 'in' : 'out';
+  }
   return State.createMove(gen, move.name, options, pokemon);
 }
 

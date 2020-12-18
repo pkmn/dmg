@@ -15,4 +15,4 @@ export * from './conditions';
 
 // mod support
 export {override} from './utils';
-export {Applier, Handler, HANDLERS as Handlers} from './mechanics';
+export {Applier, Handler, HANDLERS as Handlers, computeStats} from './mechanics';

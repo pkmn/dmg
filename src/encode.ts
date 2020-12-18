@@ -1,12 +1,14 @@
-import type {BoostName, StatName, StatsTable} from '@pkmn/data';
+import type {Generation, BoostName, StatName} from '@pkmn/data';
 import {State} from './state';
-import {PseudoWeathers, SideConditions, Volatiles} from './conditions';
+import {Conditions, PseudoWeathers, SideConditions, Volatiles} from './conditions';
 import {toID} from './utils';
+import {computeStats} from './mechanics';
 
 const FORWARD = {'/': '$', '{': ')', '}': ')', '[': '(', ']': ')', '@': '*', ':': '=', ' ': '_'};
 const BACKWARD =  {'$': '/', '{': '[', '}': ']', '(': '[', ')': ']', '*': '@', '=': ':', '_': ' '};
-const ESCAPED =
-{'\\$': '/', '\\{': '[', '\\}': ']', '\\(': '[', '\\)': ']', '\\*': '@', '=': ':', '_': ' '};
+const ESCAPED = {
+  '\\$': '/', '\\{': '[', '\\}': ']', '\\(': '[', '\\)': ']', '\\*': '@', '=': ':', '_': ' ',
+};
 
 const ENCODE = new RegExp(Object.keys(FORWARD).join('|'), 'g');
 const DECODE = new RegExp(Object.keys(ESCAPED).join('|'), 'g');
@@ -26,9 +28,32 @@ export function decodeURL(s: string) {
 export function encode(state: State, url = false) {
   const {gen, gameType, p1, p2, move, field} = state;
 
-  const stats = getStats(p1.pokemon, p2.pokemon, move);
+  const stats = getStats(gen, p1.pokemon, p2.pokemon, move);
+
+  const implicits = {p1: [] as string[], p2: [] as string[]};
+  const explicits = {p1: [] as string[], p2: [] as string[]};
+  for (const side of ['p1', 'p2'] as const) {
+    for (const id in state[side].sideConditions) {
+      const sc = state[side].sideConditions[id];
+      const name = display(SideConditions[id][0]);
+      const implicit = Conditions.get(gen, id)?.[2] === side;
+      (implicit ? implicits : explicits)[side].push(
+        sc.level && sc.level > 1 ? `${name}:${sc.level}` : (implicit ? `+${name}` : name));
+    }
+    for (const id in state[side].pokemon.volatiles) {
+      const v = state[side].pokemon.volatiles[id];
+      const name = display(Volatiles[id][0]);
+      const implicit = Conditions.get(gen, id)?.[2] === side;
+      (implicit ? implicits : explicits)[side].push(
+        v.level && v.level > 1 ? `${name}:${v.level}` : (implicit ? `+${name}` : name));
+    }
+    if (state[side].pokemon.status) implicits[side].push(`+${state[side].pokemon.status}`);
+  }
 
   const buf: string[] = [];
+  if (gen.num !== 8) buf.push(`(Gen ${gen.num})`); // FIXME Gen 4 Doubles
+  if (gameType === 'doubles') buf.push('+doubles');
+
   const levels = getLevels(p1.pokemon, p2.pokemon);
   if (stats && p1.pokemon.boosts[stats.p1]) {
     const b = p1.pokemon.boosts[stats.p1]!;
@@ -45,10 +70,11 @@ export function encode(state: State, url = false) {
       buf.push(`${evs ?? 0}${n} ${gen.stats.display(stats.p1)}`);
     }
   }
+  for (const implicit of implicits.p1) buf.push(implicit);
   buf.push(p1.pokemon.species.name);
   if (p1.pokemon.item) buf.push(`@ ${p1.pokemon.item}`);
 
-  buf.push(`[${move.name}]`);
+  buf.push(move.magnitude ? `[${move.name} ${move.magnitude}]` : `[${move.name}]`);
   buf.push('vs.');
 
   if (stats && p2.pokemon.boosts[stats.p2]) {
@@ -59,6 +85,7 @@ export function encode(state: State, url = false) {
   if (stats) {
     const hp = p2.pokemon.evs?.hp
     const def = p2.pokemon.evs?.[stats.p2];
+    // FIXME foul play?
     if (gen.num <= 2) {
       if ((hp ?? 252 !== 252) || (def ?? 252 !== 252)) {
         buf.push(`${hp} HP / ${def} ${gen.stats.display(stats.p1)}`);
@@ -69,12 +96,10 @@ export function encode(state: State, url = false) {
       buf.push(`${hp ?? 0} HP / ${def ?? 0}${n} ${gen.stats.display(stats.p2)}`);
     }
   }
+  for (const implicit of implicits.p2) buf.push(implicit);
   buf.push(p2.pokemon.species.name);
 
   if (p2.pokemon.item) buf.push(`@ ${p2.pokemon.item}`);
-
-  if (gen.num !== 8) buf.push(`gen:${gen.num}`);
-  if (gameType === 'doubles') buf.push('+doubles');
 
   // Field
   if (field.weather) buf.push(`+${display(field.weather)}`);
@@ -134,29 +159,15 @@ export function encode(state: State, url = false) {
     if (pokemon.statusData?.toxicTurns) {
       buf.push(`${p}ToxicCounter:${pokemon.statusData.toxicTurns}`);
     }
-
-    const scoped: string[] = [];
-    for (const id in state[side].sideConditions) {
-      const sc = state[side].sideConditions[id];
-      const name = display(SideConditions[id][0]);
-      scoped.push(sc.level && sc.level > 1 ? `${name}:${sc.level}` : name);
-    }
-    for (const id in state[side].pokemon.volatiles) {
-      const v = state[side].pokemon.volatiles[id];
-      const name = display(Volatiles[id][0]);
-      scoped.push(v.level && v.level > 1 ? `${name}:${v.level}` : name);
-    }
-    if (scoped.length) buf.push(`${p}:${scoped.join(',')}`);
+    if (explicits[side].length) buf.push(`${p}:${explicits[side].join(',')}`);
   }
 
   // Move
   if (move.crit) buf.push('+crit');
   // TODO if (move.useZ) buf.push('+z');
-  // TODO if (move.useMax) buf.push('+max');
-  if (move.spreadHit) buf.push('+spread');
+  if (move.spread) buf.push('+spread');
   if (move.hits) buf.push(`hits:${move.hits}`);
-  if (move.magnitude) buf.push(`magnitude:${move.magnitude}`);
-  if (move.numConsecutive) buf.push(`consecutive:${move.numConsecutive}`);
+  if (move.consecutive) buf.push(`consecutive:${move.consecutive}`); // FIXME metronome
 
   const s = buf.join(' ');
   return url ? encodeURL(s) : s;
@@ -174,18 +185,18 @@ function getLevels(p1: State.Pokemon, p2: State.Pokemon) {
 }
 
 function getStats(
-  p1: State.Pokemon, p2: State.Pokemon, move: State.Move
+  gen: Generation, p1: State.Pokemon, p2: State.Pokemon, move: State.Move
 ): {p1: Exclude<StatName, 'hp'>, p2: Exclude<StatName, 'hp'>} | undefined {
   if (move.category === 'Status') return undefined;
   switch (move.name) {
     case 'Photon Geyser':
     case 'Light That Burns The Sky': {
-      const {atk, spa} = compute(p1);
+      const {atk, spa} = computeStats(gen, p1);
       return atk > spa ? {p1: 'atk', p2: 'def'} : {p1: 'spa', p2: 'spd'};
     }
     case 'Shell Side Arm': {
-      const {atk, spa} = compute(p1);
-      const {def, spd} = compute(p2);
+      const {atk, spa} = computeStats(gen, p1);
+      const {def, spd} = computeStats(gen, p2);
       return (atk / def) > (spa / spd) ? {p1: 'atk', p2: 'def'} : {p1: 'spa', p2: 'spd'};
     }
     case 'Body Press':
@@ -198,8 +209,4 @@ function getStats(
           : move.category === 'Special' ? 'spd' : 'def',
       }
   }
-}
-
-function compute(p: State.Pokemon) {
-  return null! as StatsTable; // FIXME compute final stats from boosts in mechanics!
 }

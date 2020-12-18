@@ -40,7 +40,17 @@ describe('Math', () => {
     expect(math.chainMod(1025, 5324)).toBe(1332);
   });
 
+  test('chain', () => {
+    expect(math.chain(4096, 2732)).toBe(2732);
+    expect(math.chain(2732)).toBe(2732);
+  });
+
   test('applyMod', () => {
     expect(math.applyMod(108, 3072)).toBe(81);
+  });
+
+  test('apply', () => {
+    expect(math.apply(108, 3072)).toBe(81);
+    expect(math.apply(108)).toBe(108);
   });
 });

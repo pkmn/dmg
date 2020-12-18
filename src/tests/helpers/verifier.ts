@@ -1,8 +1,8 @@
 import {PokemonSet} from '@pkmn/data';
 
-import {ResultBreakdown} from './helper';
+import {ResultBreakdown} from '.';
 
-import {State} from '../index';
+import {State} from '../../state';
 import {Dex, Battle, ID, PRNG, PRNGSeed} from '@pkmn/sim';
 
 const N = 1000;
@@ -35,8 +35,8 @@ export function verify(state: State, breakdown: ResultBreakdown, num = N, seed =
 
     if (breakdown.recoil || breakdown.recovery) {
       const range = [
-        p1.pokemon.hp + (breakdown.recoil?.[1] || 0) + (breakdown.recovery?.[0] || 0),
-        p1.pokemon.hp + (breakdown.recoil?.[0] || 0) + (breakdown.recovery?.[1] || 0),
+        0, // TODO p1.pokemon.hp + (breakdown.recoil?.[1] || 0) + (breakdown.recovery?.[0] || 0),
+        0, // TODO p1.pokemon.hp + (breakdown.recoil?.[0] || 0) + (breakdown.recovery?.[1] || 0),
       ];
       if (p1.pokemon.hp < range[0] || p1.pokemon.hp > range[1]) {
         throw new Error(

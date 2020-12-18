@@ -11,7 +11,6 @@ describe('Context', () => {
     const gens = new Generations(Dex as any);
     const gen = gens.get(7);
     const relevancy = new Relevancy();
-    const residual = new Relevancy();
 
     const state = new State(
       gen,
@@ -39,7 +38,7 @@ describe('Context', () => {
       {weather: 'Sand', terrain: 'Misty', pseudoWeather: {gravity: {}}}
     ) as DeepReadonly<State>;
 
-    const context = new Context(state, relevancy, residual, {
+    const context = new Context(state, relevancy, {
       Items: {
         choicespecs: {},
         leftovers: {},
@@ -66,12 +65,12 @@ describe('Context', () => {
       },
     });
 
-    return {context, state, relevancy, residual};
+    return {context, state, relevancy};
   };
 
 
   test('Field', () => {
-    const {context, state, relevancy, residual} = newContext(); // FIXME residual
+    const {context, state, relevancy} = newContext();
     const before = serialize(state);
 
     expect(context.field.weather?.basePowerCallback?.(context)).toBeUndefined();

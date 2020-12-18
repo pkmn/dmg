@@ -22,6 +22,7 @@ import {is, has, extend, DeepPartial, toID} from './utils';
 
 type OverriddenFields =
   'item' | 'ability' | 'nature' | 'status' | 'volatiles' | 'ivs' | 'evs' | 'boosts';
+
 export interface PokemonOptions extends Partial<Omit<State.Pokemon, OverriddenFields>> {
   name?: string;
   weightkg?: number;
@@ -38,12 +39,12 @@ export interface PokemonOptions extends Partial<Omit<State.Pokemon, OverriddenFi
 
 export interface MoveOptions {
   name?: string;
+  basePower?: number;
   crit?: boolean;
   hits?: number;
   magnitude?: number;
-  numConsecutive?: number;
-  spreadHit?: boolean;
-  useMax?: boolean;
+  consecutive?: number;
+  spread?: boolean;
   useZ?: boolean;
 }
 
@@ -146,11 +147,22 @@ export namespace State {
     crit?: boolean;
     hits?: number;
     magnitude?: number;
-    spreadHit?: boolean;
-    numConsecutive?: number;
+    spread?: boolean;
+    consecutive?: number;
+    useZ?: boolean;
   }
 }
 
+// Moves can include a base power override in their name, eg. "Present 80".
+const MOVE_BASE_POWER = /^\s*(\D*)(\d+)\s*$/;
+
+/**
+ * The external API representing the state of the battle used as input to the calculator. Internally
+ * this gets transformed into a `Context` during computation, but all interfaces map fairly closely
+ * to the shape of these interfaces. These interfaces were constructed to map closely to the same
+ * concepts in Pokémon Showdown for easy interoperability. Most users should use the `create` helper
+ * methods or simply `parse` the `State` from a string representation.
+ */
 export class State {
   readonly gameType: GameType;
   readonly gen: Generation;
@@ -359,9 +371,24 @@ export class State {
       volatiles?: {[id: string]: object};
     } = {}
   ) {
-    const base = gen.moves.get(name);
-    if (!base) invalid(gen, 'move', name);
-    if (options.name && toID(options.name) !== base.id) {
+    let base = gen.moves.get(name);
+    if (!base) {
+      const m = MOVE_BASE_POWER.exec(name);
+      if (m) {
+        base = gen.moves.get(m[1]);
+        const n =  Number(m[2]);
+        if (base?.id === 'magnitude' && n >= 4 && n <= 10) {
+          if (options.magnitude && options.magnitude !== n) {
+            throw new Error(`Magnitude mismatch: '${options.magnitude}' does not match '${n}'`);
+          }
+          options.magnitude = n;
+        } else {
+          options.basePower = n;
+        }
+      }
+      if (!base) invalid(gen, 'move', name);
+    }
+    if (options.name && !(toID(options.name) === base.id || toID(options.name) === toID(name))) {
       throw new Error(`Move mismatch: '${options.name}' does not match '${base.name}'`);
     }
     const move: Partial<State.Move> = {hits: 1};
@@ -376,20 +403,18 @@ export class State {
       pokemon.species = species;
     }
 
-    const useMax = options.useMax || pokemon.volatiles?.dynamax;
+    const useMax = pokemon.volatiles?.dynamax;
     if (useMax && options.useZ) {
       throw new Error(`Cannot use ${base.name} as both a Z-Move and a Max Move simulataneously`);
     }
-    if (useMax) {
+    if (useMax|| move.isMax) {
       if (options.hits && options.hits > 1) {
         throw new Error(`'${options.hits}' hits requested but Max Moves cannot be multi-hit`);
       }
-      // TODO should it be on whether the move was isMax, not whether useMax?
-    } else if (options.useZ) {
+    } else if (options.useZ || move.isZ) {
       if (options.hits && options.hits > 1) {
         throw new Error(`'${options.hits}' hits requested but Z-Moves cannot be multi-hit`);
       }
-      // TODO should it be on whether the move was isZ, not whether useZ?
     } else {
       if (base.multihit) {
         if (typeof base.multihit === 'number') {
@@ -407,6 +432,7 @@ export class State {
     }
 
     extend(move, base, options); // whatever, there are too many move fields
+
     move.crit = options.crit ?? base.willCrit;
     if (typeof options.magnitude === 'number') {
       if (move.id !== 'magnitude') {
@@ -417,15 +443,15 @@ export class State {
     if (move.id === 'magnitude' && !move.magnitude) {
       throw new Error('The move Magnitude must have a magnitude specified');
     }
-    if (gen.num < 3 && options.spreadHit) {
+    if (gen.num < 3 && options.spread) {
       throw new Error(`Spread moves do not exist in generation ${gen.num}`);
     } else {
-      move.spreadHit = options.spreadHit;
+      move.spread = options.spread;
     }
-    if (options.numConsecutive && toID(pokemon.item) !== 'metronome') {
-      throw new Error('numConsecutive has no meaning unless the Pokemon is holding a Metronome\'');
+    if (options.consecutive && toID(pokemon.item) !== 'metronome') {
+      throw new Error('consecutive has no meaning unless the Pokemon is holding a Metronome\'');
     }
-    move.numConsecutive = options.numConsecutive;
+    move.consecutive = options.consecutive;
 
     return move as State.Move;
   }
@@ -731,7 +757,7 @@ function setHiddenPowerIVs(
     const max = gen.num <= 2 ? 30 : 31;
     let maxed = true;
     for (const stat of gen.stats) {
-      if (!(pokemon.ivs[stat] >= max)) {
+      if (!(pokemon.ivs[stat] >= max) && pokemon.ivs[stat] !== ivs[stat]) {
         maxed = false;
         break;
       }

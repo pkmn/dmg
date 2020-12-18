@@ -3,8 +3,8 @@
 import {Generation, GenerationNum, Generations} from '@pkmn/data';
 import {Dex} from '@pkmn/sim';
 
-import {Scope, inGens} from '../gens';
-import {Result} from '../result';
+import {Scope, inGens} from '../../gens';
+import {Result} from '../../result';
 
 const gens = new Generations(Dex as any);
 
@@ -59,7 +59,11 @@ export function tests(...args: any[]) {
 declare global {
   namespace jest {
     interface Matchers<R, T> {
-      toMatch(gen: Generation, notation?: '%' | 'px' | ResultDiff, diff?: ResultDiff): R;
+      toMatch(
+        gen: Generation,
+        notation?: '%' | '/48' | 'px' | number | ResultDiff,
+        diff?: ResultDiff
+      ): R;
     }
   }
 }
@@ -67,8 +71,8 @@ declare global {
 export type ResultDiff = Partial<Record<GenerationNum, ResultBreakdown>>;
 export interface ResultBreakdown {
   range?: [number, number];
-  recoil?: [number, number];
-  recovery?: [number, number];
+  recoil?: number | [number, number];
+  recovery?: number | [number, number];
   desc?: string;
   result?: string;
 }
@@ -77,10 +81,10 @@ expect.extend({
   toMatch(
     received: Result,
     gen: Generation,
-    notation?: '%' | 'px' | ResultDiff,
+    notation?: '%' | '/48' | 'px' | number | ResultDiff,
     diff?: ResultDiff
   ) {
-    if (typeof notation !== 'string') {
+    if (typeof notation !== 'string' && typeof notation !== 'number') {
       diff = notation;
       notation = '%';
     }
@@ -114,8 +118,9 @@ expect.extend({
         }
       }
     }
+    const desc = received.description(notation);
     if (expected.desc) {
-      const r = received.fullDesc(notation).split(': ')[0];
+      const r = desc.desc;
       if (this.isNot) {
         expect(r).not.toEqual(expected.desc);
       } else {
@@ -123,7 +128,7 @@ expect.extend({
       }
     }
     if (expected.result) {
-      const post = received.fullDesc(notation).split(': ')[1];
+      const post = desc.result;
       const r = `(${post.split('(')[1]}`;
       if (this.isNot) {
         expect(r).not.toEqual(expected.result);

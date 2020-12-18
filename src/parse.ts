@@ -45,10 +45,15 @@ const KNOWN = {
   field: ['weather', 'terrain', 'pseudoweather', _],
   p1: PLAYER_KNOWN,
   p2: PLAYER_KNOWN,
-  move: ['name', 'hits', 'usez', 'usemax', 'crit'], // FIXME +z +max
+  move: ['name', 'hits', 'usez', 'crit'], // FIXME +z
 };
 
-// TODO: treat charge/fairyaura etc as side conditions
+// TODO: treat battery/fairyaura etc as side conditions = problem, distinguish ally ability! allies=+FriendGuard,+AuraBreak
+// FIXME: handle vs. split for scoping!
+
+// FIXME: handle ALL EVs (all 5/6 for attacker/defender) in phrase!
+// eslint-disable-next-line max-len
+const EVS = /(?:(?:\d{1,3}(?:\+|-)?\s*(?:HP|Atk|Def|SpA|SpD|Spe|Spc)(?:\s*\/\s*\d{1,3}(?:\+|-)?\s*(?:HP|Atk|Def|SpA|SpD|Spe|Spc)){0,5})?\s+)?/;
 
 const PHRASE = new RegExp([
   // Attacker Boosts
@@ -138,7 +143,7 @@ export function parse(gens: Generation | Generations, s: string, strict = false)
 }
 
 // Generation can be specified as [Gen 4] or [4] as well
-const GEN = /\[\s*(?:(?:G|g)en)?\s*(\d)\s*\]/gi;
+const GEN = /\[\s*(?:(?:G|g)en)?\s*(\d)\s*\]/gi; // FIXME handle (Gen 4 Doubles)
 
 // Gen can be specified by a flag or by passing in a specific Generation object in addition to
 // as part of the phrase. We pull any generation information out of the phrase in addition to
@@ -175,7 +180,7 @@ function validateGen(
 const UNAMBIGUOUS: {[id: string]: keyof Flags} = {
   gametype: 'general', doubles: 'general', singles: 'general',
   weather: 'field', terrain: 'field', pseudoweather: 'field',
-  move: 'move', usez: 'move', usemax: 'move', crit: 'move', hits: 'move',
+  move: 'move', usez: 'move', crit: 'move', hits: 'move',
 };
 
 // ConditionKind aliases to allow for flexible flag naming
@@ -183,11 +188,13 @@ const CONDITIONS: {[id: string]: ConditionKind} = {
   weather: 'Weather',
   terrain: 'Terrain',
   pseudoweather: 'Pseudo Weather',
+  pseudoweathers: 'Pseudo Weather',
   sidecondition: 'Side Condition',
   sideconditions: 'Side Condition',
   volatile: 'Volatile Status',
   volatiles: 'Volatile Status',
   volatilestatus: 'Volatile Status',
+  volatilestatuses: 'Volatile Status',
   status: 'Status',
 };
 
@@ -250,7 +257,7 @@ function parseFlags(gen: Generation, raw: Array<[ID, string]>, strict: boolean) 
 const CONDITION_NON_BOOLS =
   ['spikes', 'toxicspikes', 'slowstart', 'autotomize', 'stockpile'] as ID[];
 // Boolean flags that are not conditions
-const NON_CONDITION_BOOLS = ['usez', 'usemax', 'crit'] as ID[];
+const NON_CONDITION_BOOLS = ['usez', 'crit'] as ID[]; // FIXME z
 
 // Flags which canonically take an 's' suffix
 const PLURALS = ['ev', 'iv', 'dv', 'boost'] as ID[];
@@ -317,6 +324,7 @@ function parseConditionFlag(
       throw new Error(`Mismatched scope for condition '${name}'`);
     }
 
+    // FIXME tox counter?
     if (kind === 'Weather' || kind === 'Terrain' || kind === 'Status') {
       id = toID(kind);
       val = toID(name);
@@ -457,7 +465,6 @@ function buildMoveOptions(
     name: checks.conflict('move', phrase?.move, flags.move.name, REQUIRED)!,
     hits: checks.number('move hits', flags.move.hits),
     useZ: flags.move.usez ? !!+flags.move.usez : undefined,
-    useMax: flags.move.usemax ? !!+flags.move.usemax : undefined,
     crit: flags.move.crit ? !!+flags.move.crit : undefined,
   };
 }

@@ -61,6 +61,10 @@ export class Context {
       this.gameType
     );
   }
+
+  static fromState(state: State) {
+    return new Context(state as DeepReadonly<State>, new Relevancy());
+  }
 }
 
 export namespace Context {
@@ -80,20 +84,20 @@ export namespace Context {
 
       if (state.weather) {
         const id = toID(state.weather);
-        this.weather = reify({name: state.weather}, id, handlers.Conditions, handler => {
+        this.weather = reify({name: state.weather}, id, handlers.Conditions, () => {
           this.relevant.weather = true;
         });
       }
       if (state.terrain) {
         const id = toID(state.terrain);
-        this.terrain = reify({name: state.terrain}, id, handlers.Conditions, handler => {
+        this.terrain = reify({name: state.terrain}, id, handlers.Conditions, () => {
           this.relevant.terrain = true;
         });
       }
       this.pseudoWeather = {};
       for (const pw in state.pseudoWeather) {
         this.pseudoWeather[pw] =
-          reify({data: state.pseudoWeather[pw]}, pw as ID, handlers.Conditions, handler => {
+          reify({data: state.pseudoWeather[pw]}, pw as ID, handlers.Conditions, () => {
             this.relevant.pseudoWeather[pw] = true;
           });
       }
@@ -141,7 +145,7 @@ export namespace Context {
       this.sideConditions = {};
       for (const sc in state.sideConditions) {
         this.sideConditions[sc] =
-          reify(extend({}, state.sideConditions[sc]), sc as ID, handlers.Conditions, handler => {
+          reify(extend({}, state.sideConditions[sc]), sc as ID, handlers.Conditions, () => {
             this.relevant.sideConditions[sc] = true;
           });
       }
@@ -212,12 +216,12 @@ export namespace Context {
       this.weighthg = state.weighthg;
 
       if (state.item) {
-        this.item = reify({id: state.item}, state.item, handlers.Items, handler => {
+        this.item = reify({id: state.item}, state.item, handlers.Items, () => {
           this.relevant.item = true;
         });
       }
       if (state.ability) {
-        this.ability = reify({id: state.ability}, state.ability, handlers.Abilities, handler => {
+        this.ability = reify({id: state.ability}, state.ability, handlers.Abilities, () => {
           this.relevant.ability = true;
         });
       }
@@ -226,7 +230,7 @@ export namespace Context {
 
       if (state.status) {
         this.status =
-          reify({name: state.status}, state.status as ID, handlers.Conditions, handler => {
+          reify({name: state.status}, state.status as ID, handlers.Conditions, () => {
             this.relevant.status = true;
           });
       }
@@ -234,7 +238,7 @@ export namespace Context {
       this.volatiles = {};
       for (const v in state.volatiles) {
         this.volatiles[v] =
-          reify(extend({}, state.volatiles[v]), v as ID, handlers.Conditions, handler => {
+          reify(extend({}, state.volatiles[v]), v as ID, handlers.Conditions, () => {
             this.relevant.volatiles[v] = true;
           });
       }
@@ -409,8 +413,8 @@ export namespace Context {
     crit?: boolean;
     hits?: number;
     magnitude?: number;
-    spreadHit?: boolean;
-    numConsecutive?: number; // Metronome
+    spread?: boolean;
+    consecutive?: number; // Metronome
 
     damageCallback: undefined; // Silence TS2559
 
@@ -436,7 +440,7 @@ function reify<T>(
   obj: T & Partial<Handler>,
   id: ID,
   handlers: Handlers[HandlerKind],
-  cbfn?: (k: keyof Handler) => void
+  cbfn?: () => void
 ) {
   const handler = handlers[id];
   if (handler) {
@@ -446,7 +450,7 @@ function reify<T>(
       if (fn && HANDLER_FNS.has(k) && typeof fn === 'function') {
         obj[k] = (c: Context) => {
           const r = (fn as any)(c);
-          if (r && cbfn) cbfn(k);
+          if (r && cbfn) cbfn();
           return r;
         };
       }

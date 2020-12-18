@@ -1,10 +1,10 @@
 import {Generation, GenerationNum, Generations} from '@pkmn/data';
 import {Dex} from '@pkmn/sim';
 
-import {ResultBreakdown} from './helper';
+import {ResultBreakdown} from '.';
 
 import * as smogon from '@smogon/calc';
-import * as pkmn from '../index';
+import * as pkmn from '../../index';
 
 const KEYS: Array<keyof ResultBreakdown> = ['range', 'recoil', 'recovery', 'desc', 'result'];
 
@@ -20,7 +20,7 @@ export function generate(s: string, pkg: 'dmg' | 'calc' = 'dmg') {
       const breakdown = pkg === 'dmg' ? dmg(state) : calc(state);
       encoded = pkmn.encode(state);
       results.push([gen.num, breakdown]);
-    } catch (err) { } // ignore, assume it mean this generation should be skipped
+    } catch (err) { } // ignore, assume it means this generation should be skipped
   }
 
   if (!results.length) throw new Error(`No successful calculations in any generation for '${s}'`);
@@ -63,9 +63,10 @@ export function generate(s: string, pkg: 'dmg' | 'calc' = 'dmg') {
 // PRECONDITION: b[k] !== undefined
 function breakdownField(k: keyof ResultBreakdown, a: ResultBreakdown, b: ResultBreakdown) {
   if (Array.isArray(b[k])) {
-    if (!a[k] || (a[k]![0] !== b[k]![0] || a[k]![1] !== b[k]![1])) {
-      return `${k}: [${b[k]![0]}, ${b[k]![1]}]`;
-    }
+    // FIXME
+    // if (!a[k] || (a[k]![0] !== b[k]![0] || a[k]![1] !== b[k]![1])) {
+    //   return `${k}: [${b[k]![0]}, ${b[k]![1]}]`;
+    // }
   } else if (a[k] !== b[k]) {
     return `${k}: '${b[k]}'`;
   }
@@ -81,9 +82,9 @@ function dmg(state: pkmn.State): ResultBreakdown {
     recovery: result.recovery,
   };
 
-  const [pre, post] = result.desc.split(': ');
-  breakdown.desc = pre;
-  breakdown.result = `(${post.split('(')[1]}`;
+  const text = result.text;
+  breakdown.desc = text.desc;
+  breakdown.result = `(${text.result.split('(')[1]}`;
 
   return breakdown;
 }
@@ -116,7 +117,7 @@ function calc(state: pkmn.State): ResultBreakdown {
   const recovery = result.recovery();
   if (recovery.text) breakdown.recovery = recovery.recovery;
 
-  const [pre, post] = result.desc().split(': ');
+  const [pre, post] = result.desc().split(': '); // BUG: Type: Null...
   breakdown.desc = pre;
   breakdown.result = `(${post.split('(')[1]}`;
 

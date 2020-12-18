@@ -1,4 +1,4 @@
-import {Generations} from '@pkmn/data';
+import {Generations, StatsTable} from '@pkmn/data';
 import {Dex} from '@pkmn/sim';
 
 import {State} from '../state';
@@ -231,7 +231,30 @@ describe('State', () => {
     });
 
     test('hidden power', () => {
-      // TODO
+      let ivs: Partial<StatsTable> = {};
+      expect(State.createPokemon(gens.get(4), 'Pikachu', {ivs}, 'Hidden Power Bug'));
+      ivs = {atk: 8, def: 17, spa: 30};
+      expect(State.createPokemon(gens.get(4), 'Pikachu', {ivs}, 'Hidden Power').ivs)
+        .toEqual(ivs);
+      expect(() => State.createPokemon(gens.get(1), 'Pikachu', {}, 'Hidden Power Grass'))
+        .toThrow('Unsupported or invalid Hidden Power');
+      expect(() => State.createPokemon(gens.get(8), 'Pikachu', {}, 'Hidden Power Grass'))
+        .toThrow('Unsupported or invalid Hidden Power');
+      expect(() => State.createPokemon(gens.get(6), 'Pikachu', {ivs}, 'Hidden Power Grass'))
+        .toEqual(ivs);
+      expect(() => State.createPokemon(gens.get(7), 'Pikachu', {}, 'Hidden Power Fairy'))
+        .toThrow('Unsupported or invalid Hidden Power');
+      expect(State.createPokemon(gens.get(7), 'Pikachu', {ivs}, 'Hidden Power Dark').ivs)
+        .toEqual(ivs);
+      expect(() =>
+        State.createPokemon(gens.get(7), 'Pikachu', {level: 99, ivs}, 'Hidden Power Dark'))
+        .toThrow('Cannot set Hidden Power IVs over non-default IVs');
+      ivs = {atk: 31, def: 30, spe: 30};
+      expect(State.createPokemon(gens.get(7), 'Pikachu', {level: 99, ivs}, 'Hidden Power Rock'))
+        .toEqual({hp: 31, atk: 31, def: 30, spa: 31, spd: 30, spe: 30});
+        ivs = {atk: 30, spe: 30};
+      expect(State.createPokemon(gens.get(7), 'Pikachu', {level: 99, ivs}, 'Hidden Power Rock'))
+        .toEqual({hp: 23, atk: 27, def: 25, spa: 31, spd: 30, spe: 30});
     });
 
     test('boosts', () => {
@@ -294,11 +317,17 @@ describe('State', () => {
       expect(() => State.createMove(gens.get(1), 'foo')).toThrow('invalid');
       expect(() => State.createMove(gens.get(1), 'Tackle', {name: 'Not Tackle'}))
         .toThrow('mismatch');
+      expect(() => State.createMove(gens.get(1), 'Tackle 80', {name: 'Tackle 120'}))
+        .toThrow('mismatch');
 
       let move = State.createMove(gens.get(1), 'Tackle');
       expect(move.name).toBe('Tackle');
       move = State.createMove(gens.get(1), 'Tackle', {name: 'Tackle'});
       expect(move.name).toBe('Tackle');
+      expect(move.basePower).toBe(40);
+      move = State.createMove(gens.get(1), 'Tackle 80', {name: 'Tackle'});
+      expect(move.name).toBe('Tackle');
+      expect(move.basePower).toBe(80);
     });
 
     test('species', () => {
@@ -315,13 +344,14 @@ describe('State', () => {
     });
 
     test('Z + Max', () => {
-      expect(() => State.createMove(gens.get(8), 'Tackle', {useMax: true, useZ: true}))
+      const dynamax = {volatiles: {dynamax: {}}};
+      expect(() => State.createMove(gens.get(8), 'Tackle', {useZ: true}, dynamax))
         .toThrow('Z-Move and a Max Move simulataneously');
-      // TODO ???
     });
 
     test('hits', () => {
-      expect(() => State.createMove(gens.get(8), 'Tackle', {useMax: true, hits: 4}))
+      const dynamax = {volatiles: {dynamax: {}}};
+      expect(() => State.createMove(gens.get(8), 'Tackle', {hits: 4}, dynamax))
         .toThrow('Max Moves cannot be multi-hit');
       expect(() =>
         State.createMove(gens.get(8), 'Tackle', {hits: 2}, {
@@ -362,21 +392,24 @@ describe('State', () => {
       expect(() => State.createMove(gens.get(7), 'Magnitude'))
         .toThrow('must have a magnitude specified');
       expect(State.createMove(gens.get(7), 'Magnitude', {magnitude: 5}).magnitude).toBe(5);
+      expect(State.createMove(gens.get(7), 'Magnitude 9').magnitude).toBe(9);
+      expect(() => State.createMove(gens.get(7), 'Magnitude 9', {magnitude: 4}).magnitude)
+        .toThrow('Magnitude mismatch');
     });
 
-    test('spreadHit', () => {
-      expect(() => State.createMove(gens.get(1), 'Earthquake', {spreadHit: true}))
+    test('spread', () => {
+      expect(() => State.createMove(gens.get(1), 'Earthquake', {spread: true}))
         .toThrow('Spread moves do not exist');
-      expect(State.createMove(gens.get(7), 'Earthquake').spreadHit).toBeUndefined();
-      expect(State.createMove(gens.get(7), 'Earthquake', {spreadHit: false}).spreadHit).toBe(false);
+      expect(State.createMove(gens.get(7), 'Earthquake').spread).toBeUndefined();
+      expect(State.createMove(gens.get(7), 'Earthquake', {spread: false}).spread).toBe(false);
     });
 
-    test('numConsecutive', () => {
-      expect(() => State.createMove(gens.get(7), 'Tackle', {numConsecutive: 4}))
-        .toThrow('numConsecutive has no meaning');
+    test('consecutive', () => {
+      expect(() => State.createMove(gens.get(7), 'Tackle', {consecutive: 4}))
+        .toThrow('consecutive has no meaning');
       const move =
-        State.createMove(gens.get(7), 'Tackle', {numConsecutive: 4}, {item: 'Metronome'});
-      expect(move.numConsecutive).toBe(4);
+        State.createMove(gens.get(7), 'Tackle', {consecutive: 4}, {item: 'Metronome'});
+      expect(move.consecutive).toBe(4);
     });
   });
 
