@@ -1,4 +1,4 @@
-import {tests} from '../helper';
+// import {tests} from '../helpers';
 
 describe('Moves', () => {
   test('true', () => {

@@ -81,8 +81,8 @@ export class Appliers {
 export const APPLIERS = new Appliers(HANDLERS);
 
 export const HANDLER_FNS: Set<keyof Handler> = new Set([
-  'basePowerCallback', 'damageCallback', 'onModifyBasePower', 'onModifyAtk',
-  'onModifySpA', 'onModifyDef', 'onModifySpD', 'onModifySpe', 'onModifyWeight',
+  'basePowerCallback', 'damageCallback', 'onModifyBasePower', 'onModifyAtk', 'onModifySpA',
+  'onModifyDef', 'onModifySpD', 'onModifySpe', 'onModifyWeight', 'onResidual',
 ]);
 
 // Convenience overload for most programs
@@ -118,7 +118,7 @@ export function calculate(...args: any[]) {
   return new Result(hit); // TODO handle multihit / parental bond etc
 }
 
- // FIXME: other modifiers beyond just boosts
+// FIXME: other modifiers beyond just boosts
 export function computeStats(gen: Generation, pokemon: State.Pokemon) {
   const stats = {} as StatsTable;
   if (pokemon.stats) {
@@ -153,17 +153,17 @@ function computeBoostedStat(stat: number, mod: number, gen?: Generation) {
   return floor(trunc(stat * mod >= 0 ? 2 + mod : 2, 16) / (mod >= 0 ? 2 : abs(mod) + 2));
 }
 
-function computeModifiedSpeed(context: Context | State) {
+export function computeModifiedSpeed(context: Context | State) {
   context = 'relevant' in context ? context : Context.fromState(context);
-  const {gen, p1, p2, field} = context;
+  const {gen, p1} = context;
   let spe = computeBoostedStat(p1.pokemon.stats?.spe || 0, p1.pokemon.boosts.spe || 0, gen);
   let mod = 0x1000;
 
   const ability = p1.pokemon.ability && Abilities[p1.pokemon.ability.id];
-  if (ability && ability.onModifySpe) spe = chain(mod, ability.onModifySpe(context));
+  if (ability?.onModifySpe) spe = chain(mod, ability.onModifySpe(context));
 
   const item = p1.pokemon.item && Items[p1.pokemon.item.id];
-  if (item && item.onModifySpe) spe = chain(mod, item.onModifySpe(context));
+  if (item?.onModifySpe) spe = chain(mod, item.onModifySpe(context));
 
   if (p1.sideConditions['tailwind']) spe = chain(mod, 0x2000);
   if (p1.sideConditions['grasspledge']) mod = chain(mod, 0x400);
@@ -176,7 +176,7 @@ function computeModifiedSpeed(context: Context | State) {
   return gen.num <= 2 ? max(min(spe, 1), 999) : max(spe, 10000);
 }
 
-function computeModifiedWeight(pokemon: Context.Pokemon | State.Pokemon) {
+export function computeModifiedWeight(pokemon: Context.Pokemon | State.Pokemon) {
   const autotomize = pokemon.volatiles.autotomize?.level || 0;
   let weighthg = Math.max(1, pokemon.weighthg - 1000 * autotomize);
   if (pokemon.ability === 'heavymetal') {
@@ -211,7 +211,7 @@ const Z_MOVES: { [type in Exclude<TypeName, '???'>]: string } = {
   Water: 'Hydro Vortex',
 };
 
-function getZMoveName(
+export function getZMoveName(
   gen: Generation,
   move: State.Move,
   pokemon: {
@@ -252,7 +252,7 @@ const MAX_MOVES: { [type in Exclude<TypeName, '???'>]: string } = {
   Water: 'Max Geyser',
 };
 
-function getMaxMovename(
+export function getMaxMovename(
   gen: Generation,
   move: State.Move,
   pokemon: {

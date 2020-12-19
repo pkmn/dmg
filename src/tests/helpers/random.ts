@@ -1,8 +1,23 @@
-import {GenerationNum, Generations, Generation, GameType, toID, StatsTable, NatureName, BoostName} from '@pkmn/data';
+import {
+  BoostName,
+  GameType,
+  Generation,
+  GenerationNum,
+  Generations,
+  StatsTable,
+  toID,
+} from '@pkmn/data';
 import {PRNG} from '@pkmn/sim';
 
+import {
+  PseudoWeathers,
+  SideConditions,
+  Statuses,
+  Terrains,
+  Volatiles,
+  Weathers,
+} from '../../conditions';
 import {State, FieldOptions, SideOptions, PokemonOptions, MoveOptions} from '../../state';
-import {Weathers, Terrains, PseudoWeathers, SideConditions, Statuses, Volatiles} from '../../conditions';
 import {is} from '../../utils';
 
 export function generate(gens: Generations, prng: PRNG) {

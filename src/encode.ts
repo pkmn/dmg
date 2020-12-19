@@ -4,8 +4,8 @@ import {Conditions, PseudoWeathers, SideConditions, Volatiles} from './condition
 import {toID} from './utils';
 import {computeStats} from './mechanics';
 
-const FORWARD = {'/': '$', '{': ')', '}': ')', '[': '(', ']': ')', '@': '*', ':': '=', ' ': '_'};
-const BACKWARD =  {'$': '/', '{': '[', '}': ']', '(': '[', ')': ']', '*': '@', '=': ':', '_': ' '};
+const FORWARD = {'/': '$', '{': '(', '}': ')', '[': '(', ']': ')', '@': '*', ':': '=', ' ': '_'};
+const BACKWARD = {'$': '/', '{': '[', '}': ']', '(': '[', ')': ']', '*': '@', '=': ':', '_': ' '};
 const ESCAPED = {
   '\\$': '/', '\\{': '[', '\\}': ']', '\\(': '[', '\\)': ']', '\\*': '@', '=': ':', '_': ' ',
 };
@@ -13,7 +13,7 @@ const ESCAPED = {
 const ENCODE = new RegExp(Object.keys(FORWARD).join('|'), 'g');
 const DECODE = new RegExp(Object.keys(ESCAPED).join('|'), 'g');
 
-const display = (s: string) =>  s.replace(/\W+/g, '');
+const display = (s: string) => s.replace(/\W+/g, '');
 
 export function encodeURL(s: string) {
   return s.replace(ENCODE, match => FORWARD[match as keyof typeof FORWARD]);
@@ -38,14 +38,16 @@ export function encode(state: State, url = false) {
       const name = display(SideConditions[id][0]);
       const implicit = Conditions.get(gen, id)?.[2] === side;
       (implicit ? implicits : explicits)[side].push(
-        sc.level && sc.level > 1 ? `${name}:${sc.level}` : (implicit ? `+${name}` : name));
+        sc.level && sc.level > 1 ? `${name}:${sc.level}` : (implicit ? `+${name}` : name)
+      );
     }
     for (const id in state[side].pokemon.volatiles) {
       const v = state[side].pokemon.volatiles[id];
       const name = display(Volatiles[id][0]);
       const implicit = Conditions.get(gen, id)?.[2] === side;
       (implicit ? implicits : explicits)[side].push(
-        v.level && v.level > 1 ? `${name}:${v.level}` : (implicit ? `+${name}` : name));
+        v.level && v.level > 1 ? `${name}:${v.level}` : (implicit ? `+${name}` : name)
+      );
     }
     if (state[side].pokemon.status) implicits[side].push(`+${state[side].pokemon.status}`);
   }
@@ -63,7 +65,7 @@ export function encode(state: State, url = false) {
   if (stats && move.name !== 'Foul Play') {
     const evs = p1.pokemon.evs?.[stats.p1];
     if (gen.num <= 2) {
-      if (evs ?? 252 !== 252) buf.push(`${evs} ${gen.stats.display(stats.p1)}`);
+      if ((evs ?? 252) !== 252) buf.push(`${evs} ${gen.stats.display(stats.p1)}`);
     } else {
       const nature = p1.pokemon.nature && gen.natures.get(p1.pokemon.nature);
       const n = nature ? nature.plus === stats.p1 ? '+' : nature.minus === stats.p1 ? '-' : '' : '';
@@ -83,11 +85,11 @@ export function encode(state: State, url = false) {
   }
   if (levels.p2) buf.push(`Lvl ${levels.p2}`);
   if (stats) {
-    const hp = p2.pokemon.evs?.hp
+    const hp = p2.pokemon.evs?.hp;
     const def = p2.pokemon.evs?.[stats.p2];
     // FIXME foul play?
     if (gen.num <= 2) {
-      if ((hp ?? 252 !== 252) || (def ?? 252 !== 252)) {
+      if (((hp ?? 252) !== 252) || ((def ?? 252) !== 252)) {
         buf.push(`${hp} HP / ${def} ${gen.stats.display(stats.p1)}`);
       }
     } else {
@@ -125,8 +127,7 @@ export function encode(state: State, url = false) {
         if (iv !== 31) {
           buf.push(gen.num <= 2
             ? `${p}${gen.stats.display(stat)}DVs:${gen.stats.toDV(iv)}`
-            : `${p}${gen.stats.display(stat)}IVs:${iv}`
-          );
+            : `${p}${gen.stats.display(stat)}IVs:${iv}`);
         }
       }
     }
@@ -186,27 +187,27 @@ function getLevels(p1: State.Pokemon, p2: State.Pokemon) {
 
 function getStats(
   gen: Generation, p1: State.Pokemon, p2: State.Pokemon, move: State.Move
-): {p1: Exclude<StatName, 'hp'>, p2: Exclude<StatName, 'hp'>} | undefined {
+): {p1: Exclude<StatName, 'hp'>; p2: Exclude<StatName, 'hp'>} | undefined {
   if (move.category === 'Status') return undefined;
   switch (move.name) {
-    case 'Photon Geyser':
-    case 'Light That Burns The Sky': {
-      const {atk, spa} = computeStats(gen, p1);
-      return atk > spa ? {p1: 'atk', p2: 'def'} : {p1: 'spa', p2: 'spd'};
-    }
-    case 'Shell Side Arm': {
-      const {atk, spa} = computeStats(gen, p1);
-      const {def, spd} = computeStats(gen, p2);
-      return (atk / def) > (spa / spd) ? {p1: 'atk', p2: 'def'} : {p1: 'spa', p2: 'spd'};
-    }
-    case 'Body Press':
-      return {p1: 'def', p2: 'def'};
-    default:
-      return {
-        p1: move.category === 'Special' ? 'spa' : 'atk',
-        p2: move.defensiveCategory
-          ? move.defensiveCategory === 'Special' ? 'spd' : 'def'
-          : move.category === 'Special' ? 'spd' : 'def',
-      }
+  case 'Photon Geyser':
+  case 'Light That Burns The Sky': {
+    const {atk, spa} = computeStats(gen, p1);
+    return atk > spa ? {p1: 'atk', p2: 'def'} : {p1: 'spa', p2: 'spd'};
+  }
+  case 'Shell Side Arm': {
+    const {atk, spa} = computeStats(gen, p1);
+    const {def, spd} = computeStats(gen, p2);
+    return (atk / def) > (spa / spd) ? {p1: 'atk', p2: 'def'} : {p1: 'spa', p2: 'spd'};
+  }
+  case 'Body Press':
+    return {p1: 'def', p2: 'def'};
+  default:
+    return {
+      p1: move.category === 'Special' ? 'spa' : 'atk',
+      p2: move.defensiveCategory
+        ? move.defensiveCategory === 'Special' ? 'spd' : 'def'
+        : move.category === 'Special' ? 'spd' : 'def',
+    };
   }
 }

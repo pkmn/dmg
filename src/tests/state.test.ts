@@ -1,7 +1,8 @@
-import {Generations, StatsTable} from '@pkmn/data';
+import {Generations, PokemonSet, StatsTable} from '@pkmn/data';
 import {Dex} from '@pkmn/sim';
 
-import {State} from '../state';
+import {PokemonOptions, State} from '../state';
+import {DeepPartial, extend} from '../utils';
 
 const gens = new Generations(Dex as any);
 
@@ -140,7 +141,8 @@ describe('State', () => {
       expect(() => State.createPokemon(gens.get(1), 'Bulbasaur', {statusData: {toxicTurns: 20}}))
         .toThrow('is not within [0,15]');
       expect(() =>
-        State.createPokemon(gens.get(1), 'Bulbasaur', {status: 'slp', statusData: {toxicTurns: 4}})).toThrow('status is not \'tox\'');
+        State.createPokemon(gens.get(1), 'Bulbasaur', {status: 'slp', statusData: {toxicTurns: 4}}))
+        .toThrow('status is not \'tox\'');
       pokemon =
         State.createPokemon(gens.get(1), 'Bulbasaur', {status: 'tox', statusData: {toxicTurns: 4}});
       expect(pokemon.statusData).toEqual({toxicTurns: 4});
@@ -232,29 +234,30 @@ describe('State', () => {
 
     test('hidden power', () => {
       let ivs: Partial<StatsTable> = {};
-      expect(State.createPokemon(gens.get(4), 'Pikachu', {ivs}, 'Hidden Power Bug'));
+      expect(State.createPokemon(gens.get(4), 'Pikachu', {ivs}, 'Hidden Power Bug').ivs)
+        .toEqual({hp: 31, atk: 30, def: 30, spa: 31, spd: 30, spe: 31});
       ivs = {atk: 8, def: 17, spa: 30};
       expect(State.createPokemon(gens.get(4), 'Pikachu', {ivs}, 'Hidden Power').ivs)
-        .toEqual(ivs);
+        .toEqual({...ivs, hp: 31, spd: 31, spe: 31});
       expect(() => State.createPokemon(gens.get(1), 'Pikachu', {}, 'Hidden Power Grass'))
         .toThrow('Unsupported or invalid Hidden Power');
       expect(() => State.createPokemon(gens.get(8), 'Pikachu', {}, 'Hidden Power Grass'))
         .toThrow('Unsupported or invalid Hidden Power');
-      expect(() => State.createPokemon(gens.get(6), 'Pikachu', {ivs}, 'Hidden Power Grass'))
-        .toEqual(ivs);
+      expect(State.createPokemon(gens.get(6), 'Pikachu', {ivs}, 'Hidden Power Grass').ivs)
+        .toEqual({...ivs, hp: 31, spd: 31, spe: 31});
       expect(() => State.createPokemon(gens.get(7), 'Pikachu', {}, 'Hidden Power Fairy'))
         .toThrow('Unsupported or invalid Hidden Power');
       expect(State.createPokemon(gens.get(7), 'Pikachu', {ivs}, 'Hidden Power Dark').ivs)
-        .toEqual(ivs);
+        .toEqual({...ivs, hp: 31, spd: 31, spe: 31});
       expect(() =>
         State.createPokemon(gens.get(7), 'Pikachu', {level: 99, ivs}, 'Hidden Power Dark'))
         .toThrow('Cannot set Hidden Power IVs over non-default IVs');
       ivs = {atk: 31, def: 30, spe: 30};
-      expect(State.createPokemon(gens.get(7), 'Pikachu', {level: 99, ivs}, 'Hidden Power Rock'))
+      expect(State.createPokemon(gens.get(7), 'Pikachu', {level: 99, ivs}, 'Hidden Power Rock').ivs)
         .toEqual({hp: 31, atk: 31, def: 30, spa: 31, spd: 30, spe: 30});
-        ivs = {atk: 30, spe: 30};
-      expect(State.createPokemon(gens.get(7), 'Pikachu', {level: 99, ivs}, 'Hidden Power Rock'))
-        .toEqual({hp: 23, atk: 27, def: 25, spa: 31, spd: 30, spe: 30});
+      ivs = {atk: 30, spe: 30};
+      expect(State.createPokemon(gens.get(2), 'Pikachu', {level: 99, ivs}, 'Hidden Power Rock').ivs)
+        .toEqual({hp: 23, atk: 27, def: 25, spa: 31, spd: 31, spe: 31});
     });
 
     test('boosts', () => {
@@ -322,10 +325,10 @@ describe('State', () => {
 
       let move = State.createMove(gens.get(1), 'Tackle');
       expect(move.name).toBe('Tackle');
-      move = State.createMove(gens.get(1), 'Tackle', {name: 'Tackle'});
+      move = State.createMove(gens.get(7), 'Tackle', {name: 'Tackle'});
       expect(move.name).toBe('Tackle');
       expect(move.basePower).toBe(40);
-      move = State.createMove(gens.get(1), 'Tackle 80', {name: 'Tackle'});
+      move = State.createMove(gens.get(7), 'Tackle 80', {name: 'Tackle'});
       expect(move.name).toBe('Tackle');
       expect(move.basePower).toBe(80);
     });
@@ -414,8 +417,88 @@ describe('State', () => {
   });
 
   describe('mergeSet', () => {
-    test('foo', () => {
-      expect(true).toBe(true); // FIXME
+    const options: PokemonOptions = {
+      level: 50,
+      item: 'Life Orb',
+      ability: 'Illuminate',
+      nature: 'Quirky',
+      ivs: {spa: 28},
+      evs: {hp: 252, def: 40},
+      gender: 'M' as const,
+      hp: 135,
+    };
+
+    test('mismatch', () => {
+      const gen = gens.get(4);
+      const gengar = State.createPokemon(gen, 'Gengar', options);
+      expect(() => State.mergeSet(gen, gengar, {species: 'Clefable'}))
+        .toThrow('Received invalid Clefable set for Gengar');
+      expect(() => State.mergeSet(gen, gengar, 'Lick')).toThrow('Received no sets for Gengar');
+    });
+
+    test('match', () => {
+      let gengar = State.createPokemon(gens.get(4), 'Gengar', options);
+      const yes: DeepPartial<PokemonSet> = {
+        name: 'Not Match',
+        species: 'Gengar',
+        item: 'Life Orb',
+        ability: 'Levitate',
+        moves: ['Shadow Ball', 'Thunderbolt', 'Focus Blast', 'Hidden Power Fire'],
+        nature: 'Timid',
+        gender: 'F',
+        evs: {def: 4, spa: 252, spe: 252},
+        ivs: {atk: 31},
+        shiny: true,
+        happiness: 123,
+      };
+      const no: DeepPartial<PokemonSet> = extend({}, yes, {item: 'Focus Sash', nature: 'Modest'});
+
+      let merged = State.mergeSet(gens.get(4), gengar, yes, no);
+
+      expect(merged.level).toEqual(100);
+      expect(merged.item).toEqual('lifeorb');
+      expect(merged.ability).toEqual('levitate');
+      expect(merged.nature).toEqual('Timid');
+      expect(merged.evs).toEqual({hp: 0, atk: 0, def: 4, spa: 252, spd: 0, spe: 252});
+      expect(merged.ivs).toEqual({hp: 31, atk: 30, def: 31, spa: 30, spd: 31, spe: 30});
+      expect(merged.happiness).toEqual(123);
+      expect(merged.hp).toEqual(210);
+      expect(merged.maxhp).toEqual(261);
+      expect(merged.gender).toEqual('F');
+
+      yes.item = 'Leftovers';
+      yes.ability = undefined;
+      yes.evs!.spd = yes.evs!.spa;
+      gengar = State.createPokemon(gens.get(2), 'Gengar');
+      expect(() => State.mergeSet(gens.get(2), gengar, yes, no))
+        .toThrow('is required to not be shiny');
+      yes.shiny = false;
+      expect(() => State.mergeSet(gens.get(2), gengar, yes, no))
+        .toThrow('A Gengar with 14 Atk DVs must be \'M\' in gen 2');
+      yes.ivs = undefined;
+      merged = State.mergeSet(gens.get(2), gengar, yes, no);
+
+      expect(merged.nature).toBeUndefined();
+      expect(merged.gender).toEqual('M');
+      expect(merged.ivs!.atk).toEqual(29);
+    });
+
+    test('marowak', () => {
+      expect(State.mergeSet(gens.get(2), State.createPokemon(gens.get(2), 'Marowak'), {
+        species: 'Marowak',
+        item: 'Thick Club',
+        moves: ['Earthquake', 'Rock Slide', 'Counter', 'Swords Dance'],
+      }).evs!.atk).toEqual(240);
+      expect(State.mergeSet(gens.get(2), State.createPokemon(gens.get(2), 'Marowak'), {
+        species: 'Marowak',
+        item: 'Thick Club',
+        moves: ['Earthquake', 'Rock Slide', 'Counter', 'Bone Rush'],
+      }).evs!.atk).toEqual(252);
+      expect(State.mergeSet(gens.get(3), State.createPokemon(gens.get(2), 'Marowak'), {
+        species: 'Marowak',
+        item: 'Thick Club',
+        moves: ['Earthquake', 'Rock Slide', 'Counter', 'Swords Dance'],
+      }).evs!.atk).toEqual(252);
     });
   });
 });

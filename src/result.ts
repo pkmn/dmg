@@ -152,12 +152,12 @@ export class Result {
     }
 
     if (is(move.name, 'G-Max Finale')) {
-      const healed =  math.round(p1.pokemon.maxhp / 6);;
+      const healed = math.round(p1.pokemon.maxhp / 6);
       if (Array.isArray(recovery)) {
         recovery[0] += healed;
         recovery[1] += healed;
       } else {
-        recovery = (recovery || 0) as number + healed;
+        recovery = (recovery || 0) + healed;
       }
     } else if (move.drain) {
       const healed = move.drain[0] / move.drain[1];
@@ -182,13 +182,13 @@ export class Result {
   // chain (if same turn, wont be taking hazards), if second term just nothing / residual
   get knockout() {
     // FIXME ko chance : with and without residual
-    return undefined! as {none: number, hazards: number, residual: number, both: number}; // TODO
+    return undefined! as {none: number; hazards: number; residual: number; both: number}; // TODO
   }
 
   description(notation: '%' | '/48' | 'px' | number = '%') {
     const text = {desc: '', result: '', move: '', recovery: '', recoil: ''};
 
-    const state = encode(this.hits[this.hits.length - 1].simplified());
+    // TODO const state = encode(this.hits[this.hits.length - 1].simplified());
 
     const recovery = this.recovery;
     if (recovery !== undefined) {
@@ -220,18 +220,17 @@ export class Result {
     if (text.recoil) end = end ? `${end}, ${text.recoil}` : text.recoil;
     if (end) end = ` (${end})`;
     const rolls = this.hits.map(h =>
-      `[${typeof h.damage === 'number' ? h.damage : h.damage.join(', ')}]`
-    ).join(', ');
-    return `${text.desc}${end}\n${rolls}`
+      `[${typeof h.damage === 'number' ? h.damage : h.damage.join(', ')}]`).join(', ');
+    return `${text.desc}${end}\n${rolls}`;
   }
 
   private display(notation: '%' | '/48' | 'px' | number, a: number, b: number, f = 1) {
     if (notation === '%') return Math.floor((a * (1000 / f)) / b) / 10;
     const g = this.state.gen.num;
     const px =
-      notation === '/48' ? 48 :
-      notation === 'px' ? (g < 7 ? 48 : g < 8 ? 86 : 400) :
-      notation;
+      notation === '/48' ? 48
+      : notation === 'px' ? (g < 7 ? 48 : g < 8 ? 86 : 400)
+      : notation;
     return Math.floor((a * (px / f)) / b);
   }
 }

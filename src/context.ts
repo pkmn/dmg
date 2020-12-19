@@ -62,8 +62,8 @@ export class Context {
     );
   }
 
-  static fromState(state: State) {
-    return new Context(state as DeepReadonly<State>, new Relevancy());
+  static fromState(state: State, relevancy = new Relevancy()) {
+    return new Context(state as DeepReadonly<State>, relevancy);
   }
 }
 
@@ -416,7 +416,16 @@ export namespace Context {
     spread?: boolean;
     consecutive?: number; // Metronome
 
-    damageCallback: undefined; // Silence TS2559
+    basePowerCallback?(context: Context): number;
+    damageCallback?(context: Context): number;
+    onModifyBasePower?(context: Context): number | undefined;
+    onModifyAtk?(context: Context): number | undefined;
+    onModifySpA?(context: Context): number | undefined;
+    onModifyDef?(context: Context): number | undefined;
+    onModifySpD?(context: Context): number | undefined;
+    onModifySpe?(context: Context): number | undefined;
+    onModifyWeight?(context: Context): number | undefined;
+    onResidual?(context: Context): number | undefined;
 
     readonly relevant: Relevancy.Move;
 
@@ -450,7 +459,7 @@ function reify<T>(
       if (fn && HANDLER_FNS.has(k) && typeof fn === 'function') {
         obj[k] = (c: Context) => {
           const r = (fn as any)(c);
-          if (r && cbfn) cbfn();
+          if (typeof r !== undefined && cbfn) cbfn();
           return r;
         };
       }

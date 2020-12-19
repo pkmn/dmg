@@ -41,15 +41,17 @@ export function verify(state: State, breakdown: ResultBreakdown, num = N, seed =
       if (p1.pokemon.hp < range[0] || p1.pokemon.hp > range[1]) {
         throw new Error(
           `Expected p1's ${p1.pokemon.species.name} HP to be within` +
-          `[${range[0]},${range[1]}] but it was ${p1.pokemon.hp}`);
+          `[${range[0]},${range[1]}] but it was ${p1.pokemon.hp}`
+        );
       }
     }
     if (breakdown.range) {
       const damage = hp.p2 - p2.pokemon.hp;
       if (damage < breakdown.range[0] || damage > breakdown.range[1]) {
         throw new Error(
-          `Expected damage to be within` +
-          `[${breakdown.range[0]},${breakdown.range[1]}] but it was ${damage}`);
+          'Expected damage to be within' +
+          `[${breakdown.range[0]},${breakdown.range[1]}] but it was ${damage}`
+        );
       }
     }
   }

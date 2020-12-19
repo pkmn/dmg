@@ -376,7 +376,7 @@ export class State {
       const m = MOVE_BASE_POWER.exec(name);
       if (m) {
         base = gen.moves.get(m[1]);
-        const n =  Number(m[2]);
+        const n = Number(m[2]);
         if (base?.id === 'magnitude' && n >= 4 && n <= 10) {
           if (options.magnitude && options.magnitude !== n) {
             throw new Error(`Magnitude mismatch: '${options.magnitude}' does not match '${n}'`);
@@ -407,7 +407,7 @@ export class State {
     if (useMax && options.useZ) {
       throw new Error(`Cannot use ${base.name} as both a Z-Move and a Max Move simulataneously`);
     }
-    if (useMax|| move.isMax) {
+    if (useMax || move.isMax) {
       if (options.hits && options.hits > 1) {
         throw new Error(`'${options.hits}' hits requested but Max Moves cannot be multi-hit`);
       }
@@ -467,12 +467,12 @@ export class State {
     pokemon.level = bounded('level', set.level || 100);
     setItem(gen, pokemon, set.item);
     setAbility(gen, pokemon, set.ability);
-    pokemon.happiness = bounded('happiness', set.happiness || 0) || pokemon.happiness;
+    pokemon.happiness = bounded('happiness', set.happiness || 255) || pokemon.happiness;
     // Nature is required on PokemonSet, so we just ignore it for generations 1 and 2
     setNature(gen, pokemon, set.nature, gen.num >= 3);
 
-    setValues(gen, pokemon, 'evs', set.evs);
-    setValues(gen, pokemon, 'ivs', set.ivs);
+    if (set.evs) setValues(gen, pokemon, 'evs', gen.stats.fill(set.evs, gen.num <= 2 ? 252 : 0));
+    if (set.ivs) setValues(gen, pokemon, 'ivs', gen.stats.fill(set.ivs, 31));
     setHiddenPowerIVs(
       gen,
       pokemon as {level: number; ivs: StatsTable},
@@ -483,7 +483,7 @@ export class State {
     if ( // Marowak hack, cribbed from Pokémon Showdown's sim/team-validator.ts
       gen.num === 2 &&
       pokemon.species.id === 'marowak' && is(pokemon.item, 'thickclub') &&
-      has(set.moves?.map(toID), 'swordsdance') && set.level === 100
+      has(set.moves?.map(toID), 'swordsdance') && pokemon.level === 100
     ) {
       const ivs = pokemon.ivs!.atk = gen.stats.toDV(pokemon.ivs!.atk!) * 2;
       while (pokemon.evs!.atk! > 0 && 2 * 80 + ivs + floor(pokemon.evs!.atk! / 4) + 5 > 255) {
@@ -519,7 +519,7 @@ export class State {
     const maxhp = gen.stats.calc(
       'hp', pokemon.species.baseStats.hp, pokemon.ivs!.hp, pokemon.evs!.hp, pokemon.level
     );
-    pokemon.hp = pokemon.hp * floor(maxhp / pokemon.maxhp);
+    pokemon.hp = floor(maxhp * pokemon.hp / pokemon.maxhp);
     pokemon.maxhp = maxhp;
 
     return validateStats(gen, pokemon);
@@ -687,10 +687,14 @@ function setGender(
     if (species.gender && name !== species.gender) {
       throw new Error(`${species.name} must be '${species.gender}' in generation ${gen.num}`);
     }
-    if (gen.num === 2 && setAtkDV && name !== gender) {
-      throw new Error(`A ${species.name} with ${atkDV} Atk DVs must be '${gender}' in gen 2`);
+    if (gen.num === 2) {
+      if (setAtkDV && name !== gender) {
+        throw new Error(`A ${species.name} with ${atkDV} Atk DVs must be '${gender}' in gen 2`);
+      }
+      pokemon.gender = gender;
+    } else {
+      pokemon.gender = name || species.gender || gender;
     }
-    pokemon.gender = name || species.gender || gender;
   } else {
     pokemon.gender = gender;
   }

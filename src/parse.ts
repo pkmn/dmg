@@ -606,14 +606,14 @@ function toContext(phrase: string, flags: Flags) {
   if (Object.keys(flags.p1[_]).length) p1._ = flags.p1[_];
   const p2: {[k: string]: unknown} = {...flags.p2};
   if (Object.keys(flags.p2[_]).length) p2._ = flags.p2[_];
-  return stringify({phrase, flags: { general: flags.general, field, p1, p2, move: flags.move}});
+  return stringify({phrase, flags: {general: flags.general, field, p1, p2, move: flags.move}});
 }
 
 function stringify(value: any, depth = 10): string {
   if (value === undefined) return 'undefined';
   if (value === null) return 'null';
   if (typeof value === 'number' || typeof value === 'boolean') return `${value}`;
-  if (typeof value === 'string') return '"${value}"'; // NOTE: NOT ESCAPED
+  if (typeof value === 'string') return `"${value}"`; // NOTE: NOT ESCAPED
   if (typeof value === 'symbol') return value.toString();
   if (Array.isArray(value)) {
     if (!depth) return '[array]';
@@ -624,7 +624,7 @@ function stringify(value: any, depth = 10): string {
     return `${value}`;
   }
   let constructor = '';
-  if (value.constructor && value.constructor.name && typeof value.constructor.name === 'string') {
+  if (typeof value.constructor?.name === 'string') {
     constructor = value.constructor.name;
     if (constructor === 'Object') constructor = '';
   } else {

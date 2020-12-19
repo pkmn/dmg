@@ -58,7 +58,7 @@ export function tests(...args: any[]) {
 
 declare global {
   namespace jest {
-    interface Matchers<R, T> {
+    interface Matchers<R> {
       toMatch(
         gen: Generation,
         notation?: '%' | '/48' | 'px' | number | ResultDiff,
