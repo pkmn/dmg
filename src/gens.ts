@@ -6,12 +6,14 @@ import {calculate} from './mechanics';
 
 import * as parser from './parse';
 
+/** Constructs a `State.Pokemon` in a specific generation `gen`. */
 const pokemon = (gen: Generation) => (
   name: string,
   options: PokemonOptions = {},
   move: string | {name?: string} = {},
 ) => State.createPokemon(gen, name, options, move);
 
+/** Constructs a `State.Move` in a specific generation `gen`. */
 const move = (gen: Generation) => (
   name: string,
   options: MoveOptions = {},
@@ -23,6 +25,7 @@ const move = (gen: Generation) => (
   } = {}
 ) => State.createMove(gen, name, options, pokemon);
 
+/** Performs a damage calculation in specific generation `gen`. */
 interface Calculate {
   (gen: Generation): (
     attacker: State.Side | State.Pokemon,
@@ -34,8 +37,10 @@ interface Calculate {
   (gen: Generation): (args: string) => Result;
 }
 
+/** Parses a string into `State` in a specific generation `gen`. */
 const parse = (gen: Generation) => (s: string, strict?: boolean) => parser.parse(gen, s, strict);
 
+/** A collection of `State` factory methods and helpers scoped to a specific generation `gen`. */
 export interface Scope {
   gen: Generation;
   calculate: Calculate;
@@ -44,6 +49,7 @@ export interface Scope {
   Move: ReturnType<typeof move>;
 }
 
+/** Executes a function `fn` scoped to a specific generation `gen`. */
 export function inGen<T>(gen: Generation, fn: (scope: Scope) => T) {
   return fn({
     gen,
@@ -54,6 +60,10 @@ export function inGen<T>(gen: Generation, fn: (scope: Scope) => T) {
   });
 }
 
+/**
+ * Executes a function `fn` for each of the generations between `from` and `to`. If neither are
+ * specified `fn` is executed for every gen. If `to` is not specified it defaults to Generation 8.
+ */
 export function inGens(gens: Generations, fn: (scope: Scope) => void): void;
 export function inGens(gens: Generations, from: GenerationNum, fn: (scope: Scope) => void): void;
 export function inGens(

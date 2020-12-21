@@ -1,17 +1,14 @@
 import type {Generation, BoostName, StatName} from '@pkmn/data';
 import {State} from './state';
 import {Conditions, PseudoWeathers, SideConditions, Volatiles} from './conditions';
-import {toID} from './utils';
+import {is, toID} from './utils';
 import {computeStats} from './mechanics';
 
 const FORWARD = {'/': '$', '{': '(', '}': ')', '[': '(', ']': ')', '@': '*', ':': '=', ' ': '_'};
-const BACKWARD = {'$': '/', '{': '[', '}': ']', '(': '[', ')': ']', '*': '@', '=': ':', '_': ' '};
-const ESCAPED = {
-  '\\$': '/', '\\{': '[', '\\}': ']', '\\(': '[', '\\)': ']', '\\*': '@', '=': ':', '_': ' ',
-};
+const BACKWARD = {'$': '/', '(': '[', ')': ']', '*': '@', '=': ':', '_': ' '};
 
-const ENCODE = new RegExp(Object.keys(FORWARD).join('|'), 'g');
-const DECODE = new RegExp(Object.keys(ESCAPED).join('|'), 'g');
+const ENCODE = /\/|{|}|\[|\]|@|:| /g;
+const DECODE = /\$|\{|\}|\(|\)|\*|=|_/g;
 
 const display = (s: string) => s.replace(/\W+/g, '');
 
@@ -74,9 +71,11 @@ export function encode(state: State, url = false) {
   }
   for (const implicit of implicits.p1) buf.push(implicit);
   buf.push(p1.pokemon.species.name);
-  if (p1.pokemon.item) buf.push(`@ ${p1.pokemon.item}`);
+  if (p1.pokemon.item) buf.push(`@ ${gen.items.get(p1.pokemon.item)!.name}`);
 
-  buf.push(move.magnitude ? `[${move.name} ${move.magnitude}]` : `[${move.name}]`);
+  buf.push(move.magnitude
+    ? `[${gen.moves.get(move.id)!.name} ${move.magnitude}]`
+    : `[${gen.moves.get(move.id)!.name}]`);
   buf.push('vs.');
 
   if (stats && p2.pokemon.boosts[stats.p2]) {
@@ -101,7 +100,7 @@ export function encode(state: State, url = false) {
   for (const implicit of implicits.p2) buf.push(implicit);
   buf.push(p2.pokemon.species.name);
 
-  if (p2.pokemon.item) buf.push(`@ ${p2.pokemon.item}`);
+  if (p2.pokemon.item) buf.push(`@ ${gen.items.get(p2.pokemon.item)!.name}`);
 
   // Field
   if (field.weather) buf.push(`+${display(field.weather)}`);
@@ -116,7 +115,9 @@ export function encode(state: State, url = false) {
   for (const side of ['p1', 'p2'] as const) {
     const p = side === 'p1' ? 'attacker' : 'defender';
     const pokemon = state[side].pokemon;
-    if (pokemon.ability) buf.push(`${p}Ability:${pokemon.ability}`);
+    if (pokemon.ability) {
+      buf.push(`${p}Ability:${display(gen.abilities.get(pokemon.ability)!.name)}`);
+    }
     if (pokemon.gender) buf.push(`${p}Gender:${pokemon.gender}`);
     if (pokemon.weighthg) buf.push(`${side}Weight:${pokemon.weighthg}`);
     if (typeof pokemon.happiness === 'number') buf.push(`${p}Happiness:${pokemon.happiness}`);
@@ -131,8 +132,10 @@ export function encode(state: State, url = false) {
         }
       }
     }
+    // FIXME handle nature!!! nature is only relevant if it effects a stat which is also relevant!
     if (pokemon.evs) {
       for (const s in pokemon.evs) {
+        if (side === 'p1' && is(s, 'atk') || side === 'p2' && is(s, 'hp', 'spd')) continue;
         const stat = s as StatName;
         const ev = pokemon.evs[stat] ?? (gen.num <= 2 ? 252 : 0);
         if (gen.num <= 2 ? ev < 252 : ev > 0) {

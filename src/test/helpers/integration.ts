@@ -5,6 +5,7 @@ import {Dex, PRNG, PRNGSeed} from '@pkmn/sim';
 
 import * as dmg from '../../index';
 
+import {assertStateEqual} from './index';
 import {generate} from './random';
 import {verify} from './verifier';
 
@@ -22,8 +23,8 @@ export function run(seed: PRNGSeed = [1, 2, 3, 4], N = 10000) {
       const parsed = dmg.parse(gens, encoded);
       reencoded = dmg.encode(parsed);
 
-      assert.deepStrictEqual(state, parsed);
-      assert.deepStrictEqual(encoded, reencoded);
+      assertStateEqual(state, parsed);
+      assert.strictEqual(encoded, reencoded);
 
       const result = dmg.calculate(state);
       verify(state, {

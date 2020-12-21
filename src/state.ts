@@ -187,6 +187,7 @@ export class State {
     this.field = field;
   }
 
+  /** Factory method helper for creating `State.Field`. */
   static createField(gen: Generation, options: FieldOptions = {}) {
     const field: Partial<State.Field> = {};
 
@@ -207,6 +208,7 @@ export class State {
     return field as State.Field;
   }
 
+  /** Factory method helper for creating `State.Side`. */
   static createSide(gen: Generation, pokemon: State.Pokemon, options: SideOptions = {}) {
     return {
       sideConditions: setConditions(gen, 'Side Condition', options.sideConditions),
@@ -216,6 +218,7 @@ export class State {
     } as State.Side;
   }
 
+  /** Factory method helper for creating `State.Pokemon`. */
   static createPokemon(
     gen: Generation,
     name: string,
@@ -360,6 +363,7 @@ export class State {
     return validateStats(gen, pokemon as State.Pokemon);
   }
 
+  /** Factory method helper for creating `State.Move`. */
   static createMove(
     gen: Generation,
     name: string,
@@ -391,6 +395,9 @@ export class State {
     if (options.name && !(toID(options.name) === base.id || toID(options.name) === toID(name))) {
       throw new Error(`Move mismatch: '${options.name}' does not match '${base.name}'`);
     }
+    // Avoid overwriting the actual move when we extend below
+    options.name = base.name;
+
     const move: Partial<State.Move> = {hits: 1};
 
     if (typeof pokemon === 'string') {
@@ -426,7 +433,7 @@ export class State {
             ? base.multihit[1]
             : base.multihit[0] + 1;
         }
-      } else if (options.hits) {
+      } else if (options.hits && options.hits !== 1) {
         throw new Error(`'${options.hits}' hits requested but ${base.name} is not multi-hit`);
       }
     }
@@ -456,6 +463,7 @@ export class State {
     return move as State.Move;
   }
 
+  /** Mutates `pokemon` by merging in the details from the set from `sets` which best matches. */
   static mergeSet(
     gen: Generation,
     pokemon: State.Pokemon,
@@ -542,6 +550,7 @@ function invalid(gen: Generation, k: string, v: any): never {
   throw new Error(`Unsupported or invalid ${k} '${v}' for generation ${gen.num}`);
 }
 
+/** Ensures `val` falls within the range of the attribute indicated by `key`. */
 export function bounded(key: keyof typeof BOUNDS, val: number, die = true) {
   const ok = val >= BOUNDS[key][0] && val <= BOUNDS[key][1];
   if (!ok && die) throw new RangeError(`${key} ${val} is not within [${BOUNDS[key].join(',')}]`);

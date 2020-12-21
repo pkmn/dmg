@@ -368,15 +368,15 @@ function parsePhrase(s: string) {
   };
 
   if (m[3]) {
-    phrase.p1.nature = m[2].includes('+') ? '+' : m[2].includes('-') ? '-' : undefined;
+    phrase.p1.nature = m[3].includes('+') ? '+' : m[3].includes('-') ? '-' : undefined;
     phrase.p1.evs = {};
-    phrase.p1.evs[toID(m[2]).endsWith('atk') ? 'atk' : 'spa'] = parseInt(m[2]) || undefined;
+    phrase.p1.evs[toID(m[3]).endsWith('atk') ? 'atk' : 'spa'] = parseInt(m[3]) || undefined;
   }
   if (m[9]) phrase.p2.evs = {hp: parseInt(m[7]) || undefined};
   if (m[10]) {
-    phrase.p2.nature = m[8].includes('+') ? '+' : m[8].includes('-') ? '-' : undefined;
+    phrase.p2.nature = m[10].includes('+') ? '+' : m[10].includes('-') ? '-' : undefined;
     phrase.p2.evs = phrase.p2.evs || {};
-    phrase.p2.evs[toID(m[8]).endsWith('def') ? 'def' : 'spd'] = parseInt(m[7]) || undefined;
+    phrase.p2.evs[toID(m[10]).endsWith('def') ? 'def' : 'spd'] = parseInt(m[10]) || undefined;
   }
 
   return phrase;
@@ -533,9 +533,9 @@ function buildSide(
     } else if (stat === 'spa') {
       nature = p.nature === '+' ? 'Modest' : 'Adamant';
     } else if (stat === 'def') {
-      nature = p.nature === '+' ? 'Gentle' : 'Lax';
-    } else if (stat === 'spd') {
       nature = p.nature === '+' ? 'Lax' : 'Gentle';
+    } else if (stat === 'spd') {
+      nature = p.nature === '+' ? 'Gentle' : 'Lax';
     }
   } else if (f.nature) {
     nature = f.nature;
@@ -556,8 +556,8 @@ function buildSide(
 
     if (s === 'hp') continue;
 
-    const boost = stat === s ? `$${p?.boosts}` : undefined;
-    boosts[s] = checks.number(`${side} ${s} boosts`, boost, f[`${s}boosts`]);
+    const boost = stat === s ? p?.boosts : undefined;
+    boosts[s] = checks.number(`${side} ${s} boosts`, boost, f[`${s}boosts`] as any);
   }
 
   // Boosts was specified without any EVs - attempt to infer what stat it was meant to boost

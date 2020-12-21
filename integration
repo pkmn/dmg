@@ -1,0 +1,4 @@
+#!/usr/bin/env node
+'use strict';
+
+require('./build/tests/helpers/integration').run(1E6, +process.argv[2] || undefined);
