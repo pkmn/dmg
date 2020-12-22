@@ -62,6 +62,10 @@ export class Context {
     );
   }
 
+  toJSON() {
+    return this.toState();
+  }
+
   static fromState(state: State, relevancy = new Relevancy()) {
     return new Context(state as DeepReadonly<State>, relevancy);
   }
@@ -113,6 +117,10 @@ export namespace Context {
         terrain: this.terrain?.name,
         pseudoWeather,
       };
+    }
+
+    toJSON() {
+      return this.toState();
     }
   }
 
@@ -257,6 +265,7 @@ export namespace Context {
         this.stats = extend({}, state.stats);
       } else {
         this.stats = {} as StatsTable;
+        const nature = state.nature && gen.natures.get(state.nature);
         for (const stat of gen.stats) {
           this.stats[stat] = gen.stats.calc(
             stat,
@@ -264,7 +273,7 @@ export namespace Context {
             state.ivs?.[stat] ?? 31,
             state.evs?.[stat] ?? (gen.num <= 2 ? 252 : 0),
             state.level,
-            gen.natures.get(state.nature!)
+            nature
           );
         }
       }

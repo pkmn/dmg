@@ -7,6 +7,17 @@ import {DeepPartial, extend} from '../utils';
 const gens = new Generations(Dex as any);
 
 describe('State', () => {
+  describe('toJSON', () => {
+    const gen = gens.get(4);
+    const state = new State(
+      gen,
+      State.createPokemon(gen, 'Gengar'),
+      State.createPokemon(gen, 'Clefable'),
+      State.createMove(gen, 'Thunderbolt')
+    );
+    expect(() => JSON.stringify(State.toJSON(state))).not.toThrow();
+  });
+
   describe('createField', () => {
     test('weather', () => {
       expect(() => State.createField(gens.get(5), {weather: 'heat'})).toThrow('invalid');

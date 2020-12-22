@@ -165,6 +165,7 @@ certain characters may be substituted for their equivalent, URL-safe counterpart
 |      `@`      |        `*`       |
 |      `:`      |        `=`       |
 |     `' '`     |        `_`       |
+|      `%`      |        `~`       |
 
 For example:
 
@@ -175,8 +176,8 @@ For example:
 This alternative encoding can be accomplished fairly trivially in JavaScript as follows:
 
 ```js
-const REPLACE = {'/': '$', '[': '(', ']': ')', '@': '*', ':': '=', ' ': '_'};
-const REGEX = new RegExp(Object.keys(REPLACE).join('|'), 'g');
+const REPLACE = {'/': '$', '{': '(', '}': ')', '[': '(', ']': ')', '@': '*', ':': '=', ' ': '_', '%': '~',};
+const REGEX = /\/|{|}|\[|\]|@|:| |~/g;
 const encode = str => str.replace(REGEX, match => REPLACE[match]);
 ```
 

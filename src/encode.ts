@@ -4,13 +4,15 @@ import {Conditions, PseudoWeathers, SideConditions, Volatiles} from './condition
 import {is, toID} from './utils';
 import {computeStats} from './mechanics';
 
-const FORWARD = {'/': '$', '{': '(', '}': ')', '[': '(', ']': ')', '@': '*', ':': '=', ' ': '_'};
-const BACKWARD = {'$': '/', '(': '[', ')': ']', '*': '@', '=': ':', '_': ' '};
+const FORWARD = {
+  '/': '$', '{': '(', '}': ')', '[': '(', ']': ')', '@': '*', ':': '=', ' ': '_', '%': '~',
+};
+const BACKWARD = {
+  '$': '/', '{': '[', '}': ']', '(': '[', ')': ']', '*': '@', '=': ':', '_': ' ', '~': '%',
+};
 
-const ENCODE = /\/|{|}|\[|\]|@|:| /g;
-const DECODE = /\$|\{|\}|\(|\)|\*|=|_/g;
-
-const display = (s: string) => s.replace(/\W+/g, '');
+const ENCODE = /\/|{|}|\[|\]|@|:| |%/g;
+const DECODE = /\$|\{|\}|\(|\)|\*|=|_|~/g;
 
 export function encodeURL(s: string) {
   return s.replace(ENCODE, match => FORWARD[match as keyof typeof FORWARD]);
@@ -19,8 +21,11 @@ export function encodeURL(s: string) {
 export function decodeURL(s: string) {
   // Even though the encoding scheme is URL-safe, it's not impossible to imagine that someone might
   // have also called encodeURIComponent on it
-  return decodeURIComponent(s).replace(DECODE, match => BACKWARD[match as keyof typeof BACKWARD]);
+  return (decodeURIComponent(s.replace(/%/g, '~'))
+    .replace(DECODE, match => BACKWARD[match as keyof typeof BACKWARD]));
 }
+
+const display = (s: string) => s.replace(/\W+/g, '');
 
 export function encode(state: State, url = false) {
   const {gen, gameType, p1, p2, move, field} = state;
@@ -46,7 +51,7 @@ export function encode(state: State, url = false) {
         v.level && v.level > 1 ? `${name}:${v.level}` : (implicit ? `+${name}` : name)
       );
     }
-    if (state[side].pokemon.status) implicits[side].push(`+${state[side].pokemon.status}`);
+    if (state[side].pokemon.status) explicits[side].push(`+${state[side].pokemon.status}`); // FIXME
   }
 
   const buf: string[] = [];
@@ -59,10 +64,11 @@ export function encode(state: State, url = false) {
     buf.push(b > 0 ? `+${b}` : `${b}`);
   }
   if (levels.p1) buf.push(`Lvl ${levels.p1}`);
-  if (stats && move.name !== 'Foul Play') {
+  if (stats /* FIXME && move.name !== 'Foul Play' */) {
     const evs = p1.pokemon.evs?.[stats.p1];
     if (gen.num <= 2) {
-      if ((evs ?? 252) !== 252) buf.push(`${evs} ${gen.stats.display(stats.p1)}`);
+      const s = gen.stats.display(stats.p1); // FIXME
+      if ((evs ?? 252) !== 252) buf.push(`${evs} ${s === 'Spc' ? 'SpA' : s}`);
     } else {
       const nature = p1.pokemon.nature && gen.natures.get(p1.pokemon.nature);
       const n = nature ? nature.plus === stats.p1 ? '+' : nature.minus === stats.p1 ? '-' : '' : '';
@@ -73,9 +79,12 @@ export function encode(state: State, url = false) {
   buf.push(p1.pokemon.species.name);
   if (p1.pokemon.item) buf.push(`@ ${gen.items.get(p1.pokemon.item)!.name}`);
 
-  buf.push(move.magnitude
-    ? `[${gen.moves.get(move.id)!.name} ${move.magnitude}]`
-    : `[${gen.moves.get(move.id)!.name}]`);
+  const m = gen.moves.get(move.id)!;
+  // FIXME
+  // const moveName = m.name === 'Hidden Power'
+  //   ? `${m.name} ${gen.types.getHiddenPower(gen.stats.fill(p1.pokemon.ivs || {}, 31)).type}`
+  //   : m.name;
+  buf.push(`[${m.name}${move.magnitude ? ` ${move.magnitude}`: ''}]`); // TODO diff basePower!
   buf.push('vs.');
 
   if (stats && p2.pokemon.boosts[stats.p2]) {
@@ -86,10 +95,11 @@ export function encode(state: State, url = false) {
   if (stats) {
     const hp = p2.pokemon.evs?.hp;
     const def = p2.pokemon.evs?.[stats.p2];
+    const s = gen.stats.display(stats.p2); // FIXME
     // FIXME foul play?
     if (gen.num <= 2) {
       if (((hp ?? 252) !== 252) || ((def ?? 252) !== 252)) {
-        buf.push(`${hp} HP / ${def} ${gen.stats.display(stats.p1)}`);
+        buf.push(`${hp} HP / ${def} ${s === 'Spc' ? 'SpD' : s}`);
       }
     } else {
       const nature = p2.pokemon.nature && gen.natures.get(p2.pokemon.nature);
@@ -115,14 +125,21 @@ export function encode(state: State, url = false) {
   for (const side of ['p1', 'p2'] as const) {
     const p = side === 'p1' ? 'attacker' : 'defender';
     const pokemon = state[side].pokemon;
-    if (pokemon.ability) {
+    const abilities = Object.values(pokemon.species.abilities);
+    if (pokemon.ability && (abilities.length > 1 || !abilities.includes(pokemon.ability))) {
       buf.push(`${p}Ability:${display(gen.abilities.get(pokemon.ability)!.name)}`);
     }
-    if (pokemon.gender) buf.push(`${p}Gender:${pokemon.gender}`);
-    if (pokemon.weighthg) buf.push(`${side}Weight:${pokemon.weighthg}`);
+    if (pokemon.gender && pokemon.gender !== pokemon.species.gender &&
+        is('rivalry', state.p1.pokemon.ability, state.p2.pokemon.ability)) {
+      buf.push(`${p}Gender:${pokemon.gender}`);
+    }
+    if (pokemon.weighthg && pokemon.weighthg !== pokemon.species.weighthg) {
+      buf.push(`${side}Weight:${pokemon.weighthg}`);
+    }
     if (typeof pokemon.happiness === 'number') buf.push(`${p}Happiness:${pokemon.happiness}`);
     if (pokemon.ivs) {
-      for (const s in pokemon.ivs) {
+      for (const s of gen.stats) {
+        if (!(s in pokemon.ivs)) continue;
         const stat = s as StatName;
         const iv = pokemon.ivs[stat] ?? 31;
         if (iv !== 31) {
@@ -133,9 +150,11 @@ export function encode(state: State, url = false) {
       }
     }
     // FIXME handle nature!!! nature is only relevant if it effects a stat which is also relevant!
+    if (pokemon.nature) buf.push(`${p}Nature:${pokemon.nature}`);
     if (pokemon.evs) {
-      for (const s in pokemon.evs) {
-        if (side === 'p1' && is(s, 'atk') || side === 'p2' && is(s, 'hp', 'spd')) continue;
+      for (const s of gen.stats) {
+        if (!(s in pokemon.evs)) continue;
+        if (stats && ((side === 'p2' && is(s, 'hp')) || is(s, stats[side]))) continue;
         const stat = s as StatName;
         const ev = pokemon.evs[stat] ?? (gen.num <= 2 ? 252 : 0);
         if (gen.num <= 2 ? ev < 252 : ev > 0) {
@@ -144,7 +163,8 @@ export function encode(state: State, url = false) {
       }
     }
 
-    for (const b in pokemon.boosts) {
+    for (const b of [...Array.from(gen.stats).slice(1), 'accuracy', 'evasion']) {
+      if (!(b in pokemon.boosts)) continue;
       const boost = b as BoostName;
       if (!pokemon.boosts[boost] || stats?.[side] === boost) continue;
       const s = gen.stats.display(boost);
@@ -159,7 +179,7 @@ export function encode(state: State, url = false) {
       pokemon.level
     );
     if (pokemon.maxhp !== maxhp) buf.push(`${p}maxHP:${pokemon.maxhp}`);
-    if (pokemon.hp !== pokemon.maxhp) buf.push(`${p}HP:${pokemon.hp}`);
+    if (pokemon.hp !== pokemon.maxhp) buf.push(`${p}HP:${pokemon.hp}`); // TODO %
     if (pokemon.statusData?.toxicTurns) {
       buf.push(`${p}ToxicCounter:${pokemon.statusData.toxicTurns}`);
     }
@@ -168,9 +188,9 @@ export function encode(state: State, url = false) {
 
   // Move
   if (move.crit) buf.push('+crit');
-  // TODO if (move.useZ) buf.push('+z');
+  if (move.useZ) buf.push('+useZ'); // TODO +z
   if (move.spread) buf.push('+spread');
-  if (move.hits) buf.push(`hits:${move.hits}`);
+  if (move.hits && (move.hits > 1 || move.multihit)) buf.push(`hits:${move.hits}`);
   if (move.consecutive) buf.push(`consecutive:${move.consecutive}`); // FIXME metronome
 
   const s = buf.join(' ');

@@ -156,7 +156,7 @@ TODO - also cover above how `generate-test` performs integration testing on the 
 
 ## Coverage
 
-Test coverage is a metric that always needs to be taken with a grain of salt, but `npx jest
+Test coverage is a metric that always needs to be taken with a grain of salt, but `npm test --
 --coverage` can be used to generate a coverage report. 100% statement/branch coverage does *not*
 imply '100% tested', and in many cases attempting to acheive 100% statement or branch coverage is
 going to result in a lot of low value tests. Use coverage reports as a guide to see which areas may

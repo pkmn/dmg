@@ -4,7 +4,7 @@ export {State} from './state';
 export {Result} from './result';
 
 // parsing
-export {parse} from './parse';
+export {parse, ParseError} from './parse';
 export {encode} from './encode';
 
 // convenience scoping

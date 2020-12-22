@@ -1,13 +1,10 @@
 /* eslint-env jest */
 
-import {Generation, GenerationNum, Generations, Specie} from '@pkmn/data';
+import {Generation, GenerationNum, Generations} from '@pkmn/data';
 import {Dex} from '@pkmn/sim';
 
 import {Scope, inGens} from '../../gens';
-import {State} from '../../state';
 import {Result} from '../../result';
-
-import * as assert from 'assert';
 
 const gens = new Generations(Dex as any);
 
@@ -143,30 +140,3 @@ expect.extend({
     return {pass: !this.isNot, message: () => ''};
   },
 });
-
-
-/**
- * Workaround for asserting equality between between two `State` objects.
- *
- * Jest's `toEqual` and assert's `deepStrictEqual` choke on the circular references in `State` and
- * fail to terminate. Instead, this helper compares the objects piecemeal, though it mutates its
- * input and if this method throws it makes no attempt to restore its input to the correct state.
- * `assert` is used here as opposed to `expect` to faciliate use in the integration runner which
- * does not run in the Jest enviroment.
- */
-export function assertStateEqual(a: State, b: State) {
-  assert.strictEqual(a.gen, b.gen);
-  assert.strictEqual(a.gameType, b.gameType);
-  assert.deepStrictEqual(a.field, b.field);
-  const p1 = a.p1.pokemon.species;
-  const p2 = a.p2.pokemon.species;
-  assert.strictEqual(a.p1.pokemon.species, b.p1.pokemon.species);
-  a.p1.pokemon.species = b.p1.pokemon.species = undefined! as Specie;
-  assert.strictEqual(a.p2.pokemon.species, b.p2.pokemon.species);
-  a.p2.pokemon.species = b.p2.pokemon.species = undefined! as Specie;
-  assert.deepStrictEqual(a.p1, b.p1);
-  a.p1.pokemon.species = b.p1.pokemon.species = p1;
-  assert.deepStrictEqual(a.p2, b.p2);
-  a.p2.pokemon.species = b.p2.pokemon.species = p2;
-  assert.deepStrictEqual(a.move, b.move);
-}

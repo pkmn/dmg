@@ -1,4 +1,13 @@
 #!/usr/bin/env node
 'use strict';
 
-require('./build/tests/helpers/integration').run(1E6, +process.argv[2] || undefined);
+try {
+  require('source-map-support').install();
+} catch (err) {
+  if (err.code !== 'MODULE_NOT_FOUND') throw err;
+}
+
+require('./build/test/helpers/integration').run(
+  process.argv[2] ? process.argv[2].split(',').map(s => Number(s)) : [1, 2, 3, 4],
+ +process.argv[3] || undefined
+);

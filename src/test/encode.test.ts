@@ -3,7 +3,7 @@ import {Dex} from '@pkmn/sim';
 
 import {parse} from '../parse';
 import {encodeURL, decodeURL, encode} from '../encode';
-import {assertStateEqual} from './helpers';
+import {assertStateEqual} from './helpers/assert';
 
 const gens = new Generations(Dex as any);
 

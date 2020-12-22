@@ -14,6 +14,7 @@ import type {
   TypeName,
   StatName,
   Type,
+  Move,
 } from '@pkmn/data';
 
 import {WeatherName, TerrainName, Conditions, ConditionKind} from './conditions';
@@ -185,6 +186,28 @@ export class State {
     this.p2 = 'pokemon' in defender ? defender : {pokemon: defender, sideConditions: {}};
     this.move = move;
     this.field = field;
+  }
+
+  static toJSON(s: State) {
+    const move = {} as any;
+    const base = s.gen.moves.get(s.move.name);
+    for (const key in s.move) {
+      if (Object.prototype.hasOwnProperty.call(s.move, key)) {
+        const val = s.move[key as keyof State.Move];
+        if (!base || !(key in base) || val !== base[key as keyof Move]) {
+          move[key] = val;
+        }
+      }
+    }
+
+    return {
+      gen: s.gen.num,
+      gameType: s.gameType,
+      p1: {...s.p1, pokemon: {...s.p1.pokemon, species: s.p1.pokemon.species.name}},
+      p2: {...s.p2, pokemon: {...s.p2.pokemon, species: s.p2.pokemon.species.name}},
+      move,
+      field: s.field,
+    }
   }
 
   /** Factory method helper for creating `State.Field`. */
@@ -438,6 +461,7 @@ export class State {
       }
     }
 
+    // FIXME need to turn off handlers!!!!!
     extend(move, base, options); // whatever, there are too many move fields
 
     move.crit = options.crit ?? base.willCrit;
@@ -701,12 +725,10 @@ function setGender(
         throw new Error(`A ${species.name} with ${atkDV} Atk DVs must be '${gender}' in gen 2`);
       }
       pokemon.gender = gender;
-    } else {
-      pokemon.gender = name || species.gender || gender;
+      return;
     }
-  } else {
-    pokemon.gender = gender;
   }
+  pokemon.gender = name || species.gender || gender;
 }
 
 function correctHPDV(
@@ -822,6 +844,7 @@ function validateStats(
   pokemon: State.Pokemon,
 ) {
   if (!pokemon.stats) return pokemon;
+  const nature = pokemon.nature && gen.natures.get(pokemon.nature);
   for (const stat of gen.stats) {
     const actual = gen.stats.calc(
       stat,
@@ -829,7 +852,7 @@ function validateStats(
       pokemon.ivs?.[stat] ?? 31,
       pokemon.evs?.[stat] ?? (gen.num <= 2 ? 252 : 0),
       pokemon.level,
-      gen.natures.get(pokemon.nature!)
+      nature,
     );
     if (actual !== pokemon.stats[stat]) {
       const s = gen.stats.display(stat);
