@@ -10,8 +10,6 @@
  * - `vs` and `vs.` split if phrase is present
  *
  * - tox:6 = toxicCounter in status
- * - handle metronome count as @ Metronome:5
- * - Z-Foo in moveName!
  *
  * - attackerIVs=0/31/31/31/31/0 attackerEVs=0/252/0/252/0/4 (ivs and evs if a vs-implicit)
  *
@@ -81,7 +79,7 @@ const LEVEL = /(?:Lvl?\s*(\d{1,2})\s+)?/;
 // eslint-disable-next-line max-len
 const EVS = /(?:(?:\d{1,3}(?:\+|-)?\s*(?:HP|Atk|Def|SpA|SpD|Spe|Spc)(?:\s*\/\s*\d{1,3}(?:\+|-)?\s*(?:HP|Atk|Def|SpA|SpD|Spe|Spc)){0,5})?\s+)?/;
 // eslint-disable-next-line no-misleading-character-class
-const POKEMON_AND_ITEM = /(?:([A-Za-z][-0-9A-Za-zé%'’:. ]+)(?:\s*@\s*([A-Za-z][-0-9A-Za-z' ]+))?)/;
+const POKEMON_AND_ITEM = /(?:([A-Za-z][-0-9A-Za-zé%'’:. ]+)(?:\s*@\s*([A-Za-z][-0-9A-Za-z:' ]+))?)/;
 
 const PHRASE = new RegExp([
   // Attacker Boosts (1)
@@ -116,7 +114,10 @@ interface Phrase {
     evs?: {atk?: number; spa?: number}; // TODO Partial<StatsTable>
     item?: ID;
   };
-  move: ID;
+  move: {
+    id: ID;
+    consecutive?: number;
+  };
   p2: {
     id: ID;
     boosts?: number;
@@ -354,8 +355,11 @@ const NON_CONDITION_BOOLS = ['usez', 'z', 'crit', 'spread'] as ID[];
 const PLURALS = ['ev', 'iv', 'dv', 'boost'] as ID[];
 
 function parseFlag(arg: string, condition = false): [ID, string] | undefined {
-  // 'Type:Null' as part of the phrase will get detected as a flag without this hack...
-  if (arg.toLowerCase() === 'type:null') return undefined;
+  const lower = arg.toLowerCase();
+  // 'Type:Null' as part of the phrase will get detected as a flag without this hack
+  if (lower === 'type:null') return undefined;
+  // Metronome consecutive sugar requires we don't parse Metronome:N as a flag
+  if (lower.startsWith('metronome:')) return undefined;
   const m = FLAG.exec(arg);
   if (!m) return undefined;
   if (m[3]) {
@@ -449,6 +453,9 @@ function parseConditionFlag(
   return flags;
 }
 
+// Consecutive uses can be specified as part of Metronome
+const METRONOME_SUGAR = /^\s*Metronome\s*:?\s*(\d+)?\s*$/i;
+
 function parsePhrase(s: string) {
   const m = PHRASE.exec(s);
   if (!m) return undefined;
@@ -458,14 +465,29 @@ function parsePhrase(s: string) {
     return isNaN(i) ? undefined : i;
   };
 
+  let item: ID | undefined = undefined;
+  let consecutive: number | undefined = undefined;
+  if (m[5]) {
+    const ms = METRONOME_SUGAR.exec(m[5]);
+    if (ms) {
+      consecutive = Number(ms[1]) || undefined;
+      item = 'metronome' as ID;
+    } else {
+      item = toID(m[5]) || undefined;
+    }
+  }
+
   const phrase: Phrase = {
     p1: {
       id: toID(m[4]),
       boosts: int(m[1]),
       level: int(m[2]),
-      item: toID(m[5]) || undefined,
+      item,
     },
-    move: toID(m[6]),
+    move: {
+      id: toID(m[6]),
+      consecutive,
+    },
     p2: {
       id: toID(m[11]),
       boosts: int(m[7]),
@@ -576,9 +598,10 @@ function buildMoveOptions(
 ) {
   const useZ = checks.conflict('move useZ', flags.move.usez, flags.move.z);
   return {
-    name: checks.conflict('move', phrase?.move, flags.move.name, REQUIRED)!,
+    name: checks.conflict('move', phrase?.move.id, flags.move.name, REQUIRED)!,
     hits: checks.number('move hits', flags.move.hits),
-    consecutive: checks.number('move consecutive', flags.move.consecutive),
+    consecutive:
+      checks.number('move consecutive', phrase?.move.consecutive, flags.move.consecutive as any),
     crit: flags.move.crit ? !!+flags.move.crit : undefined,
     spread: flags.move.spread ? !!+flags.move.spread : undefined,
     useZ: useZ ? !!+useZ : undefined,

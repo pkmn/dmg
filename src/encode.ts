@@ -81,14 +81,37 @@ export function encode(state: State, url = false) {
   }
   for (const implicit of implicits.p1) buf.push(implicit);
   buf.push(p1.pokemon.species.name);
-  if (p1.pokemon.item) buf.push(`@ ${gen.items.get(p1.pokemon.item)!.name}`);
+  let consecutive = move.consecutive;
+  if (p1.pokemon.item) {
+    const item = gen.items.get(p1.pokemon.item)!;
+    if (item.name === 'Metronome' && consecutive) {
+      buf.push(`@ ${item.name}:${consecutive}`);
+      consecutive = undefined;
+    } else {
+      buf.push(`@ ${item.name}`);
+    }
+  }
 
   const m = gen.moves.get(move.id)!;
+  let moveName: string = m.name;
+  if (move.useZ) {
+    // Some Z-Moves have aliases which conflict with the 'Z-' sugar
+    if (!gen.moves.get(`Z-${moveName}`)) {
+      buf.push('+Z');
+    } else {
+      moveName = `Z-${moveName}`;
+    }
+  }
+  if (move.magnitude && moveName === 'Magnitude') {
+    moveName = `${moveName} ${move.magnitude}`;
+  } else if (move.basePower !== m.basePower) {
+    moveName = `${moveName} ${move.basePower}`
+  }
   // FIXME
   // const moveName = m.name === 'Hidden Power'
   //   ? `${m.name} ${gen.types.getHiddenPower(gen.stats.fill(p1.pokemon.ivs || {}, 31)).type}`
   //   : m.name;
-  buf.push(`[${m.name}${move.magnitude ? ` ${move.magnitude}` : ''}]`); // TODO diff basePower!
+  buf.push(`[${moveName}]`);
   buf.push('vs.');
 
   if (stats && p2.pokemon.boosts[stats.p2]) {
@@ -210,10 +233,9 @@ export function encode(state: State, url = false) {
 
   // Move
   if (move.crit) buf.push('+crit');
-  if (move.useZ) buf.push('+z'); // FIXME Z-Foo
   if (move.spread) buf.push('+spread');
   if (move.hits && (move.hits > 1 || move.multihit)) buf.push(`hits:${move.hits}`);
-  if (move.consecutive) buf.push(`consecutive:${move.consecutive}`); // FIXME metronome
+  if (consecutive) buf.push(`consecutive:${consecutive}`);
 
   const s = buf.join(' ');
   return url ? encodeURL(s) : s;

@@ -51,7 +51,9 @@ describe('parse', () => {
   });
 
   test('flags', () => {
-    const state = parser.parse(gens, `${FLAGS} +doubles +sun pseudoWeather="Magic Room" attackerAbility=levitate p2AtkEV=12`, true);
+    const state = parser.parse(gens,
+      `${FLAGS} +doubles +sun pseudoWeather="Magic Room" attackerAbility=levitate p2AtkEV=12`,
+      true);
     expect(state.gameType).toEqual('doubles');
     expect(state.field.weather).toEqual('Sun');
     expect(state.field.pseudoWeather.magicroom).toEqual({});
@@ -72,14 +74,17 @@ describe('parse', () => {
     expect(() => parse(gens, `${FLAGS} weather=Dynamax`)).toThrow('Mismatched kind for condition');
     expect(parse(gens, `${FLAGS} weather:Sun +Rain`, 'Conflicting values for flag').field.weather)
       .toEqual('Rain');
-    expect(parse(gens, `${FLAGS} spikes:3 spikes:2`, 'Conflicting values for condition').p2.sideConditions.spikes)
-      .toEqual({level: 2});
+    expect(parse(
+      gens, `${FLAGS} spikes:3 spikes:2`, 'Conflicting values for condition'
+    ).p2.sideConditions.spikes).toEqual({level: 2});
     parse(gens, `${FLAGS} foo:5`, 'Unrecognized or invalid condition \'foo\'');
 
-    expect(parse(gens, `${FLAGS} isCrit:true --crit:yes --noCrit=false +crit --hasCrit=1 -crit:y`).move.crit)
-      .toBe(true);
-    expect(parse(gens, `${FLAGS} isReflect:false --reflect:false --noReflect=true --hasReflect=0 -reflect:n`).field.weather)
-      .toBeUndefined();
+    expect(parse(
+      gens, `${FLAGS} isCrit:true --crit:yes --noCrit=false +crit --hasCrit=1 -crit:y`
+    ).move.crit).toBe(true);
+    expect(parse(
+      gens, `${FLAGS} isReflect:false --reflect:false --noReflect=true --hasReflect=0 -reflect:n`
+    ).field.weather).toBeUndefined();
     expect(parse(gens, `${FLAGS} reflect=true isReflect:false`, 'Conflicting values').field.weather)
       .toBeUndefined();
   });
@@ -119,13 +124,16 @@ describe('parse', () => {
     expect(state.p2.pokemon.volatiles.leechseed).toEqual({});
     expect(state.p2.active!.map(p => p!.ability)).toEqual(['friendguard']);
     expect(state.p1.active!.map(p => p!.ability)).toEqual(['aurabreak', 'battery', 'fairyaura']);
-    expect(state.p1.team!.map(p => p!.species.baseStats.atk)).toEqual([50, 100, 80]);
+    expect(state.p1.team!.map(p => p.species.baseStats.atk)).toEqual([50, 100, 80]);
 
     expect(() => parse(gens, `${PHRASE} p1allies=foo`)).toThrow('Unsupported or invalid ability');
     expect(() => parse(gens, `${PHRASE} p1allies=-1`)).toThrow('stat -1 is not within [0,255]');
 
-    expect(parse(gens, `252+ SpA ${PHRASE} p1Nature=Timid`, 'Conflicting values for p1 nature: Timid is +Spe not +SpA').p1.pokemon.nature)
-      .toEqual('Timid');
+    expect(parse(
+      gens,
+      `252+ SpA ${PHRASE} p1Nature=Timid`,
+      'Conflicting values for p1 nature: Timid is +Spe not +SpA'
+    ).p1.pokemon.nature).toEqual('Timid');
 
     expect(() => parse(gens, `${FLAGS} p1AccuracyBoosts=y`))
       .toThrow('Expected number for p1 accuracy boosts');
@@ -134,8 +142,9 @@ describe('parse', () => {
     expect(() => parse(gens, `${FLAGS} p2AtkBoosts=huh`))
       .toThrow('Expected number for p2 Atk boosts');
 
-    expect(parse(gens, `${FLAGS} p1AccuracyBoosts=1 p1EvasionBoosts=2 p1SpABoosts=3`).p1.pokemon.boosts)
-      .toEqual({accuracy: 1, evasion: 2, spa: 3});
+    expect(parse(
+      gens, `${FLAGS} p1AccuracyBoosts=1 p1EvasionBoosts=2 p1SpABoosts=3`
+    ).p1.pokemon.boosts).toEqual({accuracy: 1, evasion: 2, spa: 3});
 
     expect(() => parse(gens, `${FLAGS} p1AtkEv=y`))
       .toThrow('Expected number for p1 Atk EVs');
@@ -159,16 +168,18 @@ describe('parse', () => {
 
     expect(() => parse(gens, 'machamp @ metronome [mach punch] vs. vaporeon consecutive:foo'))
       .toThrow('Expected number for move consecutive');
-    expect(parse(gens, 'machamp @ metronome [mach punch] vs. vaporeon consecutive:3').move.consecutive)
-      .toEqual(3);
+    expect(parse(
+      gens, 'machamp @ metronome [mach punch] vs. vaporeon consecutive:3'
+    ).move.consecutive).toEqual(3);
 
     expect(parse(gens, '+1 gengar [shadow ball] vs. clefable').p1.pokemon.boosts).toEqual({spa: 1});
     expect(() => parse(gens, '+1 gengar [none] vs. clefable', 'Ambiguous boosts'))
       .toThrow('invalid move');
     expect(parse(gens, 'keldeo [secret sword] vs. +1 blissey').p2.pokemon.boosts).toEqual({def: 1});
 
-    expect(parse(gens, `(Gen 7) ${PHRASE} useZ:true z:false`, 'Conflicting values for move useZ').move.useZ)
-      .toBe(true);
+    expect(parse(
+      gens, `(Gen 7) ${PHRASE} useZ:true z:false`, 'Conflicting values for move useZ'
+    ).move.useZ).toBe(true);
     expect(parse(gens, `{7} ${PHRASE} isZ:true`).move.useZ).toBe(true);
 
     expect(parse(gens, `p1Species:Mew ${PHRASE}`, 'Conflicting values').p1.pokemon.species.id)
@@ -177,8 +188,9 @@ describe('parse', () => {
     expect(parse(gens, `${PHRASE} p2Level=90 p2Level:80`, 'Conflicting values').p2.pokemon.level)
       .toEqual(80);
     expect(() => parse(gens, `p1Happiness:foo  ${PHRASE}`)).toThrow('Expected number');
-    expect(parse(gens, `p1Happiness:100 ${FLAGS} attackerHappiness=250`, 'Conflicting values').p1.pokemon.happiness)
-      .toEqual(250);
+    expect(parse(
+      gens, `p1Happiness:100 ${FLAGS} attackerHappiness=250`, 'Conflicting values'
+    ).p1.pokemon.happiness).toEqual(250);
     expect(() => parse(gens, `attackerHP:foo ${PHRASE}`)).toThrow('Expected number');
     expect(parse(gens, `attackerHP:100 attackerHP:10 ${FLAGS}`, 'Conflicting values').p1.pokemon.hp)
       .toEqual(10);
@@ -194,5 +206,21 @@ describe('parse', () => {
     expect(parse(gens, `${PHRASE} switching:in`).p2.pokemon.switching).toBe('in');
     expect(() => parse(gens, `${PHRASE} p1Switching:foo`)).toThrow('Invalid boolean flag value');
     expect(parse(gens, `${PHRASE} +switching`).p2.pokemon.switching).toBe('out');
+
+    state = parse(gens, '(gen 7) vaporeon [zicebeam] vs. clefable');
+    expect(state.move.name).toEqual('Ice Beam');
+    expect(state.move.useZ).toBe(true);
+
+    state = parse(gens, 'Gengar @ Metronome:5 [Lick] vs Clefable');
+    expect(state.p1.pokemon.item).toEqual('metronome');
+    expect(state.move.consecutive).toEqual(5);
+
+    state = parse(gens,
+      'Gengar @ Metronome:5 [Lick] vs Clefable consecutive:4',
+      'Conflicting values for move consecutive');
+    expect(state.p1.pokemon.item).toEqual('metronome');
+    expect(state.move.consecutive).toEqual(5);
+    expect(() => parse(gens, 'Gengar @ Metronome:foo [Lick] vs Clefable'))
+      .toThrow('Unsupported or invalid item');
   });
 });

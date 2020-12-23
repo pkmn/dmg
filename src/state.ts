@@ -154,8 +154,8 @@ export namespace State {
   }
 }
 
-// Moves can include a base power override in their name, eg. "Present 80".
-const MOVE_BASE_POWER = /^\s*(\D*)(\d+)\s*$/;
+// Moves can include a base power override in their name, eg. "Present 80" or a "Z-" prefix.
+const MOVE_SUGAR = /^\s*(Z\s*-?\s*)?(\D*)(\d+)?\s*$/i;
 
 /**
  * The external API representing the state of the battle used as input to the calculator. Internally
@@ -406,17 +406,29 @@ export class State {
   ) {
     let base = gen.moves.get(name);
     if (!base) {
-      const m = MOVE_BASE_POWER.exec(name);
+      const m = MOVE_SUGAR.exec(name);
       if (m) {
-        base = gen.moves.get(m[1]);
-        const n = Number(m[2]);
-        if (base?.id === 'magnitude' && n >= 4 && n <= 10) {
-          if (options.magnitude && options.magnitude !== n) {
-            throw new Error(`Magnitude mismatch: '${options.magnitude}' does not match '${n}'`);
+        base = gen.moves.get(m[2]);
+        if (m[1]) {
+          const useZ = !!m[1];
+          if (options.useZ !== undefined && options.useZ !== useZ) {
+            throw new Error(`useZ mismatch: '${options.useZ}' does not match '${useZ}'`);
           }
-          options.magnitude = n;
-        } else {
-          options.basePower = n;
+          options.useZ = useZ;
+        }
+        if (m[3]) {
+          const n = Number(m[3]);
+          if (base?.id === 'magnitude' && n >= 4 && n <= 10) {
+            if (options.magnitude && options.magnitude !== n) {
+              throw new Error(`Magnitude mismatch: '${options.magnitude}' does not match '${n}'`);
+            }
+            options.magnitude = n;
+          } else {
+            if (options.basePower && options.basePower !== n) {
+              throw new Error(`Base Power mismatch: '${options.basePower}' does not match '${n}'`);
+            }
+            options.basePower = n;
+          }
         }
       }
       if (!base) invalid(gen, 'move', name);

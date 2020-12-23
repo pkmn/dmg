@@ -64,9 +64,9 @@ describe('State', () => {
     });
 
     test('abilities', () => {
-      const side = State.createSide(gens.get(7), pokemon, {abilities: ['Charge', 'Fairy Aura']});
+      const side = State.createSide(gens.get(7), pokemon, {abilities: ['Battery', 'Fairy Aura']});
       expect(side.active).toEqual([
-        {ability: 'charge', position: 0},
+        {ability: 'battery', position: 0},
         {ability: 'fairyaura', position: 1},
       ]);
     });

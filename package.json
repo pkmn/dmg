@@ -47,7 +47,9 @@
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "node",
-    "testPathIgnorePatterns": ["node_modules/", "build/"]
+    "testPathIgnorePatterns": ["node_modules/", "build/"],
+    "coveragePathIgnorePatterns": ["node_modules/", "build/", "src/test/helpers/"],
+    "coverageDirectory": ".coverage"
   },
   "eslintConfig": {
     "extends": "@pkmn",
