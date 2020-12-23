@@ -207,7 +207,7 @@ export class State {
       p2: {...s.p2, pokemon: {...s.p2.pokemon, species: s.p2.pokemon.species.name}},
       move,
       field: s.field,
-    }
+    };
   }
 
   /** Factory method helper for creating `State.Field`. */
@@ -236,8 +236,14 @@ export class State {
     return {
       sideConditions: setConditions(gen, 'Side Condition', options.sideConditions),
       pokemon,
-      active: options.abilities?.map((a, i) => ({ability: toID(a), position: i})),
-      team: options.atks?.map((atk, i) => ({species: {baseStats: {atk}}, position: i})),
+      active: options.abilities?.map((name, i) => {
+        const ability = gen.abilities.get(name);
+        if (!ability) invalid(gen, 'ability', name);
+        return {ability: ability.id, position: i};
+      }),
+      team: options.atks?.map((atk, i) => ({
+        species: {baseStats: {atk: bounded('stat', atk)}}, position: i,
+      })),
     } as State.Side;
   }
 
@@ -480,7 +486,7 @@ export class State {
       move.spread = options.spread;
     }
     if (options.consecutive && toID(pokemon.item) !== 'metronome') {
-      throw new Error('consecutive has no meaning unless the Pokemon is holding a Metronome\'');
+      throw new Error('consecutive has no meaning unless the Pokemon is holding a Metronome');
     }
     move.consecutive = options.consecutive;
 
@@ -499,7 +505,7 @@ export class State {
     pokemon.level = bounded('level', set.level || 100);
     setItem(gen, pokemon, set.item);
     setAbility(gen, pokemon, set.ability);
-    pokemon.happiness = bounded('happiness', set.happiness || 255) || pokemon.happiness;
+    if (set.happiness !== undefined) pokemon.happiness = bounded('happiness', set.happiness);
     // Nature is required on PokemonSet, so we just ignore it for generations 1 and 2
     setNature(gen, pokemon, set.nature, gen.num >= 3);
 
@@ -560,6 +566,7 @@ export class State {
 
 const BOUNDS: {[key: string]: [number, number]} = {
   level: [1, 100],
+  stat: [0, 255],
   evs: [0, 255],
   ivs: [0, 31],
   dvs: [0, 15],
@@ -648,7 +655,7 @@ function setItem(gen: Generation, pokemon: Partial<State.Pokemon>, name?: string
 function setAbility(gen: Generation, pokemon: {species: Specie; ability?: ID}, name?: string) {
   if (name) {
     const ability = gen.abilities.get(name);
-    if (!ability) invalid(gen, 'ability', ability);
+    if (!ability) invalid(gen, 'ability', name);
     pokemon.ability = ability.id;
   } else if (gen.num >= 3) {
     pokemon.ability = toID(pokemon.species.abilities[0]);

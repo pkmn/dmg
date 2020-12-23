@@ -7,7 +7,7 @@ import {DeepPartial, extend} from '../utils';
 const gens = new Generations(Dex as any);
 
 describe('State', () => {
-  describe('toJSON', () => {
+  test('toJSON', () => {
     const gen = gens.get(4);
     const state = new State(
       gen,

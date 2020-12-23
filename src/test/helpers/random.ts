@@ -56,8 +56,8 @@ function generateField(gen: Generation, prng: PRNG) {
 }
 
 const ALLY_ABILITIES = [
-  'flowergift', 'battery', 'powerspot', 'steelyspirit',
-  'friendguard', 'stormdrain', 'aurabreak', 'darkarua', 'fairyaura',
+  'flowergift', 'battery', 'powerspot', 'steelyspirit', 'friendguard', 'stormdrain',
+  'aurabreak', 'darkaura', 'fairyaura', // Aura abilities effect any
 ];
 
 function generateSide(gen: Generation, gameType: GameType, prng: PRNG) {
@@ -69,10 +69,9 @@ function generateSide(gen: Generation, gameType: GameType, prng: PRNG) {
     options.sideConditions[sc] = {level: sc === 'spikes' && gen.num >= 3 ? prng.next(1, 3) : 1};
     if (options.sideConditions[sc].level === 1) options.sideConditions[sc] = {};
   }
-  // FIXME
-  // if (gameType === 'doubles' && prng.randomChance(1, 10)) {
-  //   options.abilities = [sample(prng, ALLY_ABILITIES)];
-  // }
+  if (gameType === 'doubles' && prng.randomChance(1, 10)) {
+    options.abilities = [sample(prng, ALLY_ABILITIES)];
+  }
   // NOTE: team is filled in only if Beat Up ends up being the move selected
   const pokemon = generatePokemon(gen, prng);
   return State.createSide(gen, pokemon, options);
@@ -85,7 +84,9 @@ function generatePokemon(gen: Generation, prng: PRNG) {
 
   const species = sample(prng, Array.from(gen.species));
   options.level = prng.randomChance(1, 20) ? prng.next(1, 100) : 100;
-  // FIXME if (prng.randomChance(1, 100)) options.weighthg = species.weighthg * prng.next() * 2;
+  if (prng.randomChance(1, 100)) {
+    options.weighthg = math.round(species.weighthg * prng.next() * 2) + 1;
+  }
 
   if (gen.num >= 2 && prng.randomChance(99, 100)) {
     options.item = sample(prng, Array.from(gen.items)).name;
@@ -111,7 +112,7 @@ function generatePokemon(gen: Generation, prng: PRNG) {
     options.volatiles[v] = {level: is(v, 'autotomize', 'stockpile') ? prng.next(1, 3) : 1};
     if (options.volatiles[v].level === 1) options.volatiles[v] = {};
   }
-  // FIXME if (prng.randomChance(1, 100)) options.addedType = sample(prng, ['Grass', 'Ghost']);
+  if (prng.randomChance(1, 100)) options.addedType = sample(prng, ['Grass', 'Ghost']);
 
   const nature = gen.num >= 3 ? sample(prng, Array.from(gen.natures)) : undefined;
   options.nature = nature && (nature.plus ? nature.name : 'Serious');
@@ -185,7 +186,8 @@ function generateMove(gen: Generation, gameType: GameType, side: State.Side, prn
   const item = (pokemon.item || undefined) && gen.items.get(pokemon.item!);
 
   const move = item?.zMoveFrom
-    ? gen.moves.get(item.zMoveFrom)! // FIXME hidden power
+    ? gen.moves.get(item.zMoveFrom)!
+    // : sample(prng, Array.from(gen.moves).filter(m => status ? m.status : !m.status)); // FIXME hidden power
     : sample(prng, Array.from(gen.moves).filter(m => !m.id.startsWith('hiddenpower') && (status ? m.status : !m.status)));
   if (prng.randomChance(1, 16)) options.crit = true;
   if (move.multihit && typeof move.multihit !== 'number') {
@@ -196,7 +198,7 @@ function generateMove(gen: Generation, gameType: GameType, side: State.Side, prn
     is(move.target, 'allAdjacent', 'allAdjacentFoes') && prng.randomChance(4, 5)) {
     options.spread = true;
   }
-  // FIXME if (pokemon.item === 'metronome') options.consecutive = prng.next(1, 10);
+  if (pokemon.item === 'metronome') options.consecutive = prng.next(1, 10);
   if (gen.num === 7 && (item?.zMove ? prng.randomChance(4, 5) : prng.randomChance(1, 100))) {
     options.useZ = true;
     options.hits = undefined;
@@ -204,23 +206,22 @@ function generateMove(gen: Generation, gameType: GameType, side: State.Side, prn
 
   if (move.id === 'magnitude') {
     options.magnitude = prng.next(4, 10);
-  // FIXME
-  // } else if (move.id === 'beatup') {
-  //   const atks = [];
-  //   for (let i = 0; i < prng.next(0, 5); i++) atks.push(prng.next(30, 150));
-  //   side = State.createSide(gen, pokemon, {
-  //     sideConditions: side.sideConditions,
-  //     abilities: side.active?.map(p => p?.ability).filter(Boolean) as string[] | undefined,
-  //     atks,
-  //   });
-  // } else if (is(move.id, 'return', 'frustration') && prng.randomChance(1, 10)) {
-  //   pokemon.happiness = prng.next(0, 255);
-  // } else if (move.id === 'stompingtantrum') {
-  //   pokemon.moveLastTurnResult = prng.randomChance(1, 2);
-  // } else if (move.id === 'assurance') {
-  //   pokemon.hurtThisTurn = prng.randomChance(1, 2);
-  // } else if (move.id === 'pursuit' && prng.randomChance(1, 2)) {
-  //   pokemon.switching = prng.randomChance(1, 2) ? 'in' : 'out';
+  } else if (move.id === 'beatup') {
+    const atks = [];
+    for (let i = 0; i < prng.next(0, 5); i++) atks.push(prng.next(30, 150));
+    side = State.createSide(gen, pokemon, {
+      sideConditions: side.sideConditions,
+      abilities: side.active?.map(p => p?.ability).filter(Boolean) as string[] | undefined,
+      atks,
+    });
+  } else if (is(move.id, 'return', 'frustration') && prng.randomChance(1, 10)) {
+    pokemon.happiness = prng.next(0, 255);
+  } else if (move.id === 'stompingtantrum' && prng.randomChance(1, 2)) {
+    pokemon.moveLastTurnResult = false;
+  } else if (move.id === 'assurance' && prng.randomChance(1, 2)) {
+    pokemon.hurtThisTurn = false;
+  } else if (move.id === 'pursuit' && prng.randomChance(1, 2)) {
+    pokemon.switching = prng.randomChance(1, 2) ? 'in' : 'out';
   }
   return State.createMove(gen, move.name, options, pokemon);
 }
