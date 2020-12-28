@@ -1,4 +1,4 @@
-import {extend, has, is, override} from '../utils';
+import {toID, extend, has, is, override} from '../utils';
 
 class Foo {
   x: number;
@@ -11,6 +11,11 @@ class Foo {
 }
 
 describe('utils', () => {
+  test('toID', () => {
+    expect(toID('HELLO WORLD')).toBe('helloworld');
+    expect(toID({id: 'foo'})).toBe('foo');
+  });
+
   test('override', () => {
     const foo = new Foo(5);
     expect(foo.bar()).toBe(6);
@@ -18,6 +23,7 @@ describe('utils', () => {
   });
 
   test('is', () => {
+    expect(is(undefined, 'hello')).toBe(false);
     expect(is('hello', 'hello')).toBe(true);
     expect(is('hello', 'goodbye')).toBe(false);
     expect(is('hello', 'hello', 'goodbye')).toBe(true);
@@ -27,6 +33,7 @@ describe('utils', () => {
   });
 
   test('has', () => {
+    expect(has(undefined, 'hello')).toBe(false);
     expect(has(['hello'], 'hello')).toBe(true);
     expect(has(['hello'], 'goodbye')).toBe(false);
     expect(has(['hello'], 'hello', 'goodbye')).toBe(true);

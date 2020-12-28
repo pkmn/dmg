@@ -63,7 +63,7 @@ export class Context {
   }
 
   toJSON() {
-    return this.toState();
+    return State.toJSON(this.toState());
   }
 
   static fromState(state: State, relevancy = new Relevancy()) {

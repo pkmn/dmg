@@ -348,6 +348,9 @@ export class State {
       setHiddenPowerIVs(gen, pokemon as {level: number; ivs: StatsTable}, [move]);
     }
 
+    // Stats
+    if (options.stats) pokemon.stats = extend({}, options.stats);
+
     // Boosts
     pokemon.boosts = {};
     if (options.boosts) {
@@ -381,8 +384,9 @@ export class State {
       pokemon.maxhp = options.maxhp;
     }
 
-    const computed =
-      typeof options.hpPercent === 'number' ? round(options.hpPercent * pokemon.maxhp) : undefined;
+    const computed = typeof options.hpPercent === 'number'
+      ? round(options.hpPercent * pokemon.maxhp / 100)
+      : undefined;
     pokemon.hp = typeof options.hp === 'number' ? options.hp
       : typeof computed === 'number' ? computed
       : pokemon.maxhp;
@@ -892,7 +896,7 @@ function validateStats(
     );
     if (actual !== pokemon.stats[stat]) {
       const s = gen.stats.display(stat);
-      throw new Error(`Expected a ${s} stat of ${pokemon.stats[stat]}, received: ${actual}`);
+      throw new Error(`Expected a ${s} stat of ${actual}, received: ${pokemon.stats[stat]}`);
     }
   }
   return pokemon;

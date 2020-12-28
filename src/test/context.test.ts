@@ -92,6 +92,10 @@ describe('Context', () => {
     context.move.crit = true;
     expect(serialize(state)).toEqual(before);
   });
+
+  test('toJSON', () => {
+    expect(() => JSON.stringify(newContext().context.toJSON())).not.toThrow();
+  });
 });
 
 function newContext() {
@@ -156,12 +160,5 @@ function newContext() {
 }
 
 function serialize(state: DeepReadonly<State>) {
-  return JSON.stringify({
-    gameType: state.gameType,
-    gen: state.gen.num,
-    p1: state.p1,
-    p2: state.p2,
-    move: state.move,
-    field: state.field,
-  });
+  return JSON.stringify(State.toJSON(state as State));
 }

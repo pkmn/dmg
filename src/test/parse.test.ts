@@ -63,6 +63,7 @@ describe('parse', () => {
     expect(parse(gens, '(gen 6) absol-mega [sucker punch] vs. clefable').p1.pokemon.species.name)
       .toEqual('Absol-Mega');
 
+    parse(gens, `${FLAGS} attackerFoo:0`, 'Unknown flag \'attackerfoo\'');
     expect(() => parse(gens, `${FLAGS} spikes:y`))
       .toThrow('Expected number for p2 Side Condition spikes');
     expect(() => parse(gens, `${FLAGS} weather=,`)).toThrow('as a flag for a condition');
@@ -80,7 +81,7 @@ describe('parse', () => {
     parse(gens, `${FLAGS} foo:5`, 'Unrecognized or invalid condition \'foo\'');
 
     expect(parse(
-      gens, `${FLAGS} isCrit:true --crit:yes --noCrit=false +crit --hasCrit=1 -crit:y`
+      gens, `${FLAGS} -isCrit +hasCrit isCrit:true --crit:yes --noCrit=false --hasCrit=1 -crit:y`
     ).move.crit).toBe(true);
     expect(parse(
       gens, `${FLAGS} isReflect:false --reflect:false --noReflect=true --hasReflect=0 -reflect:n`
@@ -105,7 +106,7 @@ describe('parse', () => {
     expect(state.p2.pokemon.hp).toEqual(110);
     expect(state.p2.pokemon.boosts).toEqual({def: -1});
     expect(state.p2.pokemon.evs).toEqual(gens.get(8).stats.fill({hp: 48, spd: 20}, 0));
-    expect(state.p2.pokemon.nature).toEqual('Gentle');
+    expect(state.p2.pokemon.nature).toEqual('Mild');
     expect(state.p2.pokemon.item).toEqual('choicespecs');
   });
 
@@ -117,24 +118,31 @@ describe('parse', () => {
 
     test('conditions/allies', () => {
       const state = parse(gens, `${FLAGS} p2=leechseed,powerspot,reflect,lightscreen,spikes=2 ` +
-        'p1Allies=aurabreak,battery,50,100,fairyaura,80 +friendguard');
+        'p1Allies=aurabreak,battery,50,100,fairyaura,80 +friendguard p1=reflect p1Status=burned');
+      expect(state.p1.sideConditions.reflect).toEqual({});
       expect(state.p2.sideConditions.reflect).toEqual({});
       expect(state.p2.sideConditions.lightscreen).toEqual({});
       expect(state.p2.sideConditions.spikes).toEqual({level: 2});
+      expect(state.p1.pokemon.status).toEqual('brn');
       expect(state.p2.pokemon.volatiles.leechseed).toEqual({});
-      expect(state.p2.active!.map(p => p!.ability)).toEqual(['powerspot', 'friendguard']);
+      expect(state.p2.active!.map(p => p!.ability)).toEqual(['friendguard', 'powerspot']);
       expect(state.p1.active!.map(p => p!.ability)).toEqual(['aurabreak', 'battery', 'fairyaura']);
       expect(state.p1.team!.map(p => p.species.baseStats.atk)).toEqual([50, 100, 80]);
 
       expect(() => parse(gens, `${PHRASE} p1allies=foo`)).toThrow('Unsupported or invalid ability');
       expect(() => parse(gens, `${PHRASE} p1allies=-1`)).toThrow('stat -1 is not within [0,255]');
+      parse(gens, `${PHRASE} p1=fairyaura:yes,fairyaura:no`, 'Conflicting values');
+
+      expect(parse(
+        gens, `${PHRASE} p2allies=fairyaura isFairyaura:0`, 'Conflicting values'
+      ).p2.active).toEqual([]);
     });
 
     test('stats', () => {
       expect(parse(
         gens,
         `252+ SpA ${PHRASE} p1Nature=Timid`,
-        'Conflicting values for p1 nature: Timid is +Spe not +SpA'
+        'Conflicting values for p1 nature: Timid is not (+SpA)'
       ).p1.pokemon.nature).toEqual('Timid');
 
       expect(() => parse(gens, `${FLAGS} p1AccuracyBoosts=y`))
@@ -215,6 +223,8 @@ describe('parse', () => {
       ).p1.pokemon.happiness).toEqual(250);
       expect(parse(gens, `+gravity ${PHRASE}`).field.pseudoWeather.gravity).toEqual({});
       parse(gens, `p1gender:X ${PHRASE}`, 'Invalid gender');
+      expect(parse(gens, `${PHRASE} p1HPPercent:80 p1HP:70%`, 'Conflicting values').p1.pokemon.hp)
+        .toEqual(209);
 
       parse(gens, `p1AddedType:Foo ${PHRASE}`, '\'Foo\' is not a valid addedType');
       expect(parse(gens, `p1AddedType:fire ${PHRASE}`).p1.pokemon.addedType).toEqual('Fire');
@@ -237,6 +247,12 @@ describe('parse', () => {
       expect(parse(gens, `${PHRASE} switching:in`).p2.pokemon.switching).toBe('in');
       expect(() => parse(gens, `${PHRASE} p1Switching:foo`)).toThrow('Invalid boolean flag value');
       expect(parse(gens, `${PHRASE} +switching`).p2.pokemon.switching).toBe('out');
+    });
+
+    test('spread', () => {
+      parse(gens, `${PHRASE} ivs=0/1/2/3`, 'Invalid number of IVs: 4');
+      parse(gens, `${PHRASE} evs=0/1/2/3/4/5/6`, 'Invalid number of EVs: 7');
+      expect(() => parse(gens, `${PHRASE} dvs=1/2/3/f/4`)).toThrow('Expected number');
     });
   });
 });

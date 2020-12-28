@@ -1,7 +1,7 @@
 import type {Generation, BoostName, StatName, NatureName, StatsTable} from '@pkmn/data';
 import {State} from './state';
 import {PseudoWeathers, SideConditions, Volatiles, Statuses} from './conditions';
-import {has, is} from './utils';
+import {toID, has, is} from './utils';
 import {computeStats} from './mechanics';
 import * as math from './math';
 
@@ -132,7 +132,7 @@ function encodeSide(
   const evs: Partial<StatsTable> = {};
   for (const stat of order) {
     const val = pokemon.evs?.[stat] ?? (gen.num <= 2 ? 252 : 0);
-    if (has || (gen.num <= 2 ? val < 252 : val > 0)) {
+    if (has(mandatory, stat) || (gen.num <= 2 ? val < 252 : val > 0)) {
       evs[stat] = val;
     }
   }
@@ -320,7 +320,7 @@ function encodeEVsAndNature(
 }
 
 function shouldAddAbility(pokemon: State.Pokemon) {
-  const abilities = Object.values(pokemon.species.abilities);
+  const abilities = Object.values(pokemon.species.abilities).map(toID);
   return pokemon.ability && (abilities.length > 1 || !abilities.includes(pokemon.ability));
 }
 

@@ -25,8 +25,10 @@ describe('encode', () => {
       return encoded;
     };
 
-    expect(enc('gengar @ specs [tbolt] vs. 172+ spd blissey'))
-      .toEqual('0 SpA Gengar @ Choice Specs [Thunderbolt] vs. 0 HP / 172+ SpD Blissey');
+    expect(enc('gengar @ specs [tbolt] vs. 172+ spd blissey')).toEqual(
+      '0 SpA Gengar @ Choice Specs [Thunderbolt] vs. 0 HP / 172+ SpD Natural Cure Blissey'
+    );
+
     // TODO Foul Play
     // TODO Body Press
     // TODO (needs final stats computation) Photon Geyser, Shell Side Arm

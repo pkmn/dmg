@@ -289,6 +289,15 @@ describe('State', () => {
         .toEqual({evasion: 5});
     });
 
+    test('stats', () => {
+      expect(() => State.createPokemon(gens.get(4), 'Pikachu', {
+        stats: {hp: 1, atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
+      })).toThrow('Expected a HP stat of 211, received: 1');
+      expect(() => State.createPokemon(gens.get(4), 'Pikachu', {
+        stats: {hp: 211, atk: 146, def: 96, spa: 136, spd: 116, spe: 216},
+      })).not.toThrow();
+    });
+
     test('gender', () => {
       expect(() => State.createPokemon(gens.get(1), 'Chansey', {gender: 'F'}))
         .toThrow('Gender does not exist');
@@ -336,6 +345,10 @@ describe('State', () => {
       expect(() => State.createMove(gens.get(1), 'Tackle', {name: 'Not Tackle'}))
         .toThrow('mismatch');
       expect(() => State.createMove(gens.get(1), 'Tackle 80', {name: 'Tackle 120'}))
+        .toThrow('mismatch');
+      expect(() => State.createMove(gens.get(1), 'Tackle 80', {basePower: 120}))
+        .toThrow('mismatch');
+      expect(() => State.createMove(gens.get(7), 'Z-Tackle', {useZ: false}))
         .toThrow('mismatch');
 
       let move = State.createMove(gens.get(1), 'Tackle');
@@ -496,6 +509,10 @@ describe('State', () => {
       expect(merged.nature).toBeUndefined();
       expect(merged.gender).toEqual('M');
       expect(merged.ivs!.atk).toEqual(29);
+
+      yes.moves = ['Hidden Power Fire', 'Hidden Power Ice'];
+      expect(() => State.mergeSet(gens.get(2), gengar, yes, no))
+        .toThrow('Cannot have more than one Hidden Power on a set');
     });
 
     test('marowak', () => {
