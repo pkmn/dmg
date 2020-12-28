@@ -187,8 +187,7 @@ function generateMove(gen: Generation, gameType: GameType, side: State.Side, prn
 
   const move = item?.zMoveFrom
     ? gen.moves.get(item.zMoveFrom)!
-    // : sample(prng, Array.from(gen.moves).filter(m => status ? m.status : !m.status)); // FIXME hidden power
-    : sample(prng, Array.from(gen.moves).filter(m => !m.id.startsWith('hiddenpower') && (status ? m.status : !m.status)));
+    : sample(prng, Array.from(gen.moves).filter(m => status ? m.status : !m.status));
   if (prng.randomChance(1, 16)) options.crit = true;
   if (move.multihit && typeof move.multihit !== 'number') {
     options.hits = prng.next(move.multihit[0], move.multihit[1]);

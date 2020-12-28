@@ -313,6 +313,10 @@ describe('State', () => {
         .toEqual(300);
       expect(() => State.createPokemon(gens.get(3), 'Suicune', {hp: -1, evs: {hp: 252}}))
         .toThrow('is not within [0,404]');
+      expect(() =>
+        State.createPokemon(gens.get(3), 'Suicune', {hpPercent: 50, hp: 201, evs: {hp: 252}})).toThrow('hp mismatch: \'202\' does not match \'201\'');
+      expect(State.createPokemon(gens.get(3), 'Suicune', {hpPercent: 75, evs: {hp: 252}}).hp)
+        .toEqual(303);
     });
 
     test('misc', () => {

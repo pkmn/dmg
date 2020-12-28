@@ -9,8 +9,10 @@ const gens = new Generations(Dex as any);
 
 describe('encode', () => {
   test('encodeURL', () => {
-    const raw = '{Gen 4} +1 252 SpA Gengar @ Choice Specs [Focus Blast] vs. 0 HP / 172+ SpD Blissey weather:Sand';
-    const encoded = '(Gen_4)_+1_252_SpA_Gengar_*_Choice_Specs_(Focus_Blast)_vs._0_HP_$_172+_SpD_Blissey_weather=Sand';
+    const raw = '{Gen 4} +1 252 SpA Gengar @ Choice Specs [Focus Blast] vs. ' +
+      '0 HP / 172+ SpD 74% Blissey weather:Sand';
+    const encoded = '(Gen_4)_+1_252_SpA_Gengar_*_Choice_Specs_(Focus_Blast)_vs._' +
+      '0_HP_$_172+_SpD_74~_Blissey_weather=Sand';
     expect(encodeURL(raw)).toEqual(encoded);
     expect(decodeURL(encodeURL(raw))).toEqual('[Gen 4]' + raw.slice(7));
   });

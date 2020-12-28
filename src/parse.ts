@@ -1,20 +1,5 @@
-/**
- * FIXME
- *
- * - handle all EVs in phrase
- * - handle Nature (when to simplify?)
- *
- * - 60% +CursedBody Gengar (convert HP to percent), include in phrase!
- *   - also handle percent as flag (if HP ends with %!)
- *
- * - `vs` and `vs.` split if phrase is present
- *
- * - tox:6 = toxicCounter in status
- *
- * - attackerIVs=0/31/31/31/31/0 attackerEVs=0/252/0/252/0/4 (ivs and evs if a vs-implicit)
- *
- * - support multi phrase with ; (how?)
- */
+// TODO ability activation...
+
 import type {
   BoostsTable,
   GameType,
@@ -30,7 +15,7 @@ import type {
 
 import {Conditions, ConditionKind, Player} from './conditions';
 import {State, bounded} from './state';
-import {decodeURL} from './encode';
+import {decodeURL, getNature, ABILITIES, STAT_ORDER, RBY_STAT_ORDER} from './encode';
 import {is, toID, has} from './utils';
 
 // Flags can either be specified as key:value or as 'implicits'
@@ -62,13 +47,14 @@ const boosts = (s: string) => [...stats(s).slice(1), `accuracy${s}`, `evasion${s
 // Known keys for the various Flags scopes above - in strict mode unknown keys causes errors, note
 // that scalar conditions (weather/terrain/status) are 'lifted' out of _ up to the top level
 const PLAYER_KNOWN = [
-  'species', 'level', 'ability', 'item', 'gender', 'nature', ...stats('ivs'), ...stats('dvs'),
-  ...stats('evs'), ...boosts('boosts'), 'happiness', 'hp', 'toxiccounter', 'status', 'addedtype',
-  'weight', 'weightkg', 'allies', ...Object.keys(DEFAULTS), _,
+  _, 'species', 'level', 'ability', 'item', 'gender', 'nature', 'ivs', ...stats('ivs'), 'dvs',
+  ...stats('dvs'), 'evs', ...stats('evs'), ...boosts('boosts'), 'happiness', 'hp', 'hppercent',
+  'toxiccounter', 'addedtype', 'weight', 'weightkg', 'allies', ...Object.keys(DEFAULTS),
+  ...Object.keys(ABILITIES),
 ];
 const KNOWN = {
   general: ['gametype'],
-  field: ['weather', 'terrain', 'pseudoweather', _],
+  field: [_, 'weather', 'terrain', 'pseudoweather'],
   p1: PLAYER_KNOWN,
   p2: PLAYER_KNOWN,
   move: ['name', 'hits', 'usez', 'z', 'crit', 'spread', 'consecutive'],
@@ -77,29 +63,30 @@ const KNOWN = {
 const BOOSTS = /(?:((?:\+|-)[1-6])?\s+)?/;
 const LEVEL = /(?:Lvl?\s*(\d{1,2})\s+)?/;
 // eslint-disable-next-line max-len
-const EVS = /(?:(?:\d{1,3}(?:\+|-)?\s*(?:HP|Atk|Def|SpA|SpD|Spe|Spc)(?:\s*\/\s*\d{1,3}(?:\+|-)?\s*(?:HP|Atk|Def|SpA|SpD|Spe|Spc)){0,5})?\s+)?/;
+const EVS = /((?:\d{1,3}(?:\+|-)?\s*(?:HP|Atk|Def|SpA|SpD|Spe|Spc)(?:\s*\/\s*\d{1,3}(?:\+|-)?\s*(?:HP|Atk|Def|SpA|SpD|Spe|Spc)){0,5})?\s+)?/;
+const HP = /(?:(100|\d{1,2}(?:\.\d+)?)%\s+)?/;
 // eslint-disable-next-line no-misleading-character-class
 const POKEMON_AND_ITEM = /(?:([A-Za-z][-0-9A-Za-zé%'’:. ]+)(?:\s*@\s*([A-Za-z][-0-9A-Za-z:' ]+))?)/;
+const MOVE_VS = /\s*\[([-0-9A-Za-z', ]+)\]\s+vs\.?\s+/;
+const VS = /\s+vs\.?\s+/i;
 
 const PHRASE = new RegExp([
-  // Attacker Boosts (1)
-  new RegExp(`^${BOOSTS.source}`),
-  // Attacker Level (2)
-  LEVEL,
-  // Attacker EVs (3)
-  /(?:(\d{1,3}(?:\+|-)?\s*(?:SpA|Atk))?\s+)?/,
-  // Attacker Pokemon (@ Attacker Item)? (4 & 5)
-  POKEMON_AND_ITEM,
-  // Move (6)
-  /\s*\[([-0-9A-Za-z', ]+)\]\s+vs\.?\s+/,
-  // Defender Boosts (7)
-  BOOSTS,
-  // Defender Level (8)
-  LEVEL,
-  // Defender EVs (9 & 10)
-  /(?:(\d{1,3}\s*HP)?\s*\/?\s*(\d{1,3}(?:\+|-)?\s*(?:SpD|Def))?\s+)?/,
-  // Defender Pokemon (@ Defender Item)? (11 & 12)
-  new RegExp(`${POKEMON_AND_ITEM.source}$`),
+  // Attacker
+  new RegExp(`^${BOOSTS.source}`), // 1
+  LEVEL, // 2
+  EVS, // 3
+  HP, // 4
+  POKEMON_AND_ITEM, // 5 & 6
+
+  // Move
+  MOVE_VS, // 7
+
+  // Defender
+  BOOSTS, // 8
+  LEVEL, // 9
+  EVS, // 10
+  HP, // 11
+  new RegExp(`${POKEMON_AND_ITEM.source}$`), // 12 & 13
 ].map(r => r.source).join(''), 'i');
 
 const QUOTED = /^['"].*['"]$/;
@@ -109,9 +96,10 @@ interface Phrase {
     id: ID;
     boosts?: number;
     level?: number;
-    nature?: '+' | '-';
-    // TODO hp?: number;
-    evs?: {atk?: number; spa?: number}; // TODO Partial<StatsTable>
+    nature?: {plus?: StatName; minus?: StatName};
+    hp?: number;
+    evs?: Partial<StatsTable>;
+    ability?: ID;
     item?: ID;
   };
   move: {
@@ -122,9 +110,10 @@ interface Phrase {
     id: ID;
     boosts?: number;
     level?: number;
-    nature?: '+' | '-';
-    // TODO hp?: number;
-    evs?: {hp?: number; def?: number; spd?: number}; // TODO Partial<StatsTable>
+    nature?: {plus?: StatName; minus?: StatName};
+    hp?: number;
+    evs?: Partial<StatsTable>;
+    ability?: ID;
     item?: ID;
   };
 }
@@ -137,7 +126,7 @@ interface Context {
     output?: Phrase | undefined;
   };
   flags?: {
-    input: Array<[ID, string]>;
+    input: Array<[ID, string, boolean]>;
     output?: {
       general: {[id: string]: string};
       field: {[id: string]: string | {[k in ConditionKind]?: {[id: string]: string}}};
@@ -162,15 +151,25 @@ export function parse(gens: Generation | Generations, s: string, strict = false)
   const argv = tokenize(decodeURL(s));
 
   // Raw flag key:val in the order they appeared in `s`
-  const raw: Array<[ID, string]> = [];
+  const raw: Array<[ID, string, boolean]> = [];
   // Non-flag elements which are to be parsed as the phrase
   const fragments: string[] = [];
 
+  // Whether a 'vs' or 'vs.' was detected when parsing flags. Any implicitly scoped flag before the
+  // 'vs' token will be scoped to p1 and any after the token will be scoped to p2. Technically 'vs'
+  // can be used on its own absent a valid phrase - we don't really care enough to verify this, and
+  // in strict mode it gets checked anyway by other means
+  let vs = false;
   // Because disambiguating implicits depends on the generation (boo!) we must make two passes over
   // the args - once to clean them up and figure out the ordering while determining which gen to
   // use, followed by second pass with disambiguates and scopes the parameters
   let g: GenerationNum | undefined = 'num' in gens ? gens.num : undefined;
   for (const arg of argv) {
+    if (VS.test(arg)) {
+      vs = true;
+      fragments.push(arg);
+      continue;
+    }
     const parsed = parseFlag(arg);
     if (!parsed) {
       fragments.push(arg);
@@ -183,7 +182,7 @@ export function parse(gens: Generation | Generations, s: string, strict = false)
       if (n) g = n;
       continue;
     }
-    raw.push([id, val]);
+    raw.push([id, val, vs]);
   }
 
   const joined = fragments.join(' ');
@@ -191,14 +190,13 @@ export function parse(gens: Generation | Generations, s: string, strict = false)
   const [gen, gameType, phrase] = parseGen(gens, g, joined, strict, context);
   context.gen = gen.num;
   context.phrase = {input: phrase};
-  const flags = parseFlags(gen, raw, strict, context);
+  const flags = parseFlags(gen, vs, raw, strict, context);
   context.flags.output = toContext(flags);
 
   // Useful to include in error messages to reveal how `s` was parsed
-  const parsed = phrase ? parsePhrase(phrase) : undefined;
+  const parsed = phrase ? parsePhrase(gen, phrase) : undefined;
   context.phrase.output = parsed;
 
-  // context = toContext(s, phrase, parsed, raw, flags);
   if (phrase && !parsed && strict) {
     throw new ParseError(`Unable to parse phrase: '${phrase}'`, context);
   }
@@ -285,7 +283,13 @@ const CONDITIONS: {[id: string]: ConditionKind} = {
   status: 'Status',
 };
 
-function parseFlags(gen: Generation, raw: Array<[ID, string]>, strict: boolean, context: Context) {
+function parseFlags(
+  gen: Generation,
+  vsScope: boolean,
+  raw: Array<[ID, string, boolean]>,
+  strict: boolean,
+  context: Context
+) {
   const flags: Flags = {general: {}, field: {[_]: {}}, p1: {[_]: {}}, p2: {[_]: {}}, move: {}};
 
   const setFlag = (k: keyof Flags, id: ID, val: string) => {
@@ -303,7 +307,8 @@ function parseFlags(gen: Generation, raw: Array<[ID, string]>, strict: boolean, 
     }
   };
 
-  for (let [id, val] of raw) {
+  for (let [id, val, afterVs] of raw) {
+    const scope = vsScope ? (afterVs ? 'p2' : 'p1') : undefined;
     if (UNAMBIGUOUS[id]) {
       if (is(id, 'singles', 'doubles')) {
         val = id;
@@ -316,7 +321,9 @@ function parseFlags(gen: Generation, raw: Array<[ID, string]>, strict: boolean, 
         setFlag(type, id, val);
       }
     } else if (DEFAULTS[id]) {
-      setFlag(DEFAULTS[id], id, val);
+      setFlag(scope || DEFAULTS[id], id, val);
+    } else if (ABILITIES[id]) {
+      setFlag(scope || ABILITIES[id], id, val);
     } else if (id === 'attacker' || id === 'p1') {
       parseConditionFlag(gen, flags, val, strict, context, 'p1');
     } else if (id === 'defender' || id === 'p2') {
@@ -337,7 +344,7 @@ function parseFlags(gen: Generation, raw: Array<[ID, string]>, strict: boolean, 
       setFlag('p2', id, val);
       continue;
     } else {
-      parseConditionFlag(gen, flags, `${id}=${val}`, strict, context);
+      parseConditionFlag(gen, flags, `${id}=${val}`, strict, context, scope);
     }
   }
 
@@ -347,9 +354,12 @@ function parseFlags(gen: Generation, raw: Array<[ID, string]>, strict: boolean, 
 // Conditions that are not boolean flags
 const CONDITION_NON_BOOLS = [
   'echoedvoice', 'spikes', 'toxicspikes', 'slowstart', 'autotomize', 'stockpile',
+  'badlypoisoned', 'badpoisoned', 'toxic', 'tox',
 ] as ID[];
 // Boolean flags that are not conditions
-const NON_CONDITION_BOOLS = ['usez', 'z', 'crit', 'spread'] as ID[];
+const NON_CONDITION_BOOLS = [
+  'usez', 'z', 'crit', 'spread', ...Object.keys(DEFAULTS), ...Object.keys(ABILITIES),
+] as ID[];
 
 // Flags which canonically take an 's' suffix
 const PLURALS = ['ev', 'iv', 'dv', 'boost'] as ID[];
@@ -411,6 +421,16 @@ function parseConditionFlag(
 
     const condition = Conditions.get(gen, id);
     if (!condition) {
+      const a = ABILITIES[id];
+      if (!kind && scope !== 'field' && a) {
+        const cscope = scope ?? a;
+        val = asBoolean(val) ? '1' : '0';
+        if (strict && flags[cscope][id] && flags[cscope][id] !== val) {
+          throw error(`Conflicting values for flag '${id}': '${flags[cscope][id]}' vs. '${val}'`);
+        }
+        flags[cscope][id] = val;
+        continue;
+      }
       if (strict) throw error(`Unrecognized or invalid condition '${id}' from '${s}'`);
       continue;
     }
@@ -433,6 +453,18 @@ function parseConditionFlag(
 
     if (is(ckind, 'Weather', 'Terrain', 'Status')) {
       id = toID(ckind);
+      if (name === 'tox') {
+        const n = Number(val);
+        if (!isNaN(n) && n > 1) {
+          if (strict && flags[cscope].toxiccounter && flags[cscope].toxiccounter !== val) {
+            throw error(
+              'Conflicting values for flag \'toxiccounter\': ' +
+              `'${flags[cscope].toxiccounter}' vs. '${val}'`
+            );
+          }
+          flags[cscope].toxiccounter = val;
+        }
+      }
       val = toID(name);
       if (strict && flags[cscope][id] && flags[cscope][id] !== val) {
         throw error(`Conflicting values for flag '${id}': '${flags[cscope][id]}' vs. '${val}'`);
@@ -456,59 +488,104 @@ function parseConditionFlag(
 // Consecutive uses can be specified as part of Metronome
 const METRONOME_SUGAR = /^\s*Metronome\s*:?\s*(\d+)?\s*$/i;
 
-function parsePhrase(s: string) {
+function parsePhrase(gen: Generation, s: string) {
   const m = PHRASE.exec(s);
   if (!m) return undefined;
 
-  const int = (n: string) => {
-    const i = parseInt(n);
-    return isNaN(i) ? undefined : i;
-  };
-
   let item: ID | undefined = undefined;
   let consecutive: number | undefined = undefined;
-  if (m[5]) {
-    const ms = METRONOME_SUGAR.exec(m[5]);
+  if (m[6]) {
+    const ms = METRONOME_SUGAR.exec(m[6]);
     if (ms) {
       consecutive = Number(ms[1]) || undefined;
       item = 'metronome' as ID;
     } else {
-      item = toID(m[5]) || undefined;
+      item = toID(m[6]) || undefined;
     }
   }
 
-  const phrase: Phrase = {
+  return {
     p1: {
-      id: toID(m[4]),
-      boosts: int(m[1]),
-      level: int(m[2]),
+      boosts: parseInteger(m[1]),
+      level: parseInteger(m[2]),
+      ...parseSpreadValues(gen, 'ev', false, m[3]),
+      hp: parseRational(m[4]),
+      ...parsePokemonAndAbility(gen, m[5]),
       item,
     },
     move: {
-      id: toID(m[6]),
+      id: toID(m[7]),
       consecutive,
     },
     p2: {
-      id: toID(m[11]),
-      boosts: int(m[7]),
-      level: int(m[8]),
-      item: toID(m[12]) || undefined,
+      boosts: parseInteger(m[8]),
+      level: parseInteger(m[9]),
+      ...parseSpreadValues(gen, 'ev', false, m[3]),
+      hp: parseRational(m[11]),
+      ...parsePokemonAndAbility(gen, m[12]),
+      item: toID(m[13]) || undefined,
     },
-  };
+  } as Phrase;
+}
 
-  if (m[3]) {
-    phrase.p1.nature = m[3].includes('+') ? '+' : m[3].includes('-') ? '-' : undefined;
-    phrase.p1.evs = {};
-    phrase.p1.evs[toID(m[3]).endsWith('atk') ? 'atk' : 'spa'] = int(m[3]);
+function parseInteger(s: string) {
+  const n = parseInt(s);
+  return isNaN(n) ? undefined : n;
+}
+
+function parseRational(s: string) {
+  const n = parseFloat(s);
+  return isNaN(n) ? undefined : n;
+}
+
+function parsePokemonAndAbility(gen: Generation, s: string) {
+  let ability = '';
+  let species = toID(s);
+  const split = s.split(/\s+/);
+  while (species && !gen.species.get(species)) {
+    ability += split.shift();
+    species = toID(split.join(''));
   }
-  if (m[9]) phrase.p2.evs = {hp: int(m[9])};
-  if (m[10]) {
-    phrase.p2.nature = m[10].includes('+') ? '+' : m[10].includes('-') ? '-' : undefined;
-    phrase.p2.evs = phrase.p2.evs || {};
-    phrase.p2.evs[toID(m[10]).endsWith('def') ? 'def' : 'spd'] = int(m[10]);
+  return {id: species ? species : toID(s), ability: ability ? toID(ability) : undefined};
+}
+
+function parseSpreadValues(
+  gen: Generation,
+  type: 'iv' | 'ev' | 'dv',
+  compact: boolean,
+  s?: string,
+  checks?: Checks,
+) {
+  if (!s) return void checks?.error(true, `No value for ${type.toUpperCase()}s`);
+
+  let plus: StatName | undefined;
+  let minus: StatName | undefined;
+  const vals: Partial<StatsTable> = {};
+
+  const split = s.split('/');
+  if (compact && (split.length < 5 || split.length > 6)) {
+    return void checks?.error(true, `Invalid number of ${type.toUpperCase()}s: ${split.length}`);
+  }
+  const order = gen.num === 1 ? RBY_STAT_ORDER : STAT_ORDER;
+  for (const [i, v] of split.entries()) {
+    let [val, name] = v.trim().split(/\s+/);
+    const stat = (name && gen.stats.get(name)) || (compact ? order[i] : undefined);
+    if (!stat) return void checks?.error(true, `Unknown stat for ${type.toUpperCase()}s`);
+    if (type === 'ev') {
+      if (val.endsWith('+')) {
+        val = val.slice(0, -1);
+        plus = stat;
+      } else if (val.endsWith('-')) {
+        val = val.slice(0, -1);
+        minus = stat;
+      }
+    }
+
+    if (isNaN(+val)) return void checks?.number(`${type.toUpperCase()}s`, val);
+    vals[stat] = +val;
   }
 
-  return phrase;
+  return type === 'ev' ? {evs: vals, nature: plus || minus ? {plus, minus} : undefined} : vals;
 }
 
 interface Checks {
@@ -648,43 +725,49 @@ function buildSide(
     }
   }
 
-  let stat: StatName | undefined;
-  if (p?.evs) {
-    for (const s of gen.stats) {
-      if (is(s, 'hp', 'spe')) continue;
-      if (s in p.evs) {
-        stat = s;
-        break;
-      }
-    }
-  }
+  // This isn't correct for 'weird' moves, but this doesn't  need to be exhaustive - users
+  // have a plethora of ways they can use to be more explicit here
+  const m = gen.moves.get(move);
+  const stat = !m ? undefined : side === 'p1'
+    ? (m.category === 'Physical' ? 'atk' : 'spa')
+    : ((m.defensiveCategory ?? m.category) === 'Physical' ? 'def' : 'spd');
+  // This can really only happen with an invalid move....
+  checks.error(!stat && !!p?.boosts, `Ambiguous boosts ${p?.boosts} for ${side}`);
+
+  const spread = parseSpreadValues(gen, 'ev', true, f.evs, checks) as {
+    evs: Partial<StatsTable & {spc?: number}>;
+    nature?: {plus?: StatName; minus?: StatName};
+  };
+
+  const evs = spread.evs;
+  const plusMinus = spread.nature || p?.nature;
+  checks.conflict('nature buff', p?.nature?.plus, spread.nature?.plus);
+  checks.conflict('nature nerf', p?.nature?.minus, spread.nature?.minus);
 
   let nature: string | undefined = undefined;
-  if (p?.nature && f.nature) {
+  if (plusMinus && f.nature) {
     nature = f.nature;
     const n = gen.natures.get(f.nature);
     if (n) { // If the nature is invalid State.createPokemon will throw an error anyway
-      const actual = n[p.nature === '+' ? 'plus' : 'minus']!;
-      checks.error(actual !== stat, `Conflicting values for ${side} nature: ${f.nature} is ` +
-        `${p.nature}${gen.stats.display(actual)} not ${p.nature}${gen.stats.display(stat!)}`);
+      const expected = `(${[
+        plusMinus.plus ? `+${gen.stats.display(plusMinus.plus)}` : '',
+        plusMinus.minus ? `+${gen.stats.display(plusMinus.minus)}` : '',
+      ].filter(Boolean).join(', ')})`;
+      checks.error(!!(
+        (plusMinus.plus && plusMinus.plus !== n.plus) ||
+        (plusMinus.minus && plusMinus.minus !== n.minus)),
+      `Conflicting values for ${side} nature: ${f.nature} is not ${expected}`);
     }
   } else if (p?.nature) {
-    if (stat === 'atk') {
-      nature = p.nature === '+' ? 'Adamant' : 'Modest';
-    } else if (stat === 'spa') {
-      nature = p.nature === '+' ? 'Modest' : 'Adamant';
-    } else if (stat === 'def') {
-      nature = p.nature === '+' ? 'Lax' : 'Gentle';
-    } else if (stat === 'spd') {
-      nature = p.nature === '+' ? 'Gentle' : 'Lax';
-    }
+    nature = getNature(p.nature, p?.evs);
   } else if (f.nature) {
     nature = f.nature;
   }
 
-  const evs: Partial<StatsTable & {spc: number}> = {};
-  const dvs: Partial<StatsTable & {spc: number}> = {};
-  const ivs: Partial<StatsTable & {spc: number}> = {};
+  const dvs =
+    parseSpreadValues(gen, 'dv', true, f.dvs, checks) as Partial<StatsTable & {spc?: number}>;
+  const ivs =
+    parseSpreadValues(gen, 'iv', true, f.ivs, checks) as Partial<StatsTable & {spc?: number}>;
   // eslint-disable-next-line @typescript-eslint/no-shadow
   const boosts: Partial<BoostsTable & {spc: number}> = {
     accuracy: checks.number(`${side} accuracy boosts`, f.accuracyboosts),
@@ -692,30 +775,18 @@ function buildSide(
   };
   for (const s of [...gen.stats, 'spc'] as (StatName | 'spc')[]) {
     const ev = (p?.evs as StatsTable & {spc: number} | undefined)?.[s];
-    const d = gen.stats.display(s); // FIXME spc
+    const d = gen.stats.display(s);
+    // ev[s] may already be populated from the parseSpreadValues call above
+    evs[s] = checks.number(`${side} ${d} EVs`, evs[s], ev);
     evs[s] = checks.number(`${side} ${d} EVs`, ev, f[`${s}evs`] as unknown);
-    dvs[s] = checks.number(`${side} ${d} DVs`, f[`${s}dvs`]);
-    ivs[s] = checks.number(`${side} ${d} IVs`, f[`${s}ivs`]);
+
+    dvs[s] = checks.number(`${side} ${d} DVs`, dvs[s], f[`${s}dvs`] as unknown);
+    ivs[s] = checks.number(`${side} ${d} IVs`, ivs[s], f[`${s}ivs`] as unknown);
 
     if (s === 'hp') continue;
 
     const boost = stat === s ? p?.boosts : undefined;
     boosts[s] = checks.number(`${side} ${d} boosts`, boost, f[`${s}boosts`] as any);
-  }
-
-  // Boosts was specified without any EVs - attempt to infer what stat it was meant to boost
-  // based on the move being used. BUG: This isn't correct for 'weird' moves, but this doesn't
-  // need to be exhaustive - users have numerous ways they can be more explicit here
-  if (!stat && p?.boosts) {
-    const m = gen.moves.get(move);
-    if (m) {
-      const s = side === 'p1'
-        ? (m.category === 'Physical' ? 'atk' : 'spa')
-        : ((m.defensiveCategory ?? m.category) === 'Physical' ? 'def' : 'spd');
-      boosts[s] = checks.number(`${side} ${s} boosts`, `${p?.boosts}`, f[`${s}boosts`]);
-    } else {
-      checks.error(true, `Ambiguous boosts ${p?.boosts} for ${side}`);
-    }
   }
 
   let addedType: TypeName | undefined = undefined;
@@ -738,6 +809,11 @@ function buildSide(
     }
   }
 
+  if (f?.hp.endsWith('%')) {
+    delete f.hp;
+    f.hppercent = checks.conflict(`${side} HP percent`, f.hppercent, f.hp.slice(0, -1))!;
+  }
+
   const pokemon = State.createPokemon(gen, name, {
     level: checks.number(`${side} level`, p?.level, f.level as unknown),
     item: checks.conflict(`${side} item`, p?.item, f.item),
@@ -745,6 +821,7 @@ function buildSide(
     gender,
     happiness: checks.number(`${side} happiness`, f.happiness),
     hp: checks.number(`${side} HP`, f.hp),
+    hpPercent: checks.number(`${side} HP percent`, p?.hp, f.hppercent as unknown),
     nature,
     evs,
     weightkg: checks.number(`${side} weight`, f.weightkg, f.weight),
@@ -762,7 +839,11 @@ function buildSide(
     volatiles: fillConditions('Volatile Status'),
   }, move);
 
-  const abilities = [];
+  const abilities: ID[] = [];
+  const noabilities: ID[] = [];
+  for (const a in ABILITIES) {
+    if (f[a]) (asBoolean(f[a]) ? abilities : noabilities).push(toID(a));
+  }
   const atks = [];
   if (f.allies) {
     for (const v of f.allies.split(',')) {
@@ -770,7 +851,12 @@ function buildSide(
       if (!isNaN(n)) {
         atks.push(n);
       } else {
-        abilities.push(v);
+        const id = toID(v);
+        if (noabilities.includes(id)) {
+          checks.conflict(`${side} ally ability`, 'false', 'true');
+        } else if (!abilities.includes(id)) {
+          abilities.push(id);
+        }
       }
     }
   }

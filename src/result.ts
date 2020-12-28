@@ -52,6 +52,7 @@ export namespace Relevancy {
     // types are always relevant (though usually elided in output)
     // addedType is always relevant
 
+    // TODO hp/maxhp is only relevant for attacker under certain circumstances!
     // hp is relevant for the defender, but is checked when calculating OHKO chance
 
     // certain moves/conditions change which stats are relevant
@@ -110,6 +111,10 @@ export class Result {
 
   get context(): Context {
     return this.hits[this.hits.length - 1].context;
+  }
+
+  simplified(): State {
+    return this.hits[this.hits.length - 1].simplified();
   }
 
   get range() {
@@ -349,6 +354,7 @@ export class HitResult {
     for (const id in state.volatiles) {
       if (relevant.volatiles[id]) pokemon.volatiles[id] = extend({}, state.volatiles[id]);
     }
+    // FIXME Hidden Power...
     for (const s in relevant.stats) {
       const stat = s as StatName;
       pokemon.evs![stat] = state.evs?.[stat] ?? (gen.num <= 2 ? 252 : 0);

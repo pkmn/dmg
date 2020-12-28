@@ -18,7 +18,7 @@ import type {
 } from '@pkmn/data';
 
 import {WeatherName, TerrainName, Conditions, ConditionKind} from './conditions';
-import {floor} from './math';
+import {floor, round} from './math';
 import {is, has, extend, DeepPartial, toID} from './utils';
 
 type OverriddenFields =
@@ -31,6 +31,7 @@ export interface PokemonOptions extends Partial<Omit<State.Pokemon, OverriddenFi
   ability?: string;
   nature?: string;
   status?: string;
+  hpPercent?: number;
   volatiles?: string[] | State.Pokemon['volatiles'];
   evs?: Partial<StatsTable & {spc: number}>;
   ivs?: Partial<StatsTable & {spc: number}>;
@@ -154,7 +155,7 @@ export namespace State {
   }
 }
 
-// Moves can include a base power override in their name, eg. "Present 80" or a "Z-" prefix.
+// Moves can include a base power override in their name, eg. "Present 80" or a "Z-" prefix
 const MOVE_SUGAR = /^\s*(Z\s*-?\s*)?(\D*)(\d+)?\s*$/i;
 
 /**
@@ -188,6 +189,7 @@ export class State {
     this.field = field;
   }
 
+  /** Serializes State, collapsing immutable data structurs that have circular references. */
   static toJSON(s: State) {
     const move = {} as any;
     const base = s.gen.moves.get(s.move.name);
@@ -378,9 +380,19 @@ export class State {
       }
       pokemon.maxhp = options.maxhp;
     }
-    pokemon.hp = typeof options.hp === 'number' ? options.hp : pokemon.maxhp;
+
+    const computed =
+      typeof options.hpPercent === 'number' ? round(options.hpPercent * pokemon.maxhp) : undefined;
+    pokemon.hp = typeof options.hp === 'number' ? options.hp
+      : typeof computed === 'number' ? computed
+      : pokemon.maxhp;
     if (!(pokemon.hp >= 0 && pokemon.hp <= pokemon.maxhp)) {
       throw new RangeError(`hp ${pokemon.hp} is not within [0,${pokemon.maxhp}]`);
+    }
+    if (typeof options.hp === 'number' && typeof computed === 'number') {
+      if (pokemon.hp !== computed) {
+        throw new Error(`hp mismatch: '${computed}' does not match '${pokemon.hp}'`);
+      }
     }
 
     // Miscellaneous
@@ -479,8 +491,13 @@ export class State {
       }
     }
 
-    // FIXME need to turn off handlers!!!!!
     extend(move, base, options); // whatever, there are too many move fields
+    // If @pkmn/sim is used as the backing Dex, extend might copy over the simulators handlers which
+    // conflict with our own so we iterate through the top level keys (which are the only handlers
+    // which could conflict) and yeet any which are functions
+    for (const k in move) {
+      if (typeof k === 'function') delete move[k];
+    }
 
     move.crit = options.crit ?? base.willCrit;
     if (typeof options.magnitude === 'number') {

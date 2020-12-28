@@ -10,9 +10,7 @@ export {encode} from './encode';
 // convenience scoping
 export {inGen, inGens, Scope} from './gens';
 
-// UI support
+// UI and mod support
 export * from './conditions';
-
-// mod support
 export {override} from './utils';
 export {Applier, Handler, HANDLERS as Handlers, computeStats} from './mechanics';
