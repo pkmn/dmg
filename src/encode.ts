@@ -44,11 +44,10 @@ export function encode(state: State, url = false) {
   const consecutive = encodeSide(gen, 'p1', stats, normal, state, buf);
 
   // Move
-  const m = gen.moves.get(move.id)!;
-  let moveName: string = m.name;
-  if (move.useZ) {
+  let moveName: string = move.name;
+  if (move.useZ && !move.isZ) {
     // Some Z-Moves have aliases which conflict with the 'Z-' sugar
-    if (!gen.moves.get(`Z-${moveName}`)) {
+    if (gen.moves.get(`Z-${moveName}`)) {
       buf.push('+Z');
     } else {
       moveName = `Z-${moveName}`;
@@ -56,7 +55,7 @@ export function encode(state: State, url = false) {
   }
   if (move.magnitude && moveName === 'Magnitude') {
     moveName = `${moveName} ${move.magnitude}`;
-  } else if (move.basePower !== m.basePower) {
+  } else if (move.id !== 'hiddenpower' && move.basePower !== gen.moves.get(move.id)!.basePower) {
     moveName = `${moveName} ${move.basePower}`;
   }
   buf.push(`[${moveName}]`);
@@ -115,7 +114,7 @@ function encodeSide(
     }
   } else {
     const boost = pokemon.boosts[stats[p]]!;
-    buf.push(boost > 0 ? `+$${boost}` : `${boost}`);
+    buf.push(boost > 0 ? `+${boost}` : `${boost}`);
   }
 
   // Level
@@ -147,13 +146,13 @@ function encodeSide(
     pokemon.level
   );
   if (pokemon.hp !== pokemon.maxhp) {
-    const hp = math.round(pokemon.hp / pokemon.maxhp);
-    buf.push(math.round(hp * pokemon.maxhp) === pokemon.hp ? `${hp}%` : `HP:${pokemon.hp}`);
+    const hp = math.round(pokemon.hp * 1000 / pokemon.maxhp) / 10;
+    buf.push(math.round(hp * pokemon.maxhp / 100) === pokemon.hp ? `${hp}%` : `HP:${pokemon.hp}`);
   }
 
   // Status
   if (pokemon.status === 'tox') {
-    buf.push(pokemon.statusData?.toxicTurns && pokemon.statusData.toxicTurns > 1
+    buf.push(pokemon.statusData?.toxicTurns && pokemon.statusData.toxicTurns > 0
       ? `Toxic:${pokemon.statusData.toxicTurns}`
       : '+Toxic');
   } else if (pokemon.status) {
@@ -207,13 +206,14 @@ function encodeSide(
     let expected = gen.stats.fill({}, 31);
     // Hidden Power changes the expected IVs - if hypertraining isn't possible the IVs should match
     // the default Hidden Power IVs (which requires a special case for Gen 2...)
-    if (state.move.id.startsWith('hiddenpower') && (gen.num <= 6 || pokemon.level !== 100)) {
+    if (p === 'p1' && state.move.id === 'hiddenpower' && (gen.num <= 6 || pokemon.level !== 100)) {
       const type = gen.types.get(state.move.id.slice(11)) ??
         gen.types.get(gen.types.getHiddenPower(gen.stats.fill({...pokemon.ivs}, 31)).type);
       if (gen.num <= 2) {
         for (const stat of gen.stats) {
           expected[stat] = type?.HPdvs?.[stat] ? gen.stats.toIV(type.HPdvs[stat]!) : 31;
         }
+        expected.hp = gen.stats.toIV(gen.stats.getHPDV(expected));
       } else {
         expected = gen.stats.fill({...type!.HPivs}, 31);
       }
@@ -225,7 +225,7 @@ function encodeSide(
     const ivs = [];
     for (const stat of order) {
       let val = pokemon.ivs[stat];
-      ivs.push(val || 31);
+      ivs.push(val ?? 31);
       if (val === undefined) continue;
       if (gen.num <= 2) val = gen.stats.toIV(gen.stats.toDV(val));
       if (val !== expected[stat]) iv = iv === false ? stat : true;
@@ -235,8 +235,8 @@ function encodeSide(
     if (iv) {
       if (typeof iv === 'string') {
         buf.push(gen.num >= 3
-          ? `${gen.stats.display(iv)}IVs:${pokemon.ivs[iv]}`
-          : `${gen.stats.display(iv)}DVs:${gen.stats.toDV(pokemon.ivs[iv]!)}`);
+          ? `${gen.stats.display(iv)}IV:${pokemon.ivs[iv]}`
+          : `${gen.stats.display(iv)}DV:${gen.stats.toDV(pokemon.ivs[iv]!)}`);
       } else {
         buf.push(gen.num >= 3
           ? `IVs:${ivs.join('/')}`
@@ -257,7 +257,7 @@ function encodeSide(
   for (const active of (state[p].active || [])) {
     if (active?.ability) {
       if (!ABILITIES[active.ability]) eligible = false;
-      allies.push(gen.abilities.get(active.ability)!.name);
+      allies.push(display(gen.abilities.get(active.ability)!.name));
     }
   }
   for (const member of (state[p].team || [])) {
@@ -299,7 +299,9 @@ function encodeEVsAndNature(
 ) {
   const n = nature ? gen.natures.get(nature) : undefined;
   if (n?.plus) {
-    if (getNature({plus: n.plus, minus: n.minus}, evs) === n.name) {
+    const plus = n.plus in evs ? n.plus : undefined;
+    const minus = n.minus! in evs ? n.minus : undefined;
+    if (getNature({plus, minus}, evs) === n.name) {
       const b = [];
       for (const stat of order) {
         if (!(stat in evs)) continue;
@@ -307,16 +309,16 @@ function encodeEVsAndNature(
         b.push(`${evs[stat]}${m} ${gen.stats.display(stat)}`);
       }
       buf.push(b.join(' / '));
+      return;
     }
-  } else {
-    const b = [];
-    for (const stat of order) {
-      if (!(stat in evs)) continue;
-      b.push(`${evs[stat]} ${gen.stats.display(stat)}`);
-    }
-    if (b.length) buf.push(b.join(' / '));
-    if (n?.plus) buf.push(`Nature:${n.name}`);
   }
+  const b = [];
+  for (const stat of order) {
+    if (!(stat in evs)) continue;
+    b.push(`${evs[stat]} ${gen.stats.display(stat)}`);
+  }
+  if (b.length) buf.push(b.join(' / '));
+  if (n?.plus) buf.push(`Nature:${n.name}`);
 }
 
 function shouldAddAbility(pokemon: State.Pokemon) {

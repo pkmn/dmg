@@ -39,7 +39,7 @@
     "bundle": "microbundle --name dmg --format umd --tsconfig bundle.json --strict",
     "build": "npm run compile",
     "test": "jest",
-    "testXXX": "jest -t integration",
+    "test:integration": "npm run test && node integration",
     "prepare": "npm run build",
     "pretest": "npm run build",
     "posttest": "npm run lint"

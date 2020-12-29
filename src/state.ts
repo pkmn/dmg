@@ -156,7 +156,7 @@ export namespace State {
 }
 
 // Moves can include a base power override in their name, eg. "Present 80" or a "Z-" prefix
-const MOVE_SUGAR = /^\s*(Z\s*-?\s*)?(\D*)(\d+)?\s*$/i;
+export const MOVE_SUGAR = /^\s*(Z\s*-?\s*)?(\D*)(\d+)?\s*$/i;
 
 /**
  * The external API representing the state of the battle used as input to the calculator. Internally
@@ -196,7 +196,7 @@ export class State {
     for (const key in s.move) {
       if (Object.prototype.hasOwnProperty.call(s.move, key)) {
         const val = s.move[key as keyof State.Move];
-        if (!base || !(key in base) || val !== base[key as keyof Move]) {
+        if (key === 'name' || !base || !(key in base) || val !== base[key as keyof Move]) {
           move[key] = val;
         }
       }
@@ -744,7 +744,7 @@ function setSpc(
   }
 }
 
-function setGender(
+export function setGender(
   gen: Generation,
   pokemon: {species: Specie; ivs: StatsTable; gender?: GenderName},
   name?: GenderName,

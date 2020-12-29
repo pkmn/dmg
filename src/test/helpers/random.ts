@@ -4,6 +4,7 @@ import {
   Generation,
   GenerationNum,
   Generations,
+  Specie,
   StatsTable,
   toID,
 } from '@pkmn/data';
@@ -18,7 +19,14 @@ import {
   Volatiles,
   Weathers,
 } from '../../conditions';
-import {State, FieldOptions, SideOptions, PokemonOptions, MoveOptions} from '../../state';
+import {
+  FieldOptions,
+  MoveOptions,
+  PokemonOptions,
+  setGender,
+  SideOptions,
+  State,
+} from '../../state';
 import {is} from '../../utils';
 import * as math from '../../math';
 
@@ -70,7 +78,8 @@ function generateSide(gen: Generation, gameType: GameType, prng: PRNG) {
     if (options.sideConditions[sc].level === 1) options.sideConditions[sc] = {};
   }
   if (gameType === 'doubles' && prng.randomChance(1, 10)) {
-    options.abilities = [sample(prng, ALLY_ABILITIES)];
+    const a = sample(prng, ALLY_ABILITIES);
+    if (gen.abilities.get(a)) options.abilities = [a];
   }
   // NOTE: team is filled in only if Beat Up ends up being the move selected
   const pokemon = generatePokemon(gen, prng);
@@ -115,7 +124,7 @@ function generatePokemon(gen: Generation, prng: PRNG) {
   if (prng.randomChance(1, 100)) options.addedType = sample(prng, ['Grass', 'Ghost']);
 
   const nature = gen.num >= 3 ? sample(prng, Array.from(gen.natures)) : undefined;
-  options.nature = nature && (nature.plus ? nature.name : 'Serious');
+  options.nature = nature && (nature.plus ? nature.name : undefined);
   options.ivs = {};
   options.evs = {};
   const stats: Partial<StatsTable> = {};
@@ -185,9 +194,37 @@ function generateMove(gen: Generation, gameType: GameType, side: State.Side, prn
   const status = prng.randomChance(1, 200);
   const item = (pokemon.item || undefined) && gen.items.get(pokemon.item!);
 
-  const move = item?.zMoveFrom
+  let move = item?.zMoveFrom
     ? gen.moves.get(item.zMoveFrom)!
     : sample(prng, Array.from(gen.moves).filter(m => status ? m.status : !m.status));
+
+  if (move.id === 'hiddenpower' && move.name !== 'Hidden Power') {
+    // Change our IVs to match our Hidden Power or change the Hidden Power type to match our IVs
+    if (prng.randomChance(3, 5)) {
+      const type = gen.types.get(toID(move.name).slice(11))!;
+      pokemon.ivs = {};
+      if (gen.num < 3) {
+        for (const stat of gen.stats) {
+          pokemon.ivs[stat] = stat in type.HPdvs ? gen.stats.toIV(type.HPdvs[stat]!) : 31;
+        }
+        pokemon.ivs.hp = gen.stats.toIV(gen.stats.getHPDV(pokemon.ivs));
+      } else {
+        for (const stat of gen.stats) {
+          pokemon.ivs[stat] = type.HPivs[stat] ?? 31;
+        }
+      }
+      const maxhp = gen.stats.calc(
+        'hp', pokemon.species.baseStats.hp, pokemon.ivs.hp, pokemon.evs?.hp ?? 252, pokemon.level
+      );
+      const fraction = pokemon.hp / pokemon.maxhp;
+      pokemon.maxhp = maxhp;
+      pokemon.hp = math.round(fraction * maxhp);
+      setGender(gen, pokemon as {species: Specie; ivs: StatsTable});
+    } else {
+      const type = gen.types.getHiddenPower(gen.stats.fill({...pokemon.ivs}, 31)).type;
+      move = gen.moves.get(`Hidden Power ${type}`)!;
+    }
+  }
   if (prng.randomChance(1, 16)) options.crit = true;
   if (move.multihit && typeof move.multihit !== 'number') {
     options.hits = prng.next(move.multihit[0], move.multihit[1]);
@@ -198,7 +235,8 @@ function generateMove(gen: Generation, gameType: GameType, side: State.Side, prn
     options.spread = true;
   }
   if (pokemon.item === 'metronome') options.consecutive = prng.next(1, 10);
-  if (gen.num === 7 && (item?.zMove ? prng.randomChance(4, 5) : prng.randomChance(1, 100))) {
+  if (gen.num === 7 && !move.isZ &&
+      (item?.zMove ? prng.randomChance(4, 5) : prng.randomChance(1, 100))) {
     options.useZ = true;
     options.hits = undefined;
   }

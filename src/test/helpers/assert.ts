@@ -31,7 +31,7 @@ export function assertStateEqual(a: State, b: State) {
     assert.deepStrictEqual(a.move, b.move);
   } finally {
     a.p1.pokemon.species = A.p1;
-    a.p2.pokemon.species = A.p1;
+    a.p2.pokemon.species = A.p2;
     b.p1.pokemon.species = B.p1;
     b.p2.pokemon.species = B.p2;
   }

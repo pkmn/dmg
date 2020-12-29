@@ -22,9 +22,10 @@ Flags are very flexible in how they can be specified: any thing in the form `key
 `key=value` (where the key can optionally be prefixed with `+`, `-` or `--`, i.e. `-key=value` or
 `--key:value`, etc) gets interpreted as a flag. Some flag values (`Choice Band`) contain spaces -
 you must either completely remove spaces (`attackerItem:ChoiceBand` or `attackerItem=choiceband`),
-replace the spaces with underscores (`attackerItem=Choice_Band`), or quote the space if using the
-parser in an environment where spaces are allowed in the input (eg. `--attackerItem='Choice Band'`
-on the command line, though this wouldn't be allowed in a browser URL).
+replace the spaces with underscores (`attackerItem=Choice_Band`), or quote the space with double
+quotes if using the parser in an environment where spaces are allowed in the input (eg.
+`--attackerItem="Choice Band"` on the command line, though this wouldn't be allowed in a browser
+URL).
 
 #### Implicits
 
@@ -101,6 +102,7 @@ disambiguate their [scope](#Implicits).
 | `<BOOST>Boost(s)` | the number boosts of the attacker / defender has in the specific stat |
 | `happiness` | the current happiness of the attacker / defender (defaults correctly based on the move) |
 | `hp` | the current exact HP of the attacker / defender, or the current HP percent if the flag's value ends in `%` or the `hpPercent` flag is used |
+| `maxHP` | the current maximum HP of the attacker / defender |
 | `toxicCounter` | the current toxic counter of the attacker / defender |
 | `addedType` | any added type of the attacker / defender |
 | `weight` | the weight in kilograms of the attacker / defender (aliased to `weightkg`) |

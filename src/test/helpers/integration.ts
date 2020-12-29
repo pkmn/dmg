@@ -17,7 +17,7 @@ export function run(seed: PRNGSeed = [1, 2, 3, 4], N = 10000) {
   const gens = new Generations(Dex as any);
   const prng = new PRNG(seed);
 
-  for (let i = 0; i <= N; i++) {
+  for (let i = 0; i < N; i++) {
     seed = prng.seed;
     let state: State | undefined = undefined;
     let encoded = '';

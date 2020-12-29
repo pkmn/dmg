@@ -135,7 +135,7 @@ describe('parse', () => {
 
       expect(parse(
         gens, `${PHRASE} p2allies=fairyaura isFairyaura:0`, 'Conflicting values'
-      ).p2.active).toEqual([]);
+      ).p2.active).toBeUndefined();
     });
 
     test('stats', () => {
