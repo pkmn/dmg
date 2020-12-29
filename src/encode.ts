@@ -59,6 +59,10 @@ export function encode(state: State, url = false) {
     moveName = `${moveName} ${move.basePower}`;
   }
   buf.push(`[${moveName}]`);
+  if (move.crit) buf.push('+Crit');
+  if (move.spread) buf.push('+Spread');
+  if (move.hits && (move.hits > 1 || move.multihit)) buf.push(`Hits:${move.hits}`);
+  if (consecutive) buf.push(`Consecutive:${consecutive}`);
 
   buf.push('vs.');
 
@@ -73,12 +77,6 @@ export function encode(state: State, url = false) {
     const name = display(PseudoWeathers[id][0]);
     buf.push(pw.level && pw.level > 1 ? `${name}:${pw.level}` : `+${name}`);
   }
-
-  // Move (extra)
-  if (move.crit) buf.push('+Crit');
-  if (move.spread) buf.push('+Spread');
-  if (move.hits && (move.hits > 1 || move.multihit)) buf.push(`Hits:${move.hits}`);
-  if (consecutive) buf.push(`Consecutive:${consecutive}`);
 
   const s = buf.join(' ');
   return url ? encodeURL(s) : s;
@@ -152,12 +150,9 @@ function encodeSide(
 
   // Status
   if (pokemon.status === 'tox') {
-    buf.push(pokemon.statusData?.toxicTurns && pokemon.statusData.toxicTurns > 0
-      ? `Toxic:${pokemon.statusData.toxicTurns}`
-      : '+Toxic');
+    buf.push(pokemon.statusData?.toxicTurns ? `Toxic:${pokemon.statusData.toxicTurns}` : '+Toxic');
   } else if (pokemon.status) {
     buf.push(`+${Statuses[pokemon.status]}`);
-    if (pokemon.statusData?.toxicTurns) buf.push(`ToxicCounter:${pokemon.statusData.toxicTurns}`);
   }
 
   if (pokemon.volatiles.dynamax) buf.push('+Dynamax');
@@ -186,7 +181,7 @@ function encodeSide(
 
   // Gender
   if (pokemon.gender && pokemon.gender !== pokemon.species.gender &&
-      is('rivalry', state.p1.pokemon.ability, state.p2.pokemon.ability)) {
+      is('rivalry', state.p1.pokemon.ability)) {
     buf.push(`Gender:${pokemon.gender}`);
   }
 

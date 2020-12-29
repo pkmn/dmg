@@ -126,7 +126,7 @@ interface ParseContext {
     output?: Phrase | undefined;
   };
   flags?: {
-    input: Array<[ID, string, boolean]>;
+    input: Array<[ID, string, string, boolean]>;
     output?: {
       general: {[id: string]: string};
       field: {[id: string]: string | {[k in ConditionKind]?: {[id: string]: string}}};
@@ -148,8 +148,9 @@ export function parse(gens: Generation | Generations, s: string, strict = false)
     // whitespace separated tokens (respecting quotes!)
     const argv = tokenize(decodeURL(s));
 
-    // Raw flag key:val in the order they appeared in `s`
-    const raw: Array<[ID, string, boolean]> = [];
+    // Raw flag key:val in the order they appeared in `s` as well as the raw flag and whether or not
+    // the flag came after the 'vs.' token or not (see `vs` below).
+    const raw: Array<[ID, string, string, boolean]> = [];
     // Non-flag elements which are to be parsed as the phrase
     const fragments: string[] = [];
 
@@ -180,7 +181,7 @@ export function parse(gens: Generation | Generations, s: string, strict = false)
         if (n) g = n;
         continue;
       }
-      raw.push([id, val, vs]);
+      raw.push([id, val, arg, vs]);
     }
 
     const joined = fragments.join(' ');
@@ -284,7 +285,7 @@ const CONDITIONS: {[id: string]: ConditionKind} = {
 function parseFlags(
   gen: Generation,
   vsScope: boolean,
-  raw: Array<[ID, string, boolean]>,
+  raw: Array<[ID, string, string, boolean]>,
   strict: boolean,
 ) {
   const flags: Flags = {general: {}, field: {[_]: {}}, p1: {[_]: {}}, p2: {[_]: {}}, move: {}};
@@ -302,8 +303,8 @@ function parseFlags(
     }
   };
 
-  for (let [id, val, afterVs] of raw) {
-    const orig = id;
+  for (let [id, val, origFlag, afterVs] of raw) {
+    const origID = id;
     const scope = vsScope ? (afterVs ? 'p2' : 'p1') : undefined;
     if (UNAMBIGUOUS[id]) {
       if (is(id, 'singles', 'doubles')) {
@@ -312,38 +313,38 @@ function parseFlags(
       }
       const type = UNAMBIGUOUS[id];
       if (type === 'field') {
-        parseConditionFlag(gen, flags, val, strict, 'field', true, CONDITIONS[id]);
+        parseConditionFlag(gen, flags, val, origFlag, strict, 'field', true, CONDITIONS[id]);
       } else {
-        setFlag(type, id, val, orig);
+        setFlag(type, id, val, origID);
       }
     } else if (DEFAULTS[id]) {
-      setFlag(scope || DEFAULTS[id], id, val, orig);
+      setFlag(scope || DEFAULTS[id], id, val, origID);
     } else if (ABILITIES[id]) {
-      setFlag(scope || ABILITIES[id], id, val, orig);
+      setFlag(scope || ABILITIES[id], id, val, origID);
     } else if (id === 'attacker' || id === 'p1') {
-      parseConditionFlag(gen, flags, val, strict, 'p1', true);
+      parseConditionFlag(gen, flags, val, origFlag, strict, 'p1', true);
     } else if (id === 'defender' || id === 'p2') {
-      parseConditionFlag(gen, flags, val, strict, 'p2', true);
+      parseConditionFlag(gen, flags, val, origFlag, strict, 'p2', true);
     } else if (id.startsWith('attacker') || id.startsWith('p1')) {
       id = id.slice(id.charAt(0) === 'p' ? 2 : 8) as ID;
       if (CONDITIONS[id]) {
-        parseConditionFlag(gen, flags, val, strict, 'p1', true, CONDITIONS[id]);
+        parseConditionFlag(gen, flags, val, origFlag, strict, 'p1', true, CONDITIONS[id]);
         continue;
       }
-      setFlag('p1', id, val, orig);
+      setFlag('p1', id, val, origID);
     } else if (id.startsWith('defender') || id.startsWith('p2')) {
       id = id.slice(id.charAt(0) === 'p' ? 2 : 8) as ID;
       if (CONDITIONS[id]) {
-        parseConditionFlag(gen, flags, val, strict, 'p2', true, CONDITIONS[id]);
+        parseConditionFlag(gen, flags, val, origFlag, strict, 'p2', true, CONDITIONS[id]);
         continue;
       }
-      setFlag('p2', id, val, orig);
+      setFlag('p2', id, val, origID);
       continue;
     } else if (scope && KNOWN[scope].includes(id)) {
-      setFlag(scope, id, val, orig);
+      setFlag(scope, id, val, origID);
       continue;
     } else {
-      parseConditionFlag(gen, flags, `${id}=${val}`, strict, scope, false);
+      parseConditionFlag(gen, flags, `${id}=${val}`, origFlag, strict, scope, false);
     }
   }
 
@@ -396,6 +397,7 @@ function parseConditionFlag(
   gen: Generation,
   flags: Flags,
   s: string,
+  orig: string,
   strict: boolean,
   scope?: 'p1' | 'p2' | 'field',
   explicit?: boolean,
@@ -456,14 +458,21 @@ function parseConditionFlag(
       id = toID(ckind);
       if (name === 'tox') {
         const n = Number(val);
-        if (!isNaN(n) && n > 0) {
-          if (strict && flags[cscope].toxiccounter && flags[cscope].toxiccounter !== val) {
-            throw new Error(
-              'Conflicting values for flag \'toxiccounter\': ' +
-              `'${flags[cscope].toxiccounter}' vs. '${val}'`
-            );
+        if (!isNaN(n)) {
+          // We need to reparse the original flag to figure out the difference between +toxic
+          // (counter 0) and toxic:1 (counter 1) since by default parseFlag is going to turn +toxic
+          // into [toxic, 1] as all booleans get turned into 1 or 0.
+          // BUG: if toxic:1 is used in a subflag there is no way to properly discern the count
+          const match = FLAG.exec(orig);
+          if (match && !match[3]) {
+            if (strict && flags[cscope].toxiccounter && flags[cscope].toxiccounter !== val) {
+              throw new Error(
+                'Conflicting values for flag \'toxiccounter\': ' +
+                `'${flags[cscope].toxiccounter}' vs. '${val}'`
+              );
+            }
+            flags[cscope].toxiccounter = val;
           }
-          flags[cscope].toxiccounter = val;
         }
       }
       val = toID(name);

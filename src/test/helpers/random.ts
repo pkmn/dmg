@@ -31,7 +31,7 @@ import {is} from '../../utils';
 import * as math from '../../math';
 
 export function generate(gens: Generations, prng: PRNG) {
-  const gen = gens.get(prng.next(1, 8) as GenerationNum);
+  const gen = gens.get(range(prng, 1, 8) as GenerationNum);
   const gameType = (gen.num >= 3 && prng.randomChance(1, 4)) ? 'doubles' : 'singles';
 
   const field = generateField(gen, prng);
@@ -55,7 +55,7 @@ function generateField(gen: Generation, prng: PRNG) {
     options.pseudoWeather = {};
     while (pws.length && prng.randomChance(1, 25)) {
       const pw = toID(sample(prng, pws, true)[0]);
-      options.pseudoWeather[pw] = {level: pw === 'echoedvoice' ? prng.next(1, 5) : 1};
+      options.pseudoWeather[pw] = {level: pw === 'echoedvoice' ? range(prng, 1, 5) : 1};
       if (options.pseudoWeather[pw].level === 1) options.pseudoWeather[pw] = {};
     }
   }
@@ -74,7 +74,7 @@ function generateSide(gen: Generation, gameType: GameType, prng: PRNG) {
   options.sideConditions = {};
   while (scs.length && prng.randomChance(1, 8)) {
     const sc = toID(sample(prng, scs, true)[0]);
-    options.sideConditions[sc] = {level: sc === 'spikes' && gen.num >= 3 ? prng.next(1, 3) : 1};
+    options.sideConditions[sc] = {level: sc === 'spikes' && gen.num >= 3 ? range(prng, 1, 3) : 1};
     if (options.sideConditions[sc].level === 1) options.sideConditions[sc] = {};
   }
   if (gameType === 'doubles' && prng.randomChance(1, 10)) {
@@ -92,7 +92,7 @@ function generatePokemon(gen: Generation, prng: PRNG) {
   const options: PokemonOptions = {};
 
   const species = sample(prng, Array.from(gen.species));
-  options.level = prng.randomChance(1, 20) ? prng.next(1, 100) : 100;
+  options.level = prng.randomChance(1, 20) ? range(prng, 1, 100) : 100;
   if (prng.randomChance(1, 100)) {
     options.weighthg = math.round(species.weighthg * prng.next() * 2) + 1;
   }
@@ -108,17 +108,17 @@ function generatePokemon(gen: Generation, prng: PRNG) {
   // NOTE: happiness is set only if Return or Frustration are selected
   if (prng.randomChance(1, 10)) {
     options.status = sample(prng, Object.keys(Statuses));
-    if (options.status === 'tox') options.statusData = {toxicTurns: prng.next(1, 16)};
+    if (options.status === 'tox') options.statusData = {toxicTurns: range(prng, 0, 15)};
   }
 
   const volatiles = Object.values(Volatiles).filter(v =>
     Conditions.get(gen, v[0])?.[1] === 'Volatile Status' && v[0] !== 'Dynamax');
   options.volatiles = {};
   // Special case Dynamax to proc more often than other volatiles
-  if (gen.num === 8 && prng.next(1, 4)) options.volatiles.dynamax = {};
+  if (gen.num === 8 && prng.randomChance(1, 4)) options.volatiles.dynamax = {};
   while (volatiles.length && prng.randomChance(1, 8)) {
     const v = toID(sample(prng, volatiles, true)[0]);
-    options.volatiles[v] = {level: is(v, 'autotomize', 'stockpile') ? prng.next(1, 3) : 1};
+    options.volatiles[v] = {level: is(v, 'autotomize', 'stockpile') ? range(prng, 1, 3) : 1};
     if (options.volatiles[v].level === 1) options.volatiles[v] = {};
   }
   if (prng.randomChance(1, 100)) options.addedType = sample(prng, ['Grass', 'Ghost']);
@@ -153,11 +153,11 @@ function generatePokemon(gen: Generation, prng: PRNG) {
     }
     options.ivs[stat] = stat === 'hp' && gen.num < 3
       ? gen.stats.toIV(gen.stats.getHPDV(options.ivs))
-      : prng.randomChance(1, 10) ? prng.next(0, 31) : 31;
+      : prng.randomChance(1, 10) ? range(prng, 0, 31) : 31;
     if (gen.num < 3) options.ivs[stat] = gen.stats.toIV(gen.stats.toDV(options.ivs[stat]!));
     options.evs[stat] = gen.num >= 3
-      ? (prng.randomChance(1, 2) ? prng.next(0, math.min(total, 252)) : math.min(total, 252))
-      : (prng.randomChance(1, 20) ? prng.next(0, 252) : 252);
+      ? (prng.randomChance(1, 2) ? range(prng, 0, math.min(total, 252)) : math.min(total, 252))
+      : (prng.randomChance(1, 20) ? range(prng, 0, 252) : 252);
     total -= options.evs[stat]!;
     stats[stat] = gen.stats.calc(
       stat, species.baseStats[stat]!, options.ivs[stat], options.evs[stat], options.level, nature
@@ -165,7 +165,8 @@ function generatePokemon(gen: Generation, prng: PRNG) {
   }
 
   if (options.volatiles.dynamax || options.ability === 'powerconstruct') {
-    options.maxhp = math.round(stats.hp! * 1.5 * (prng.randomChance(1, 10) ? prng.next() : 1));
+    const mod = 0.5 * (options.volatiles.dynamax && prng.randomChance(1, 10) ? prng.next() : 1);
+    options.maxhp = math.round(stats.hp! * (1 + mod));
   }
   if (prng.randomChance(1, 10)) options.hp = math.round(stats.hp! * prng.next());
 
@@ -173,7 +174,7 @@ function generatePokemon(gen: Generation, prng: PRNG) {
   const boosts = BOOSTS.slice() as BoostName[];
   // eslint-disable-next-line no-unmodified-loop-condition
   while (boosts && prng.randomChance(1, 10)) {
-    options.boosts[sample(prng, boosts, true)] = prng.next(1, 6);
+    options.boosts[sample(prng, boosts, true)] = range(prng, 1, 6);
   }
   if (gen.num < 3 && options.boosts.spa !== options.boosts.spd) {
     if (options.boosts.spa) {
@@ -182,6 +183,8 @@ function generatePokemon(gen: Generation, prng: PRNG) {
       options.boosts.spa = options.boosts.spd;
     }
   }
+
+  // console.log(gen.num, species.name, options); // DEBUG
 
   // NOTE: switching/moveLastTurnResult/hurtThisTurn are set when relevant for the particular move
   return State.createPokemon(gen, species.name, options);
@@ -226,15 +229,15 @@ function generateMove(gen: Generation, gameType: GameType, side: State.Side, prn
     }
   }
   if (prng.randomChance(1, 16)) options.crit = true;
-  if (move.multihit && typeof move.multihit !== 'number') {
-    options.hits = prng.next(move.multihit[0], move.multihit[1]);
+  if (move.multihit && typeof move.multihit !== 'number' && !pokemon.volatiles.dynamax) {
+    options.hits = range(prng, move.multihit[0], move.multihit[1]);
   }
 
   if (gen.num >= 3 && gameType === 'doubles' &&
     is(move.target, 'allAdjacent', 'allAdjacentFoes') && prng.randomChance(4, 5)) {
     options.spread = true;
   }
-  if (pokemon.item === 'metronome') options.consecutive = prng.next(1, 10);
+  if (pokemon.item === 'metronome') options.consecutive = range(prng, 1, 10);
   if (gen.num === 7 && !move.isZ &&
       (item?.zMove ? prng.randomChance(4, 5) : prng.randomChance(1, 100))) {
     options.useZ = true;
@@ -242,17 +245,17 @@ function generateMove(gen: Generation, gameType: GameType, side: State.Side, prn
   }
 
   if (move.id === 'magnitude') {
-    options.magnitude = prng.next(4, 10);
+    options.magnitude = range(prng, 4, 10);
   } else if (move.id === 'beatup') {
     const atks = [];
-    for (let i = 0; i < prng.next(0, 5); i++) atks.push(prng.next(30, 150));
+    for (let i = 0; i < range(prng, 0, 5); i++) atks.push(range(prng, 30, 150));
     side = State.createSide(gen, pokemon, {
       sideConditions: side.sideConditions,
       abilities: side.active?.map(p => p?.ability).filter(Boolean) as string[] | undefined,
       atks,
     });
   } else if (is(move.id, 'return', 'frustration') && prng.randomChance(1, 10)) {
-    pokemon.happiness = prng.next(0, 255);
+    pokemon.happiness = range(prng, 0, 255);
   } else if (move.id === 'stompingtantrum' && prng.randomChance(1, 2)) {
     pokemon.moveLastTurnResult = false;
   } else if (move.id === 'assurance' && prng.randomChance(1, 2)) {
@@ -261,6 +264,10 @@ function generateMove(gen: Generation, gameType: GameType, side: State.Side, prn
     pokemon.switching = prng.randomChance(1, 2) ? 'in' : 'out';
   }
   return State.createMove(gen, move.name, options, pokemon);
+}
+
+function range(prng: PRNG, min: number, max: number) {
+  return prng.next(min, max + 1);
 }
 
 function sample<T>(prng: PRNG, arr: T[], remove = false) {
