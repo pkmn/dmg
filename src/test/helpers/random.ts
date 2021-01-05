@@ -184,8 +184,6 @@ function generatePokemon(gen: Generation, prng: PRNG) {
     }
   }
 
-  // console.log(gen.num, species.name, options); // DEBUG
-
   // NOTE: switching/moveLastTurnResult/hurtThisTurn are set when relevant for the particular move
   return State.createPokemon(gen, species.name, options);
 }

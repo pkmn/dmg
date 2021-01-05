@@ -1,9 +1,8 @@
-import {PokemonSet} from '@pkmn/data';
-
-import {ResultBreakdown} from '.';
+import {Generation, PokemonSet, Specie, ID} from '@pkmn/data';
+import {Dex, Battle, PRNG, PRNGSeed} from '@pkmn/sim';
 
 import {State} from '../../state';
-import {Dex, Battle, ID, PRNG, PRNGSeed} from '@pkmn/sim';
+import {Result} from '../../result';
 
 const N = 1000;
 const SEED = [0x09917, 0x06924, 0x0e1c8, 0x06af0] as PRNGSeed;
@@ -18,44 +17,68 @@ const WEATHERS: {[id: string]: ID} = {
   strongwinds: 'deltastream' as ID,
 };
 
-export function verify(state: State, breakdown: ResultBreakdown, num = N, seed = SEED) {
-  const prng = new PRNG(seed);
-  const gameType = state.gameType === 'singles' ? '' : state.gameType;
-  const format = Dex.getFormat(`gen${state.gen.num}${gameType}customgame`);
-  for (let i = 0; i < num; i++, prng.next()) {
-    const battle = new Battle({format, formatid: format.id, seed: prng.seed});
-    battle.trunc = Dex.trunc.bind(Dex); // Custom Game formats don't use proper truncation...
+export function verify(state: State, result: Result, num = N, seed = SEED) {
+  if (!isSupported(state)) return false;
 
-    const p1 = setSide('p1', battle, state);
-    const p2 = setSide('p2', battle, state);
-    setField(battle, state.field);
+  try {
+    const prng = new PRNG(seed);
+    const gameType = state.gameType === 'singles' ? '' : state.gameType;
+    const format = Dex.getFormat(`gen${state.gen.num}${gameType}customgame`);
+    for (let i = 0; i < num; i++, prng.next()) {
+      const battle = new Battle({format, formatid: format.id, seed: prng.seed});
+      battle.trunc = Dex.trunc.bind(Dex); // Custom Game formats don't use proper truncation...
 
-    const hp = {p1: p1.pokemon.hp, p2: p2.pokemon.hp};
-    battle.makeChoices(p1.choice, p2.choice);
+      const players = {
+        p1: setSide('p1', battle, state),
+        p2: setSide('p2', battle, state),
+      };
+      setField(battle, state.field);
+      battle.makeChoices(players.p1.choice, players.p2.choice);
 
-    if (breakdown.recoil || breakdown.recovery) {
-      const range = [
-        0, // TODO p1.pokemon.hp + (breakdown.recoil?.[1] || 0) + (breakdown.recovery?.[0] || 0),
-        0, // TODO p1.pokemon.hp + (breakdown.recoil?.[0] || 0) + (breakdown.recovery?.[1] || 0),
-      ];
-      if (p1.pokemon.hp < range[0] || p1.pokemon.hp > range[1]) {
-        throw new Error(
-          `Expected p1's ${p1.pokemon.species.name} HP to be within` +
-          `[${range[0]},${range[1]}] but it was ${p1.pokemon.hp}`
-        );
+      // TODO: need to figure out EoT final HP for p1 and p2 (including recovery/recoil/residual)
+      const ranges = undefined! as {p1: [number, number]; p2: [number, number]};
+      for (const p in ranges) {
+        const player = p as 'p1' | 'p2';
+        if (players[player].pokemon.hp < ranges[player][0] ||
+            players[player].pokemon.hp > ranges[player][1]) {
+          throw new Error(
+            `Expected ${player}'s ${players[player].pokemon.species.name} HP to be within` +
+            `[${ranges[player][0]},${ranges[player][1]}] but it was ${players[player].pokemon.hp}`
+          );
+        }
       }
     }
-    if (breakdown.range) {
-      const damage = hp.p2 - p2.pokemon.hp;
-      if (damage < breakdown.range[0] || damage > breakdown.range[1]) {
-        throw new Error(
-          'Expected damage to be within' +
-          `[${breakdown.range[0]},${breakdown.range[1]}] but it was ${damage}`
-        );
-      }
-    }
+
+    return true;
+  } catch (err) {
+    throw new VerificationError(err);
   }
+}
 
+export class VerificationError extends Error {
+  readonly cause: Error;
+
+  constructor(cause: Error) {
+    super(cause.message);
+    this.cause = cause;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+function isSupported(state: State) {
+  // Finding the correct PRNG seed to manipulate the RNG here is too complicated
+  if (state.move.crit || state.move.magnitude) return false;
+  // Setting up the field to ensure a move is a spread hit is too much work
+  if (state.move.spread) return false;
+  // Guaranteeing a certain number of hits for multihit moves is not tractable
+  if (state.move.multihit || state.move.hits && state.move.hits > 1) return false;
+  // Setting up the scenario where a certain mon is switching in or out is too difficult
+  if (state.p1.pokemon.switching || state.p2.pokemon.switching) return false;
+  // Non-trivial active/team scenarios are a headache to attempt to set up
+  if (state.p1.active?.find(p => p === null || p.fainted)) return false;
+  if (state.p2.active?.find(p => p === null || p.fainted)) return false;
+  if (state.p1.team?.find(p => p.status || p.fainted)) return false;
+  if (state.p2.team?.find(p => p.status || p.fainted)) return false;
   return true;
 }
 
@@ -74,8 +97,33 @@ function setSide(player: 'p1' | 'p2', battle: Battle, state: State) {
     ivs: state.gen.stats.fill(p.ivs || {}, 31),
     moves: [state.move.id, 'splash'],
   };
+  const team = [set];
 
-  battle.setPlayer(player, {team: [set]});
+  const t = state[player].team || [];
+  if (state[player].active) {
+    for (const active of state[player].active!) {
+      if (!active) continue;
+      if ('position' in active) {
+        if (active.position === p.position) continue;
+        const index = t.findIndex(pokemon => pokemon.position === active.position);
+        if (index > -1) {
+          const member = t[index];
+          t.splice(index, 1);
+          team.push(find(state.gen, member.species.baseStats.atk, active.ability));
+        } else {
+          team.push(find(state.gen, undefined, active.ability));
+        }
+      }
+    }
+  }
+  if (t.length) {
+    for (const member of t) {
+      if ('position' in member && member.position === p.position) continue;
+      team.push(find(state.gen, member.species.baseStats.atk));
+    }
+  }
+
+  battle.setPlayer(player, {team});
 
   const side = battle.sides[player === 'p1' ? 0 : 1];
   for (const id in state[player].sideConditions) {
@@ -86,13 +134,12 @@ function setSide(player: 'p1' | 'p2', battle: Battle, state: State) {
     }
   }
 
-  // TODO active
-  // TODO team
-
-  // TODO switching
   const pokemon = side.active[0];
   pokemon.weighthg = p.weighthg;
-  // FIXME status, statusData
+  if (p.status) {
+    pokemon.setStatus(pokemon.status);
+    if (p.statusData?.toxicTurns) pokemon.statusData.stage = p.statusData.toxicTurns;
+  }
   for (const id in p.volatiles) {
     const v = p.volatiles[id];
     pokemon.addVolatile(id);
@@ -102,14 +149,17 @@ function setSide(player: 'p1' | 'p2', battle: Battle, state: State) {
   }
   pokemon.setType(p.types, true);
   if (p.addedType) pokemon.addType(p.addedType);
-  if (p.hp) pokemon.maxhp = p.hp;
+  pokemon.maxhp = p.maxhp;
   pokemon.hp = p.hp;
   pokemon.boostBy(p.boosts);
   if (p.moveLastTurnResult === false) pokemon.moveLastTurnResult = false;
   pokemon.hurtThisTurn = p.hurtThisTurn ? 1 : null;
 
-  // TODO crit etc
-  return {choice: player === 'p2' ? 'move splash' : `move ${state.move.id}`, pokemon};
+  const choice = player === 'p1'
+    ? `move ${state.move.id}${state.move.useZ ? ' zmove' : ''}`
+    : 'move splash';
+
+  return {pokemon, choice};
 }
 
 function setField(battle: Battle, field: State.Field) {
@@ -132,4 +182,12 @@ function setField(battle: Battle, field: State.Field) {
       (battle.field.getPseudoWeather(id) as any).layers = pw.level;
     }
   }
+}
+
+function find(gen: Generation, atk?: number, ability?: ID) {
+  let species: Specie;
+  for (species of gen.species) {
+    if (!atk || species.baseStats.atk === atk) break;
+  }
+  return {species: species!.name, ability, moves: ['splash']} as unknown as PokemonSet;
 }

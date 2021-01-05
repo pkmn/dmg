@@ -167,7 +167,7 @@ export type SideConditionName =
   'Tailwind' | 'Stealth Rock' | 'Spikes' | 'Toxic Spikes' |
   'Aurora Veil' | 'Light Screen' | 'Reflect' |
   'Safeguard' | 'Quick Guard' | 'Wide Guard' |
-  'Steelsurge' | 'Volcalith' | 'Wildfire' |
+  'Steelsurge' | 'Cannonade' | 'Volcalith' | 'Vinelash' | 'Wildfire' |
   'Crafty Shield' | 'Lucky Chant' | 'Mist' | 'Sticky Web';
 
 export const SideConditions: {[id: string]: [SideConditionName, GenerationNum, Player?]} = {
@@ -176,7 +176,9 @@ export const SideConditions: {[id: string]: [SideConditionName, GenerationNum, P
   spikes: ['Spikes', 2, 'p2'],
   auroraveil: ['Aurora Veil', 7],
   steelsurge: ['Steelsurge', 8, 'p2'],
+  cannonade: ['Cannonade', 8, 'p2'],
   volcalith: ['Volcalith', 8, 'p2'],
+  vinelash: ['Vinelash', 8, 'p2'],
   wildfire: ['Wildfire', 8, 'p2'],
   stickyweb: ['Sticky Web', 6],
   // Before Gen 2 these were treated as a volatiles

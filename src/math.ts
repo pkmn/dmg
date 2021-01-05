@@ -30,5 +30,5 @@ export const chain = (m: number, n?: number) => n !== undefined ? chainMod(m, n)
 /** Apply the mod `m` to the number `n` per the cartridge mechanics. */
 export const applyMod = (n: number, m: number) => roundDown(trunc(n * m) / 0x1000);
 
-/** Apply the mod `m` to the number `n` if `n` is not undefined. */
-export const apply = (m: number, n?: number) => n !== undefined ? applyMod(m, n) : m;
+/** Apply the mod `m` to the number `n` if `m` is not undefined. */
+export const apply = (n: number, m?: number) => m !== undefined ? applyMod(n, m) : n;

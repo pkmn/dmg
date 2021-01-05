@@ -14,7 +14,7 @@ import {Moves} from './moves';
 import {clamp, floor, trunc, max, min, chain, apply, abs} from '../math';
 
 export interface Applier {
-  apply(state: State, guaranteed?: boolean): void;
+  apply(side: 'p1' | 'p2', state: State, guaranteed?: boolean): void;
 }
 
 export interface Handler {
@@ -45,17 +45,23 @@ export class Appliers {
     this.handlers = handlers;
   }
 
-  apply(kind: HandlerKind, id: ID, state: State, guaranteed?: boolean) {
+  apply(
+    kind: Exclude<HandlerKind, 'Conditions'>,
+    side: 'p1' | 'p2', id: ID | undefined,
+    state: State,
+    guaranteed?: boolean
+  ) {
+    if (!id) return;
+
     switch (kind) {
     case 'Abilities':
     case 'Items':
-    case 'Conditions':
-      return this.handlers[kind][id]?.apply?.(state, guaranteed);
+      return this.handlers[kind][id]?.apply?.(side, state, guaranteed);
     case 'Moves': {
       // If a Move handler is defined, use it, otherwise try to see if an 'apply' function can
       // can be inferred based purely on information from the data files
       const handler = this.handlers.Moves[id];
-      if (handler?.apply) return handler.apply(state, guaranteed);
+      if (handler?.apply) return handler.apply(side, state, guaranteed);
 
       const move = state.gen.moves.get(id);
       if (!move) return;

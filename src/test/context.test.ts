@@ -129,7 +129,7 @@ function newContext() {
     {weather: 'Sand', terrain: 'Misty', pseudoWeather: {gravity: {}}}
   ) as DeepReadonly<State>;
 
-  const context = new Context(state, relevancy, {
+  const context = new Context(state, {
     Items: {
       choicespecs: {},
       leftovers: {onResidual() { return 5; }},
@@ -154,7 +154,7 @@ function newContext() {
     Moves: {
       sacredsword: {basePowerCallback() { return 4; }},
     },
-  });
+  }, relevancy);
 
   return {context, state, relevancy};
 }

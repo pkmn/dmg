@@ -17,9 +17,9 @@ architecture and correctness, `@pkmn/dmg` features:
   effects**
 - **comprehensive multi-hit** support and [**KO chance**](#ko-chance) calculation, enabling
   ['**chained**'](#chaining) calculations
-- improved [**programmatic support**](#library) for **recoil and recovery** results
+- improved [**programmatic support**](#library) for **recoil, recovery, and crash** results
 - **non-intrusive support for [mods](#mods)** overriding data or effects
-- extensive **tests** build on state of the art [**multi-generational testing
+- extensive **tests** build on state-of-the-art [**multi-generational testing
   infrastructure**](TESTING.md)
 
 ## Installation
@@ -30,7 +30,7 @@ $ npm install @pkmn/dmg
 
 Alternatively, as [detailed below](#browser), if you are using `@pkmn/dmg` in the browser and want a
 convenient way to get started, simply depend on a transpiled and minified version via
-[unpkg](https://unpkg.com/):
+[unpkg](https://unpkg.com/) (`@pkmn/dex` and `@pkmn/data` are required dependencies of `@pkmn/dmg`):
 
 ```html
 <script src="https://unpkg.com/@pkmn/dex"></script>
@@ -42,8 +42,8 @@ convenient way to get started, simply depend on a transpiled and minified versio
 
 ### Library
 
-`@pkmn/dmg`'s main API is the `calculate` function takes in [`State`](src/state.ts) and returns a
-[`Result`](src/result.ts).
+`@pkmn/dmg`'s main API is the `calculate` function which takes in [`State`](src/state.ts) and
+returns a [`Result`](src/result.ts).
 
 `@pkmn/dmg` is data-layer agnostic - thanks to its dependency on
 [`@pkmn/data`](https://github.com/pkmn/ps/blob/master/data) it simply requires a Pokémon Showdown
@@ -115,9 +115,11 @@ well by encoding the `Result` into the desired format.
 
 ### CLI
 
-The [`dmg` binary](dmg) can be used to perform damage calculations via the command line.
+The [`dmg`](dmg) binary can be used to perform damage calculations via the command line.
 
 ```sh
+// FIXME improve these to match actual output and encoding
+
 dmg +1 252 SpA Gengar @ Choice Specs [Focus Blast] vs. 0 HP / 172+ SpD Blissey --gen=4
 +1 252 SpA Choice Specs Gengar Focus Blast vs. 0 HP / 172+ SpD Blissey: 362-428 (55.6 - 65.7%) -- guaranteed 2HKO after Leftovers recovery
 
@@ -186,18 +188,19 @@ boost) but also **allows for abitrary moves to be chained together to compute th
 series of attacks**.
 
 Chaining handles the common case of wanting to see what the results of a repeated Overheat or Draco
-Meteor might be, but also covers things like Scizor U-turn into Gengar Focus Blast - any results can
-be linked together and the expected KO chance of the joint `Result` is handled in exactly the same
-way 2 consectutive hits from a Breloom's Bullet Seed is handled. At the extreme, this design scales
-to handle scenarios like Gluttony Sitrus Berry kicking in after a few hits or Defeatist activating
-after recoil drops the attacker into the requisite HP range. Chained moves only deal with
-**guaranteed** scenarios - ie. effects are only `apply`-ed between moves if they are guaranteed to
-occur, either because they have a 100% chance of activating or the ranges involved guarantee that
-a certain event would occur.
+Meteor might be, but also covers things like Scizor U-turn into Gengar Focus Blast - any results
+with the same target can be linked together and the expected KO chance of the joint `Result` is
+handled in exactly the same way 2 consecutive hits from eg. a Breloom's Bullet Seed are handled. At
+the extreme, this design scales to handle scenarios like Gluttony Sitrus Berry kicking in after a
+few hits or Defeatist activating after recoil drops the attacker into the requisite HP range.
+Chained moves only deal with **guaranteed** scenarios - ie. effects are only `apply`-ed between
+moves if they are guaranteed to occur, either because they have a 100% chance of activating or the
+ranges involved guarantee that a certain event would occur.
 
 ### KO Chance
 
 == TODO ==
+
 - OHKO chance exact not approx
 - pre and post EOT separated out
 - rich breakdowns of all results - recoils, multi stages, etc
@@ -254,7 +257,7 @@ justification, core parts of the algorithm may be broken up and made moddable in
   Calculator](https://docs.google.com/spreadsheets/d/14XBTYYRp1OK5epQzB3SF2ccdSkuA6Jv7UlRQi66pxkY/edit#gid=1621823916)
   \- SadisticMystic
 - [sulcalc](https://github.com/sulcata/sulcalc/) - sulcata
-- [`@smogon/calc`](https://github.com/smogon/damage-calc) - Honko, Austin and contributors
+- [`@smogon/calc`](https://github.com/smogon/damage-calc) - Honko, Austin, and contributors
 
 ## License
 

@@ -3,7 +3,7 @@ import * as assert from 'assert';
 import {Generations} from '@pkmn/data';
 import {Dex, PRNG, PRNGSeed} from '@pkmn/sim';
 
-import {encode, parse, State, ParseError} from '../../index';
+import {Result, encode, parse, State, ParseError} from '../../index';
 import {assertStateEqual} from './assert';
 import {generate} from './random';
 // import {verify} from './verifier';
@@ -19,34 +19,39 @@ export function run(seed: PRNGSeed = [1, 2, 3, 4], N = 10000) {
 
   for (let i = 0; i < N; i++) {
     seed = prng.seed;
-    let state: State | undefined = undefined;
     let encoded = '';
     let reencoded = '';
+    const original: {state?: State; result?: Result} = {};
+    const simplified: {state?: State; result?: Result} = {};
     try {
-      state = generate(gens, prng);
-      encoded = encode(state);
+      original.state = generate(gens, prng);
+      encoded = encode(original.state);
       const parsed = parse(gens, encoded, true);
       reencoded = encode(parsed);
 
-      assertStateEqual(state, parsed);
+      assertStateEqual(original.state, parsed);
       assert.strictEqual(encoded, reencoded);
 
       // TODO
-      // const result = calculate(state);
-      // verify(state, {
-      //   range: result.range,
-      //   recoil: result.recoil,
-      //   recovery: result.recovery,
-      // });
+      // original.result = calculate(original.state);
+      // verify(original.state, original.result);
 
-      // const reduced = calculate(result.simplified());
-      // expect(reduced).toEqual(result);
+      // simplified.state = Relevancy.simplify(original.result.state, original.result.relevant);
+      // simplified.result = calculate(simplified.state);
+      // // FIXME expect(simplified.result).toEqual(original.result);
     } catch (err) {
       const sep = '------------------------------\n';
       let s = `Seed: ${seed} (${i + 1}/${N})\n`;
-      if (encoded) s += sep + `Encoded: '${encoded}'\n`;
-      if (reencoded && encoded !== reencoded) s += sep + `Re-encoded: '${reencoded}'\n`;
-      if (state) s += sep + `State: ${stringify(State.toJSON(state), null, 2)}\n`;
+      if (encoded) s += sep + `Encoded (1): '${encoded}'\n`;
+      if (reencoded && encoded !== reencoded) s += sep + `Encoded (2): '${reencoded}'\n`;
+      if (original.state) {
+        s += sep + `State (1): ${stringify(State.toJSON(original.state), null, 2)}\n`;
+      }
+      if (simplified.state) {
+        s += sep + `State (2): ${stringify(State.toJSON(simplified.state), null, 2)}\n`;
+      }
+      if (original.result) s += sep + `Result (1): ${original.toString()}\n`;
+      if (simplified.result) s += sep + `Result (2): ${simplified.toString()}\n`;
       if (err instanceof ParseError) {
         s += sep + `Context: ${stringify(err.context, null, 2)}\n`;
       }

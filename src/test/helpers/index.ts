@@ -4,7 +4,7 @@ import {Generation, GenerationNum, Generations} from '@pkmn/data';
 import {Dex} from '@pkmn/sim';
 
 import {Scope, inGens} from '../../gens';
-import {Result} from '../../result';
+import {Result, Notation, KOType} from '../../result';
 
 const gens = new Generations(Dex as any);
 
@@ -71,8 +71,9 @@ declare global {
 export type ResultDiff = Partial<Record<GenerationNum, ResultBreakdown>>;
 export interface ResultBreakdown {
   range?: [number, number];
-  recoil?: number | [number, number];
   recovery?: number | [number, number];
+  recoil?: number | [number, number];
+  crash?: number | [number, number];
   desc?: string;
   result?: string;
 }
@@ -81,20 +82,27 @@ expect.extend({
   toMatch(
     received: Result,
     gen: Generation,
-    notation?: '%' | '/48' | 'px' | number | ResultDiff,
+    notation?: Notation | ResultDiff,
+    type?: KOType | ResultDiff,
     diff?: ResultDiff
   ) {
     if (typeof notation !== 'string' && typeof notation !== 'number') {
       diff = notation;
       notation = '%';
+      type = 'both';
+    } else if (typeof type !== 'string') {
+      diff = type;
+      type = 'both';
     }
+
     if (!diff) throw new Error('toMatch called with no diff!');
 
     const breakdowns = Object.entries(diff).sort() as [string, ResultBreakdown][];
     const expected = {
       range: undefined! as [number, number],
-      recoil: undefined! as [number, number],
       recovery: undefined! as [number, number],
+      recoil: undefined! as [number, number],
+      crash: undefined! as [number, number],
       desc: '',
       result: '',
     };
@@ -109,7 +117,7 @@ expect.extend({
       throw new Error(`toMatch called with empty diff: ${diff}`);
     }
 
-    for (const key of ['range', 'recovery', 'recoil'] as Array<'range' | 'recovery' | 'recoil'>) {
+    for (const key of ['range', 'recovery', 'recoil', 'crash'] as const) {
       if (expected[key]) {
         if (this.isNot) {
           expect(received[key]).not.toEqual(expected[key]);
@@ -118,22 +126,24 @@ expect.extend({
         }
       }
     }
-    const desc = received.description(notation);
+
+    const text = received.text(type, notation);
+    const colon = text.lastIndexOf(':');
+    const desc = text.slice(0, colon);
+    const result = text.slice(colon + 2);
+
     if (expected.desc) {
-      const r = desc.desc;
       if (this.isNot) {
-        expect(r).not.toEqual(expected.desc);
+        expect(desc).not.toEqual(expected.desc);
       } else {
-        expect(r).toEqual(expected.desc);
+        expect(desc).toEqual(expected.desc);
       }
     }
     if (expected.result) {
-      const post = desc.result;
-      const r = `(${post.split('(')[1]}`;
       if (this.isNot) {
-        expect(r).not.toEqual(expected.result);
+        expect(result).not.toEqual(expected.result);
       } else {
-        expect(r).toEqual(expected.result);
+        expect(result).toEqual(expected.result);
       }
     }
 

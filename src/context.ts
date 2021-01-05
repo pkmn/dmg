@@ -39,8 +39,8 @@ export class Context {
 
   constructor(
     state: DeepReadonly<State>,
-    relevant: Relevancy,
-    handlers: Handlers = HANDLERS
+    handlers: Handlers = HANDLERS,
+    relevant: Relevancy = new Relevancy()
   ) {
     this.gameType = state.gameType;
     this.gen = state.gen as Generation;
@@ -66,8 +66,8 @@ export class Context {
     return State.toJSON(this.toState());
   }
 
-  static fromState(state: State, relevancy = new Relevancy()) {
-    return new Context(state as DeepReadonly<State>, relevancy);
+  static fromState(state: State) {
+    return new Context(state as DeepReadonly<State>);
   }
 }
 
