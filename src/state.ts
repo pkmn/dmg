@@ -12,7 +12,7 @@ import type {
   StatsTable,
   StatusName,
   TypeName,
-  StatName,
+  StatID,
   Type,
   Move,
 } from '@pkmn/data';
@@ -111,7 +111,7 @@ export namespace State {
     happiness?: number;
 
     status?: StatusName;
-    statusData?: {toxicTurns?: number};
+    statusState?: {toxicTurns?: number};
     // Level is used to track layers/stockpiles/etc
     volatiles: {[id: string]: {level?: number}};
 
@@ -189,7 +189,7 @@ export class State {
     this.field = field;
   }
 
-  /** Serializes State, collapsing immutable data structurs that have circular references. */
+  /** Serializes State, collapsing immutable data structures that have circular references. */
   static toJSON(s: State) {
     const move = {} as any;
     const base = s.gen.moves.get(s.move.name);
@@ -287,11 +287,13 @@ export class State {
     setAbility(gen, pokemon as {species: Specie; ability?: ID}, options.ability);
 
     // Happiness
-    pokemon.happiness = bounded('happiness', options.happiness || 0) || undefined;
+    pokemon.happiness = typeof options.happiness === 'undefined'
+      ? undefined
+      : bounded('happiness', options.happiness);
 
     // Status
     pokemon.status = undefined;
-    pokemon.statusData = undefined;
+    pokemon.statusState = undefined;
     if (options.status) {
       const condition = Conditions.get(gen, options.status);
       if (!condition) invalid(gen, 'status', options.status);
@@ -300,19 +302,19 @@ export class State {
         throw new Error(`'${status} is a ${kind} not a Status in generation ${gen.num}`);
       }
       pokemon.status = status as StatusName;
-      if (pokemon.status === 'tox') pokemon.statusData = {toxicTurns: 0};
+      if (pokemon.status === 'tox') pokemon.statusState = {toxicTurns: 0};
     }
 
     // Status Data
-    if (options.statusData) {
-      if (options.statusData.toxicTurns) {
-        const turns = options.statusData.toxicTurns;
+    if (options.statusState) {
+      if (options.statusState.toxicTurns) {
+        const turns = options.statusState.toxicTurns;
         bounded('toxicCounter', turns);
         if (pokemon.status !== 'tox') {
           throw new Error(`toxicTurns set to ${turns} but the Pokemon's status is not 'tox'`);
         }
       }
-      pokemon.statusData = options.statusData;
+      pokemon.statusState = options.statusState;
     }
 
     // Volatiles
@@ -434,7 +436,9 @@ export class State {
         }
         if (m[3]) {
           const n = Number(m[3]);
-          if (base?.id === 'magnitude' && n >= 4 && n <= 10) {
+          if (base?.id === 'conversion' && n === 2) {
+            base = gen.moves.get('Conversion 2');
+          } else if (base?.id === 'magnitude' && n >= 4 && n <= 10) {
             if (options.magnitude && options.magnitude !== n) {
               throw new Error(`Magnitude mismatch: '${options.magnitude}' does not match '${n}'`);
             }
@@ -510,7 +514,7 @@ export class State {
       }
       move.magnitude = bounded('magnitude', options.magnitude);
     }
-    if (move.id === 'magnitude' && !move.magnitude) {
+    if (move.id === 'magnitude' && !(move.magnitude || options.useZ)) {
       throw new Error('The move Magnitude must have a magnitude specified');
     }
     if (gen.num < 3 && options.spread) {
@@ -563,7 +567,7 @@ export class State {
     }
 
     // Shiny
-    const dv = (stat: StatName) => gen.stats.toDV(pokemon.ivs![stat]!);
+    const dv = (stat: StatID) => gen.stats.toDV(pokemon.ivs![stat]!);
     const shiny =
       !!(dv('def') === 10 && dv('spe') === 10 && dv('spa') === 10 && dv('atk') % 4 >= 2);
     if (gen.num === 2 && (shiny !== !!set.shiny)) {
@@ -820,7 +824,7 @@ function setHiddenPowerIVs(
   if (gen.num <= 2) {
     ivs = {};
     for (const stat in hpType.HPdvs) {
-      ivs[stat as StatName] = gen.stats.toIV(hpType.HPdvs[stat as StatName]!);
+      ivs[stat as StatID] = gen.stats.toIV(hpType.HPdvs[stat as StatID]!);
     }
   }
 

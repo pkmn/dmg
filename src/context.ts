@@ -242,7 +242,7 @@ export namespace Context {
             this.relevant.status = true;
           });
       }
-      this.statusData = this.statusData && extend({}, state.statusData);
+      this.statusData = this.statusData && extend({}, state.statusState);
       this.volatiles = {};
       for (const v in state.volatiles) {
         this.volatiles[v] =
@@ -299,7 +299,7 @@ export namespace Context {
         gender: this.gender,
         happiness: this.hp,
         status: this.status?.name,
-        statusData: this.statusData && extend({}, this.statusData),
+        statusState: this.statusData && extend({}, this.statusData),
         volatiles,
         types: this.types.slice() as Pokemon['types'],
         addedType: this.addedType,

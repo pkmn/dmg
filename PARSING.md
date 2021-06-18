@@ -38,7 +38,7 @@ like field conditions or move flags etc), the disambiguating prefix can be elide
 `--isSR=true` and `sr:1` both set Stealth Rock on the defender's side). In the cases where a
 property's scope is not implicit, the `attacker` / `p1` or `defender` / `p2` *flags* can also be
 used to explicitly scope a property as belonging to a certain side. Multiple ambiguous flags may be
-passed to these dismabiguators, and in these scenarios, boolean flags can drop their prefix enitrely
+passed to these disambiguators, and in these scenarios, boolean flags can drop their prefix entirely
 eg. `p2:spikes:3,auroraveil` or `--attacker=flashfire+foresight+helpinghand`. Finally, if implicit
 flags are used to augment a phrase, implicit flags to the left of the `vs.` token are considered to
 belong to the attacker and implicit flags to right of the token are considered to be associated with

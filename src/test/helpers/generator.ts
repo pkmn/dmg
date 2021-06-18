@@ -186,7 +186,7 @@ function calcSideAndPokemon(gen: Generation, state: pkmn.State.Side) {
     boosts: state.pokemon.boosts,
     // BUG: maxhp + hp vs. originalCurHP ¯\_(ツ)_/¯
     status: state.pokemon.status,
-    toxicCounter: state.pokemon.statusData?.toxicTurns,
+    toxicCounter: state.pokemon.statusState?.toxicTurns,
   });
 
   return [side, pokemon] as [smogon.Side, smogon.Pokemon];

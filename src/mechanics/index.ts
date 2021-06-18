@@ -275,7 +275,7 @@ export function getMaxMovename(
   return MAX_MOVES[move.type as Exclude<TypeName, '???'>];
 }
 
-// function takeItem(pokemon: State.Pokemon | Context.Pokemon, boost: BoostName, amount: number) {
+// function takeItem(pokemon: State.Pokemon | Context.Pokemon, boost: BoostID, amount: number) {
 //   if (pokemon.ability === 'sticky') {
 
 //   }
@@ -364,7 +364,7 @@ setAbility(ability: string | Ability, source?: Pokemon | null, isFromFormeChange
   */
 
 // TODO white verb, mist, WONDER ROOM
-// function applyBoost(pokemon: State.Pokemon | Context.Pokemon, boost: BoostName, amount: number) {
+// function applyBoost(pokemon: State.Pokemon | Context.Pokemon, boost: BoostID, amount: number) {
 //   const ability = 'relevant' in pokemon ? pokemon.ability?.id : pokemon.ability;
 //   let mod = 1;
 //   if (is(ability, 'simple')) {

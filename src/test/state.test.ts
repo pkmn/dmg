@@ -134,32 +134,32 @@ describe('State', () => {
     test('status', () => {
       let pokemon = State.createPokemon(gens.get(1), 'Bulbasaur');
       expect(pokemon.status).toBeUndefined();
-      expect(pokemon.statusData).toBeUndefined();
+      expect(pokemon.statusState).toBeUndefined();
       expect(() => State.createPokemon(gens.get(1), 'Bulbasaur', {status: 'foo'}))
         .toThrow('invalid');
       expect(() => State.createPokemon(gens.get(1), 'Bulbasaur', {status: 'reflect'}))
         .toThrow('not a Status');
       pokemon = State.createPokemon(gens.get(1), 'Bulbasaur', {status: 'Asleep'});
       expect(pokemon.status).toBe('slp');
-      expect(pokemon.statusData).toBeUndefined();
+      expect(pokemon.statusState).toBeUndefined();
 
       pokemon = State.createPokemon(gens.get(1), 'Bulbasaur', {status: 'tox'});
       expect(pokemon.status).toBe('tox');
-      expect(pokemon.statusData).toEqual({toxicTurns: 0});
+      expect(pokemon.statusState).toEqual({toxicTurns: 0});
 
-      expect(() => State.createPokemon(gens.get(1), 'Bulbasaur', {statusData: {toxicTurns: -1}}))
+      expect(() => State.createPokemon(gens.get(1), 'Bulbasaur', {statusState: {toxicTurns: -1}}))
         .toThrow('is not within [0,15]');
-      expect(() => State.createPokemon(gens.get(1), 'Bulbasaur', {statusData: {toxicTurns: 20}}))
+      expect(() => State.createPokemon(gens.get(1), 'Bulbasaur', {statusState: {toxicTurns: 20}}))
         .toThrow('is not within [0,15]');
       expect(() =>
-        State.createPokemon(gens.get(1), 'Bulbasaur', {status: 'slp', statusData: {toxicTurns: 4}}))
+        State.createPokemon(gens.get(1), 'Bulbasaur', {status: 'slp', statusState: {toxicTurns: 4}}))
         .toThrow('status is not \'tox\'');
       pokemon =
-        State.createPokemon(gens.get(1), 'Bulbasaur', {status: 'tox', statusData: {toxicTurns: 4}});
-      expect(pokemon.statusData).toEqual({toxicTurns: 4});
+        State.createPokemon(gens.get(1), 'Bulbasaur', {status: 'tox', statusState: {toxicTurns: 4}});
+      expect(pokemon.statusState).toEqual({toxicTurns: 4});
       const statusData = {};
-      pokemon = State.createPokemon(gens.get(1), 'Bulbasaur', {status: 'tox', statusData});
-      expect(pokemon.statusData).toBe(statusData);
+      pokemon = State.createPokemon(gens.get(1), 'Bulbasaur', {status: 'tox', statusState: statusData});
+      expect(pokemon.statusState).toBe(statusData);
     });
 
     test('volatiles', () => {

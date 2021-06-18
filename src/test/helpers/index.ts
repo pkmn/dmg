@@ -97,7 +97,7 @@ expect.extend({
 
     if (!diff) throw new Error('toMatch called with no diff!');
 
-    const breakdowns = Object.entries(diff).sort() as [string, ResultBreakdown][];
+    const breakdowns = Object.entries(diff).sort();
     const expected = {
       range: undefined! as [number, number],
       recovery: undefined! as [number, number],

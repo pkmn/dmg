@@ -238,7 +238,7 @@ describe('parse', () => {
       expect(() => parse(gens, `attackerToxicCounter:foo ${PHRASE}`)).toThrow('Expected number');
       expect(parse(
         gens, `p2ToxicCounter:3 p2Status=tox:5 ${FLAGS}`, 'Conflicting values'
-      ).p2.pokemon.statusData?.toxicTurns).toEqual(5);
+      ).p2.pokemon.statusState?.toxicTurns).toEqual(5);
 
       expect(parse(gens, `${PHRASE} --noAttackerMoveLastTurn`).p1.pokemon.moveLastTurnResult)
         .toBe(false);

@@ -1,9 +1,9 @@
 import type {
-  BoostName,
+  BoostID,
   BoostsTable,
   Generation,
   Specie,
-  StatName,
+  StatID,
   StatsTable,
 } from '@pkmn/data';
 
@@ -604,12 +604,12 @@ function simplifyPokemon(
   }
   // TODO: Hidden Power needs to mark all IVs as relevant, encode takes care of eliding.
   for (const s in relevant.stats) {
-    const stat = s as StatName;
+    const stat = s as StatID;
     pokemon.evs![stat] = state.evs?.[stat] ?? (gen.num <= 2 ? 252 : 0);
     pokemon.ivs![stat] = state.ivs?.[stat] ?? 31;
   }
   for (const b in relevant.boosts) {
-    const boost = b as BoostName;
+    const boost = b as BoostID;
     pokemon.boosts[boost] = state.boosts[boost];
   }
   return pokemon;

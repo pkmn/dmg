@@ -120,7 +120,7 @@ function newContext() {
         item: 'Leftovers',
         ability: 'Natural Cure',
         status: 'tox',
-        statusData: {toxicTurns: 2},
+        statusState: {toxicTurns: 2},
         volatiles: {leechseed: {}},
       }),
       sideConditions: {stealthrock: {}, spikes: {level: 1}},

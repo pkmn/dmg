@@ -1,21 +1,12 @@
 import {Generation, PokemonSet, Specie, ID} from '@pkmn/data';
 import {Dex, Battle, PRNG, PRNGSeed} from '@pkmn/sim';
 
+import {Conditions} from '../../conditions';
 import {State} from '../../state';
 import {Result} from '../../result';
 
 const N = 1000;
 const SEED = [0x09917, 0x06924, 0x0e1c8, 0x06af0] as PRNGSeed;
-
-const WEATHERS: {[id: string]: ID} = {
-  sand: 'sandstorm' as ID,
-  sun: 'sunnyday' as ID,
-  rain: 'raindance' as ID,
-  hail: 'hail' as ID,
-  harshsunshine: 'desolateland' as ID,
-  heavyrain: 'primordialsea' as ID,
-  strongwinds: 'deltastream' as ID,
-};
 
 export function verify(state: State, result: Result, num = N, seed = SEED) {
   if (!isSupported(state)) return false;
@@ -23,7 +14,7 @@ export function verify(state: State, result: Result, num = N, seed = SEED) {
   try {
     const prng = new PRNG(seed);
     const gameType = state.gameType === 'singles' ? '' : state.gameType;
-    const format = Dex.getFormat(`gen${state.gen.num}${gameType}customgame`);
+    const format = Dex.formats.get(`gen${state.gen.num}${gameType}customgame`);
     for (let i = 0; i < num; i++, prng.next()) {
       const battle = new Battle({format, formatid: format.id, seed: prng.seed});
       battle.trunc = Dex.trunc.bind(Dex); // Custom Game formats don't use proper truncation...
@@ -126,7 +117,8 @@ function setSide(player: 'p1' | 'p2', battle: Battle, state: State) {
   battle.setPlayer(player, {team});
 
   const side = battle.sides[player === 'p1' ? 0 : 1];
-  for (const id in state[player].sideConditions) {
+  for (let id in state[player].sideConditions) {
+    id = Conditions.toPS(id);
     const sc = state[player].sideConditions[id];
     side.addSideCondition(id, 'debug');
     if (sc.level && sc.level > 1) {
@@ -138,9 +130,10 @@ function setSide(player: 'p1' | 'p2', battle: Battle, state: State) {
   pokemon.weighthg = p.weighthg;
   if (p.status) {
     pokemon.setStatus(pokemon.status);
-    if (p.statusData?.toxicTurns) pokemon.statusData.stage = p.statusData.toxicTurns;
+    if (p.statusState?.toxicTurns) pokemon.statusState.stage = p.statusState.toxicTurns;
   }
-  for (const id in p.volatiles) {
+  for (let id in p.volatiles) {
+    id = Conditions.toPS(id);
     const v = p.volatiles[id];
     pokemon.addVolatile(id);
     if (v.level && v.level > 1) {
@@ -164,18 +157,19 @@ function setSide(player: 'p1' | 'p2', battle: Battle, state: State) {
 
 function setField(battle: Battle, field: State.Field) {
   if (field.weather) {
-    battle.field.setWeather(WEATHERS[field.weather], 'debug');
+    battle.field.setWeather(Conditions.toPS(field.weather), 'debug');
   } else {
     battle.field.clearWeather();
   }
 
   if (field.terrain) {
-    battle.field.setTerrain(`${field.terrain} Terrain`, 'debug');
+    battle.field.setTerrain(Conditions.toPS(field.terrain), 'debug');
   } else {
     battle.field.clearTerrain();
   }
 
-  for (const id in field.pseudoWeather) {
+  for (let id in field.pseudoWeather) {
+    id = Conditions.toPS(id);
     const pw = field.pseudoWeather[id];
     battle.field.addPseudoWeather(id, 'debug');
     if (pw.level && pw.level > 1) {

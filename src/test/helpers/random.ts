@@ -1,5 +1,5 @@
 import {
-  BoostName,
+  BoostID,
   GameType,
   Generation,
   GenerationNum,
@@ -108,7 +108,7 @@ function generatePokemon(gen: Generation, prng: PRNG) {
   // NOTE: happiness is set only if Return or Frustration are selected
   if (prng.randomChance(1, 10)) {
     options.status = sample(prng, Object.keys(Statuses));
-    if (options.status === 'tox') options.statusData = {toxicTurns: range(prng, 0, 15)};
+    if (options.status === 'tox') options.statusState = {toxicTurns: range(prng, 0, 15)};
   }
 
   const volatiles = Object.values(Volatiles).filter(v =>
@@ -171,7 +171,7 @@ function generatePokemon(gen: Generation, prng: PRNG) {
   if (prng.randomChance(1, 10)) options.hp = math.round(stats.hp! * prng.next());
 
   options.boosts = {};
-  const boosts = BOOSTS.slice() as BoostName[];
+  const boosts = BOOSTS.slice() as BoostID[];
   // eslint-disable-next-line no-unmodified-loop-condition
   while (boosts && prng.randomChance(1, 10)) {
     options.boosts[sample(prng, boosts, true)] = range(prng, 1, 6);
@@ -242,7 +242,7 @@ function generateMove(gen: Generation, gameType: GameType, side: State.Side, prn
     options.hits = undefined;
   }
 
-  if (move.id === 'magnitude') {
+  if (move.id === 'magnitude' && !options.useZ) {
     options.magnitude = range(prng, 4, 10);
   } else if (move.id === 'beatup') {
     const atks = [];

@@ -8,7 +8,7 @@ import type {
   GenerationNum,
   Generations,
   ID,
-  StatName,
+  StatID,
   StatsTable,
   TypeName,
 } from '@pkmn/data';
@@ -96,7 +96,7 @@ interface Phrase {
     id: ID;
     boosts?: number;
     level?: number;
-    nature?: {plus?: StatName; minus?: StatName};
+    nature?: {plus?: StatID; minus?: StatID};
     hp?: number;
     evs?: Partial<StatsTable>;
     ability?: ID;
@@ -110,7 +110,7 @@ interface Phrase {
     id: ID;
     boosts?: number;
     level?: number;
-    nature?: {plus?: StatName; minus?: StatName};
+    nature?: {plus?: StatID; minus?: StatID};
     hp?: number;
     evs?: Partial<StatsTable>;
     ability?: ID;
@@ -566,8 +566,8 @@ function parseSpreadValues(
   s?: string,
   checks?: Checks,
 ) {
-  let plus: StatName | undefined;
-  let minus: StatName | undefined;
+  let plus: StatID | undefined;
+  let minus: StatID | undefined;
   const vals: Partial<StatsTable> = {};
 
   if (!s) return type === 'ev' ? {evs: vals} : vals;
@@ -756,7 +756,7 @@ function buildSide(
 
   const spread = parseSpreadValues(gen, 'ev', true, f.evs, checks) as {
     evs: Partial<StatsTable & {spc?: number}>;
-    nature?: {plus?: StatName; minus?: StatName};
+    nature?: {plus?: StatID; minus?: StatID};
   };
 
   const evs = spread?.evs;
@@ -793,7 +793,7 @@ function buildSide(
     accuracy: checks.number(`${side} accuracy boosts`, f.accuracyboosts),
     evasion: checks.number(`${side} evasion boosts`, f.evasionboosts),
   };
-  for (const s of [...gen.stats, 'spc'] as (StatName | 'spc')[]) {
+  for (const s of [...gen.stats, 'spc'] as (StatID | 'spc')[]) {
     const ev = (p?.evs as StatsTable & {spc: number} | undefined)?.[s];
     const d = gen.stats.display(s);
     // ev[s] may already be populated from the parseSpreadValues call above
@@ -876,7 +876,7 @@ function buildSide(
     dvs,
     boosts,
     status: f.status,
-    statusData: f.toxiccounter
+    statusState: f.toxiccounter
       ? {toxicTurns: checks.number(`${side} toxic counter`, f.toxiccounter)}
       : undefined,
     addedType,

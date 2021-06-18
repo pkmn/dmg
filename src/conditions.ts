@@ -34,6 +34,9 @@ const ALIASES: {[id: string]: string} = {
   gmaxsteelsurge: 'steelsurge',
   gmaxvolcalith: 'volcalith',
   gmaxwildfire: 'wildfire',
+  gmaxcannonade: 'cannonade',
+  gmaxvinelash: 'vinelash',
+
   // Status
   sleep: 'slp', asleep: 'slp',
   poison: 'psn', poisoned: 'psn',
@@ -41,6 +44,26 @@ const ALIASES: {[id: string]: string} = {
   freeze: 'frz', frozen: 'frz',
   paralysis: 'par', paralyzed: 'par',
   toxic: 'tox', badpoisoned: 'tox', badlypoisoned: 'tox',
+};
+
+/** Map between condition name and Pokémon Showdown's name for the condition.  */
+const REVERSE: {[id: string]: string} = {
+  sand: 'sandstorm',
+  sun: 'sunnyday',
+  rain: 'raindance',
+  hail: 'hail',
+  harshsunshine: 'desolateland',
+  heavyrain: 'primordialsea',
+  strongwinds: 'deltastream',
+  electric: 'electricterrain',
+  grassy: 'grassyterrain',
+  psychic: 'psychicterrain',
+  misty: 'mistyterrain',
+  steelsurge: 'gmaxsteelsurge',
+  cannonade: 'gmaxcannonade',
+  volcalith: 'gmaxvolcalith',
+  vinelash: 'gmaxvinelash',
+  wildfire: 'gmaxwildfire',
 };
 
 /**
@@ -110,6 +133,12 @@ export const Conditions = new class {
     }
 
     return undefined;
+  }
+
+  /** Turns a Condition name into Pokémon Showdown's version of the name.  */
+  toPS(name: string) {
+    const id = toID(name);
+    return REVERSE[id] as ID || id;
   }
 };
 

@@ -74,7 +74,7 @@ named similarly), but several differences exist:
 ### `p1` and `p2`
 
 `@pkmn/dmg`'s convention for side naming is to use `'p1'` and `'p2'`. These are the `SideID`s from
-Pokémon Showdown for two-player battles, and have the benefit of being succint. `@smogon/calc` uses
+Pokémon Showdown for two-player battles, and have the benefit of being succinct. `@smogon/calc` uses
 `'attacker'` and `'defender'`, which is a logical choice, but these names are not used in
 `@pkmn/dmg` due to potential confusion between the `Side` and the `Pokemon` (in `@smogon/calc` the
 `Side` is a member of the `Field`, not its own construct housing a `Pokemon` like `@pkmn/dmg` or

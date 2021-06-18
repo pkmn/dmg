@@ -13,31 +13,37 @@
   "publishConfig": {
     "access": "public"
   },
+  "files": [
+    "build",
+    "!build/test",
+    "src",
+    "!src/test"
+  ],
   "dependencies": {
-    "@pkmn/data": "^0.3.9"
+    "@pkmn/data": "^0.4.8"
   },
   "devDependencies": {
-    "@pkmn/sim": "^0.3.9",
     "@pkmn/eslint-config": "^1.1.0",
+    "@pkmn/sim": "^0.4.8",
     "@smogon/calc": "^0.6.0",
-    "@types/jest": "^26.0.19",
-    "@types/node": "^14.14.20",
-    "@typescript-eslint/eslint-plugin": "^4.12.0",
-    "@typescript-eslint/parser": "^4.12.0",
-    "eslint": "^7.17.0",
-    "eslint-plugin-import": "^2.22.1",
-    "eslint-plugin-jest": "^24.1.3",
-    "jest": "^26.6.3",
-    "microbundle": "^0.13.0",
-    "ts-jest": "^26.4.4",
-    "typescript": "^4.1.3"
+    "@types/jest": "^26.0.23",
+    "@types/node": "^15.12.2",
+    "@typescript-eslint/eslint-plugin": "^4.27.0",
+    "@typescript-eslint/parser": "^4.27.0",
+    "eslint": "^7.28.0",
+    "eslint-plugin-import": "^2.23.4",
+    "eslint-plugin-jest": "^24.3.6",
+    "jest": "^27.0.4",
+    "microbundle": "^0.13.3",
+    "ts-jest": "^27.0.3",
+    "typescript": "^4.3.3"
   },
   "scripts": {
     "lint": "eslint --cache src --ext ts",
     "fix": "eslint --fix src --ext ts",
     "compile": "tsc -p .",
     "bundle": "microbundle --name dmg --format umd --tsconfig bundle.json --strict",
-    "build": "npm run compile",
+    "build": "npm run compile && npm run bundle",
     "test": "jest",
     "test:integration": "npm run test && node integration",
     "prepare": "npm run build",
@@ -47,34 +53,50 @@
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "node",
-    "testPathIgnorePatterns": ["node_modules/", "build/"],
-    "coveragePathIgnorePatterns": ["node_modules/", "build/", "src/test/helpers/"],
+    "testPathIgnorePatterns": [
+      "node_modules/",
+      "build/"
+    ],
+    "coveragePathIgnorePatterns": [
+      "node_modules/",
+      "build/",
+      "src/test/helpers/"
+    ],
     "coverageDirectory": ".coverage"
   },
   "eslintConfig": {
     "extends": "@pkmn",
     "overrides": [
       {
-        "files": ["src/mechanics/*.ts", "!src/test/mechanics/index.ts"],
+        "files": [
+          "src/mechanics/*.ts",
+          "!src/test/mechanics/index.ts"
+        ],
         "rules": {
           "consistent-return": "off",
           "max-len": "off"
         }
       },
       {
-        "files": ["src/test/mechanics/*.ts"],
+        "files": [
+          "src/test/mechanics/*.ts"
+        ],
         "rules": {
           "max-len": "off"
         }
       },
       {
-        "files": ["src/result.ts"],
+        "files": [
+          "src/result.ts"
+        ],
         "rules": {
           "@typescript-eslint/prefer-for-of": "off"
         }
       },
       {
-        "files": ["src/**/*.ts"],
+        "files": [
+          "src/**/*.ts"
+        ],
         "rules": {
           "@typescript-eslint/restrict-template-expressions": 0,
           "@typescript-eslint/ban-types": [

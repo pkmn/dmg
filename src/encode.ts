@@ -1,4 +1,4 @@
-import type {Generation, BoostName, StatName, NatureName, StatsTable} from '@pkmn/data';
+import type {Generation, BoostID, StatID, NatureName, StatsTable} from '@pkmn/data';
 import {State} from './state';
 import {PseudoWeathers, SideConditions, Volatiles, Statuses} from './conditions';
 import {toID, has, is} from './utils';
@@ -87,13 +87,13 @@ export const ABILITIES: {[id: string]: 'p1' | 'p2'} = {
   friendguard: 'p2', powerspot: 'p1', steelyspirit: 'p1', stormdrain: 'p2',
 };
 
-export const STAT_ORDER: readonly StatName[] = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
-export const RBY_STAT_ORDER: readonly StatName[] = ['hp', 'atk', 'def', 'spa', 'spe'];
+export const STAT_ORDER: readonly StatID[] = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
+export const RBY_STAT_ORDER: readonly StatID[] = ['hp', 'atk', 'def', 'spa', 'spe'];
 
 function encodeSide(
   gen: Generation,
   p: 'p1' | 'p2',
-  stats: {p1: Exclude<StatName, 'hp'>; p2: Exclude<StatName, 'hp'>} | undefined,
+  stats: {p1: Exclude<StatID, 'hp'>; p2: Exclude<StatID, 'hp'>} | undefined,
   normal: boolean,
   state: State,
   buf: string[]
@@ -104,7 +104,7 @@ function encodeSide(
   // Boosts
   if (!normal || !stats || (stats && !pokemon.boosts[stats[p]]) ||
     Object.values(pokemon.boosts).filter(Boolean).length > 1) {
-    for (const boost of [...order.slice(1), 'accuracy', 'evasion'] as BoostName[]) {
+    for (const boost of [...order.slice(1), 'accuracy', 'evasion'] as BoostID[]) {
       if (!pokemon.boosts[boost]) continue;
       const s = gen.stats.display(boost);
       const name = s === boost ? s.charAt(0).toUpperCase() + s.slice(1) : s;
@@ -119,7 +119,7 @@ function encodeSide(
   if (pokemon.level !== 100) buf.push(`Lvl ${pokemon.level}`);
 
   // Nature / EVs
-  let mandatory: StatName[];
+  let mandatory: StatID[];
   if (p === 'p1') {
     mandatory = gen.num >= 3 && stats?.[p] && state.move.name !== 'Foul Play' ? [stats[p]] : [];
   } else {
@@ -150,7 +150,7 @@ function encodeSide(
 
   // Status
   if (pokemon.status === 'tox') {
-    buf.push(pokemon.statusData?.toxicTurns ? `Toxic:${pokemon.statusData.toxicTurns}` : '+Toxic');
+    buf.push(pokemon.statusState?.toxicTurns ? `Toxic:${pokemon.statusState.toxicTurns}` : '+Toxic');
   } else if (pokemon.status) {
     buf.push(`+${Statuses[pokemon.status]}`);
   }
@@ -214,21 +214,31 @@ function encodeSide(
       }
     }
 
-    // IV is a `false` if no IVs differ from the expected IVs, a specific stat if only one stat
-    // differs (eg. 0 Spe) and `true` if more than one IV is different than expected.
-    let iv: StatName | boolean = false;
     const ivs = [];
+    let unexpected: StatID[] = [];
+    const nonMax: StatID[] = [];
     for (const stat of order) {
       let val = pokemon.ivs[stat];
       ivs.push(val ?? 31);
       if (val === undefined) continue;
       if (gen.num <= 2) val = gen.stats.toIV(gen.stats.toDV(val));
-      if (val !== expected[stat]) iv = iv === false ? stat : true;
+      if (val !== expected[stat]) unexpected.push(stat);
+      if (val !== 31) nonMax.push(stat);
     }
+
+    // If the Pokémon's IVs match the expected defaults, we may still need to encode them if the
+    // move is 'Hidden Power' without any type provided. We also need to be careful to not encode
+    // only a single IV in the typed Hidden Power case as this will cause problems in parsing.
+    const typedHP = !(state.move.id === 'hiddenpower' && state.move.name !== 'Hidden Power');
+    if (state.move.name === 'Hidden Power') {
+      unexpected = nonMax;
+    }
+
     // If the IVs differ at all from what they will default to we need to encode them, though if
     // only a single differs it gets encoded differently for brevity/clarity.
-    if (iv) {
-      if (typeof iv === 'string') {
+    if (unexpected.length) {
+      if (unexpected.length === 1 && typedHP) {
+        const iv = unexpected[0];
         buf.push(gen.num >= 3
           ? `${gen.stats.display(iv)}IV:${pokemon.ivs[iv]}`
           : `${gen.stats.display(iv)}DV:${gen.stats.toDV(pokemon.ivs[iv]!)}`);
@@ -289,7 +299,7 @@ function encodeEVsAndNature(
   gen: Generation,
   evs: Partial<StatsTable>,
   nature: NatureName | undefined,
-  order: readonly StatName[],
+  order: readonly StatID[],
   buf: string[]
 ) {
   const n = nature ? gen.natures.get(nature) : undefined;
@@ -323,7 +333,7 @@ function shouldAddAbility(pokemon: State.Pokemon) {
 
 function getStats(
   gen: Generation, p1: State.Pokemon, p2: State.Pokemon, move: State.Move
-): [{p1: Exclude<StatName, 'hp'>; p2: Exclude<StatName, 'hp'>} | undefined, boolean] {
+): [{p1: Exclude<StatID, 'hp'>; p2: Exclude<StatID, 'hp'>} | undefined, boolean] {
   if (move.category === 'Status') return [undefined, true];
   switch (move.name) {
   case 'Photon Geyser':
@@ -357,14 +367,14 @@ const NATURE_ORDER: readonly NatureName[] = [
 ];
 
 export function getNature(
-  nature: {plus?: StatName; minus?: StatName},
+  nature: {plus?: StatID; minus?: StatID},
   evs: Partial<StatsTable & {spc: number}> | undefined,
 ) {
   if (nature.plus === 'hp' || nature.minus === 'hp') throw new Error('Natures cannot modify HP');
   if (nature.plus && nature.minus) return getNatureFromPlusMinus(nature.plus, nature.minus);
   if (!(nature.plus || nature.minus)) return undefined;
 
-  const unspecified: Array<Exclude<StatName, 'hp'>> = [];
+  const unspecified: Array<Exclude<StatID, 'hp'>> = [];
   for (const stat of STAT_ORDER) {
     if (stat === 'hp' || evs && stat in evs) continue;
     unspecified.push(stat);
@@ -376,17 +386,17 @@ export function getNature(
   return getNatureFromPlusMinus(plus, minus);
 }
 
-function getNatureFromPlusMinus(plus: Exclude<StatName, 'hp'>, minus: Exclude<StatName, 'hp'>) {
+function getNatureFromPlusMinus(plus: Exclude<StatID, 'hp'>, minus: Exclude<StatID, 'hp'>) {
   return NATURE_ORDER[(STAT_ORDER.indexOf(plus) - 1) * 5 + (STAT_ORDER.indexOf(minus) - 1)];
 }
 
-function complement(stat: Exclude<StatName, 'hp'>, options: Array<Exclude<StatName, 'hp'>>) {
+function complement(stat: Exclude<StatID, 'hp'>, options: Array<Exclude<StatID, 'hp'>>) {
   if (options.length === 1) return options[0];
   // Actually finding the 'optimal' stat to buff/nerf is effectively a fool's errand - the goal here
   // is to use somewhat sane heuristics and choose an underspecified stat that 'best' matches and
   // likely has the least impact on the relevant damage calculation. If the stat that is chosen is
   // at all relevant the user should have specified it.
-  const find = (stats: Array<Exclude<StatName, 'hp'>>) => stats.find(s => options.includes(s))!;
+  const find = (stats: Array<Exclude<StatID, 'hp'>>) => stats.find(s => options.includes(s))!;
   if (stat === 'atk') return find(['spa', 'spd', 'def', 'spe']);
   if (stat === 'spa') return find(['atk', 'def', 'spd', 'spe']);
   if (stat === 'def') return find(['spa', 'atk', 'spd', 'spe']);
