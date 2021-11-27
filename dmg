@@ -60,11 +60,11 @@ try {
     dmg.State.mergeSet(
       state.p1.pokemon,
       state.move.id,
-      ...(await smogon.sets(gen, state.p1.pokemon.species, format, true))
+      ...(await smogon.sets(gen, state.p1.pokemon.species, format))
     );
     dmg.State.mergeSet(
       state.p2.pokemon,
-      ...(await smogon.sets(gen, state.p2.pokemon.species, format, true))
+      ...(await smogon.sets(gen, state.p2.pokemon.species, format))
     );
 
     const result = dmg.calculate(state);

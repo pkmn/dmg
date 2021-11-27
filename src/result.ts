@@ -16,7 +16,7 @@ import * as math from './math';
 
 export class Relevancy {
   gameType: boolean;
-  readonly p1: Relevancy.Side ;
+  readonly p1: Relevancy.Side;
   readonly p2: Relevancy.Side;
   readonly move: Relevancy.Move;
   readonly field: Relevancy.Field;

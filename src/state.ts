@@ -14,7 +14,6 @@ import type {
   TypeName,
   StatID,
   Type,
-  Move,
 } from '@pkmn/data';
 
 import {WeatherName, TerrainName, Conditions, ConditionKind} from './conditions';
@@ -196,7 +195,7 @@ export class State {
     for (const key in s.move) {
       if (Object.prototype.hasOwnProperty.call(s.move, key)) {
         const val = s.move[key as keyof State.Move];
-        if (key === 'name' || !base || !(key in base) || val !== base[key as keyof Move]) {
+        if (key === 'name' || !base || !(key in base) || val !== base[key as keyof DMove]) {
           move[key] = val;
         }
       }

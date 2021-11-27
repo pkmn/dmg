@@ -41,7 +41,7 @@ export function verify(state: State, result: Result, num = N, seed = SEED) {
     }
 
     return true;
-  } catch (err) {
+  } catch (err: any) {
     throw new VerificationError(err);
   }
 }

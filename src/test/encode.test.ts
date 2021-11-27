@@ -25,22 +25,22 @@ describe('encode', () => {
       return encoded;
     };
 
-    expect(enc('gengar @ specs [tbolt] vs. 172+ spd blissey')).toEqual(
+    expect(enc('gengar @ specs [tbolt] vs. 172+ spd blissey')).toBe(
       '0 SpA Gengar @ Choice Specs [Thunderbolt] vs. 0 HP / 172+ SpD Natural Cure Blissey'
     );
-    expect(enc('252 SpA Mewtwo [Psystrike] vs. 252+ Def Blissey defBoost:4')).toEqual(
+    expect(enc('252 SpA Mewtwo [Psystrike] vs. 252+ Def Blissey defBoost:4')).toBe(
       '252 SpA Pressure Mewtwo [Psystrike] vs. +4 0 HP / 252+ Def Natural Cure Blissey'
     );
-    expect(enc('(Gen 5) 0 Atk Umbreon atkBoosts:3 [Foul Play] vs. 252 Def Snorlax')).toEqual(
+    expect(enc('(Gen 5) 0 Atk Umbreon atkBoosts:3 [Foul Play] vs. 252 Def Snorlax')).toBe(
       '(Gen 5) +3 Synchronize Umbreon [Foul Play] vs. 0 HP / 0 Atk / 252 Def Immunity Snorlax'
     );
-    expect(enc('252+ Atk Steelix [Body Press] vs. 252 HP / 252+ Def Shuckle')).toEqual(
+    expect(enc('252+ Atk Steelix [Body Press] vs. 252 HP / 252+ Def Shuckle')).toBe(
       '252+ Atk / 0 Def Rock Head Steelix [Body Press] vs. 252 HP / 252+ Def Sturdy Shuckle'
     );
-    expect(enc('Slowbro-Galar [Shell Side Arm] vs. 0 HP / 4 Def Rillaboom')).toEqual(
+    expect(enc('Slowbro-Galar [Shell Side Arm] vs. 0 HP / 4 Def Rillaboom')).toBe(
       '0 SpA Quick Draw Slowbro-Galar [Shell Side Arm] vs. 0 HP / 4 Def / 0 SpD Overgrow Rillaboom'
     );
-    expect(enc('(Gen 7) 252+ SpA Necrozma @ Firium Z [Photon Geyser] vs. Aegislash')).toEqual(
+    expect(enc('(Gen 7) 252+ SpA Necrozma @ Firium Z [Photon Geyser] vs. Aegislash')).toBe(
       '(Gen 7) 252+ SpA Necrozma @ Firium Z [Photon Geyser] vs. 0 HP / 0 SpD Aegislash'
     );
     expect(enc(
@@ -66,7 +66,7 @@ describe('encode', () => {
       '[Magnitude 5] +Spread vs. 0 HP / 0 Def Nature:Gentle 50.1% +Burn Immunity Snorlax ' +
       '@ Leftovers +Reflect +LeechSeed'
     );
-    expect(enc('(gen 1) pidgey [tail whip] vs. squirtle')).toEqual(
+    expect(enc('(gen 1) pidgey [tail whip] vs. squirtle')).toBe(
       '(Gen 1) Pidgey [Tail Whip] vs. Squirtle'
     );
     expect(
@@ -76,7 +76,7 @@ describe('encode', () => {
       '0 HP / 0 Def Blaze Charizard Spikes:3 EchoedVoice:2'
     );
 
-    expect(enc('{7} Weavile [Pursuit] vs. Celebi switching:out')).toEqual(
+    expect(enc('{7} Weavile [Pursuit] vs. Celebi switching:out')).toBe(
       '(Gen 7) 0 Atk Pressure Weavile [Pursuit] vs. 0 HP / 0 Def Celebi Switching:Out'
     );
     expect(enc(
@@ -88,7 +88,7 @@ describe('encode', () => {
     );
     expect(enc('{6} Kingler AddedType:Ghost [Hidden Power Ghost] vs. Haunter atkIV:0')).toEqual(
       '(Gen 6) 0 SpA Hyper Cutter Kingler AddedType:Ghost [Hidden Power Ghost] vs. ' +
-      '0 HP / 0 SpD Haunter AtkIV:0'
+      '0 HP / 0 SpD Haunter IVs:31/0/31/31/31/31'
     );
     expect(enc(
       '(Gen 5 Doubles) Umbreon allies=100,80,90,120,pressure [Beat Up] vs. Blissey +friendguard'
@@ -100,7 +100,7 @@ describe('encode', () => {
       '(Gen 4) 0 Atk Effect Spore Breloom [Bullet Seed] Hits:4 vs. ' +
       '0 HP / 0 Def Tyranitar IVs:30/31/30/31/30/31'
     );
-    expect(enc('{2} Marowak [Hidden Power Bug] vs. Machamp atkDV:7 defDV:8')).toEqual(
+    expect(enc('{2} Marowak [Hidden Power Bug] vs. Machamp atkDV:7 defDV:8')).toBe(
       '(Gen 2) Marowak [Hidden Power Bug] vs. Machamp DVs:11/7/8/15/15/15'
     );
   });
@@ -108,11 +108,11 @@ describe('encode', () => {
   test('getNature', () => {
     expect(() => getNature({plus: 'hp', minus: 'atk'}, undefined))
       .toThrow('Natures cannot modify HP');
-    expect(getNature({plus: 'atk', minus: 'spa'}, undefined)).toEqual('Adamant');
+    expect(getNature({plus: 'atk', minus: 'spa'}, undefined)).toBe('Adamant');
     expect(getNature({}, {})).toBeUndefined();
     expect(getNature({plus: 'atk'}, {hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0}))
       .toBeUndefined();
-    expect(getNature({plus: 'spe'}, {hp: 0, atk: 0, def: 0, spd: 0, spe: 0})).toEqual('Jolly');
-    expect(getNature({minus: 'spe'}, undefined)).toEqual('Sassy');
+    expect(getNature({plus: 'spe'}, {hp: 0, atk: 0, def: 0, spd: 0, spe: 0})).toBe('Jolly');
+    expect(getNature({minus: 'spe'}, undefined)).toBe('Sassy');
   });
 });

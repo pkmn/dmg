@@ -311,21 +311,21 @@ describe('State', () => {
     test('hp', () => {
       expect(() => State.createPokemon(gens.get(1), 'Chansey', {dvs: {hp: 15, atk: 0}}))
         .toThrow('required to have an HP DV');
-      expect(State.createPokemon(gens.get(1), 'Chansey', {dvs: {atk: 0}}).ivs!.hp).toEqual(15);
-      expect(State.createPokemon(gens.get(3), 'Suicune', {evs: {hp: 252}}).maxhp).toEqual(404);
+      expect(State.createPokemon(gens.get(1), 'Chansey', {dvs: {atk: 0}}).ivs!.hp).toBe(15);
+      expect(State.createPokemon(gens.get(3), 'Suicune', {evs: {hp: 252}}).maxhp).toBe(404);
       expect(() => State.createPokemon(gens.get(3), 'Suicune', {maxhp: 300, evs: {hp: 252}}))
         .toThrow('less than calculated max HP');
       expect(State.createPokemon(gens.get(3), 'Suicune', {maxhp: 500, evs: {hp: 252}}).maxhp)
-        .toEqual(500);
-      expect(State.createPokemon(gens.get(3), 'Suicune', {evs: {hp: 252}}).hp).toEqual(404);
+        .toBe(500);
+      expect(State.createPokemon(gens.get(3), 'Suicune', {evs: {hp: 252}}).hp).toBe(404);
       expect(State.createPokemon(gens.get(3), 'Suicune', {hp: 300, evs: {hp: 252}}).hp)
-        .toEqual(300);
+        .toBe(300);
       expect(() => State.createPokemon(gens.get(3), 'Suicune', {hp: -1, evs: {hp: 252}}))
         .toThrow('is not within [0,404]');
       expect(() =>
         State.createPokemon(gens.get(3), 'Suicune', {hpPercent: 50, hp: 201, evs: {hp: 252}})).toThrow('hp mismatch: \'202\' does not match \'201\'');
       expect(State.createPokemon(gens.get(3), 'Suicune', {hpPercent: 75, evs: {hp: 252}}).hp)
-        .toEqual(303);
+        .toBe(303);
     });
 
     test('misc', () => {
@@ -483,16 +483,16 @@ describe('State', () => {
 
       let merged = State.mergeSet(gens.get(4), gengar, yes, no);
 
-      expect(merged.level).toEqual(100);
-      expect(merged.item).toEqual('lifeorb');
-      expect(merged.ability).toEqual('levitate');
-      expect(merged.nature).toEqual('Timid');
+      expect(merged.level).toBe(100);
+      expect(merged.item).toBe('lifeorb');
+      expect(merged.ability).toBe('levitate');
+      expect(merged.nature).toBe('Timid');
       expect(merged.evs).toEqual({hp: 0, atk: 0, def: 4, spa: 252, spd: 0, spe: 252});
       expect(merged.ivs).toEqual({hp: 31, atk: 30, def: 31, spa: 30, spd: 31, spe: 30});
-      expect(merged.happiness).toEqual(123);
-      expect(merged.hp).toEqual(210);
-      expect(merged.maxhp).toEqual(261);
-      expect(merged.gender).toEqual('F');
+      expect(merged.happiness).toBe(123);
+      expect(merged.hp).toBe(210);
+      expect(merged.maxhp).toBe(261);
+      expect(merged.gender).toBe('F');
 
       yes.item = 'Leftovers';
       yes.ability = undefined;
@@ -507,8 +507,8 @@ describe('State', () => {
       merged = State.mergeSet(gens.get(2), gengar, yes, no);
 
       expect(merged.nature).toBeUndefined();
-      expect(merged.gender).toEqual('M');
-      expect(merged.ivs!.atk).toEqual(29);
+      expect(merged.gender).toBe('M');
+      expect(merged.ivs!.atk).toBe(29);
 
       yes.moves = ['Hidden Power Fire', 'Hidden Power Ice'];
       expect(() => State.mergeSet(gens.get(2), gengar, yes, no))
@@ -520,17 +520,17 @@ describe('State', () => {
         species: 'Marowak',
         item: 'Thick Club',
         moves: ['Earthquake', 'Rock Slide', 'Counter', 'Swords Dance'],
-      }).evs!.atk).toEqual(240);
+      }).evs!.atk).toBe(240);
       expect(State.mergeSet(gens.get(2), State.createPokemon(gens.get(2), 'Marowak'), {
         species: 'Marowak',
         item: 'Thick Club',
         moves: ['Earthquake', 'Rock Slide', 'Counter', 'Bone Rush'],
-      }).evs!.atk).toEqual(252);
+      }).evs!.atk).toBe(252);
       expect(State.mergeSet(gens.get(3), State.createPokemon(gens.get(2), 'Marowak'), {
         species: 'Marowak',
         item: 'Thick Club',
         moves: ['Earthquake', 'Rock Slide', 'Counter', 'Swords Dance'],
-      }).evs!.atk).toEqual(252);
+      }).evs!.atk).toBe(252);
     });
   });
 });

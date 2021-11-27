@@ -199,7 +199,7 @@ export function parse(gens: Generation | Generations, s: string, strict = false)
 
     // DEBUG console.log(stringify(context, null, 2) + '\n');
     return build(gen, gameType, parsed, flags, strict);
-  } catch (err) {
+  } catch (err: any) {
     throw new ParseError(err, context);
   }
 }
@@ -749,8 +749,8 @@ function buildSide(
     if (match) m = gen.moves.get(match[2]);
   }
   const stat = !m ? undefined : side === 'p1'
-    ? (m.category === 'Physical' ? 'atk' : 'spa')
-    : ((m.defensiveCategory ?? m.category) === 'Physical' ? 'def' : 'spd');
+    ? (m.overrideOffensiveStat || (m.category === 'Special' ? 'spa' : 'atk'))
+    : (m.overrideDefensiveStat || (m.category === 'Special' ? 'spd' : 'def'));
   // This can really only happen with an invalid move....
   checks.error(!stat && !!p?.boosts, `Ambiguous boosts ${p?.boosts} for ${side}`);
 

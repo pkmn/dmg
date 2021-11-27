@@ -250,7 +250,7 @@ justification, core parts of the algorithm may be broken up and made moddable in
 
 ### Implementations
 
-- [pret](https://github.com/pret) - disassembly of Gens 1-3
+- [pret](https://github.com/pret) - disassembly of Gens 1-4
 - [Pokémon Showdown!](https://github.com/smogon/pokemon-showdown) - Guangcong Luo (Zarel) and
   contributors
 - [Long Form Damage

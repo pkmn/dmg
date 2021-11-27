@@ -232,7 +232,7 @@ export function getZMoveName(
       item?.zMove &&
       has(item.itemUser, pokemon.species?.name) &&
       item.zMoveFrom === move.name;
-    if (matching) return item!.zMove;
+    if (matching) return item.zMove;
   }
   return Z_MOVES[move.type as Exclude<TypeName, '???'>];
 }

@@ -346,15 +346,11 @@ function getStats(
     const {def, spd} = computeStats(gen, p2);
     return [(atk / def) > (spa / spd) ? {p1: 'atk', p2: 'def'} : {p1: 'spa', p2: 'spd'}, false];
   }
-  case 'Body Press':
-    return [{p1: 'def', p2: 'def'}, false];
   default:
     return [{
-      p1: move.category === 'Special' ? 'spa' : 'atk',
-      p2: move.defensiveCategory
-        ? move.defensiveCategory === 'Special' ? 'spd' : 'def'
-        : move.category === 'Special' ? 'spd' : 'def',
-    }, true];
+      p1: move.overrideOffensiveStat || (move.category === 'Special' ? 'spa' : 'atk'),
+      p2: move.overrideDefensiveStat || (move.category === 'Special' ? 'spd' : 'def'),
+    }, move.name !== 'Body Press'];
   }
 }
 

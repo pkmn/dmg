@@ -16,6 +16,7 @@ import type {
   SecondaryEffect,
   Specie,
   SpeciesName,
+  StatID,
   StatsTable,
   StatusName,
   TypeName,
@@ -110,7 +111,7 @@ export namespace Context {
     toState(): State.Field {
       const pseudoWeather: {[id: string]: object} = {};
       for (const pw in this.pseudoWeather) {
-        pseudoWeather[pw] = extend(this.pseudoWeather[pw].data);
+        pseudoWeather[pw] = this.pseudoWeather[pw].data;
       }
       return {
         weather: this.weather?.name,
@@ -164,11 +165,13 @@ export namespace Context {
     toState(): State.Side {
       const sideConditions: {[id: string]: {level?: number}} = {};
       for (const sc in this.sideConditions) {
-        sideConditions[sc] = extend(this.sideConditions[sc]);
+        sideConditions[sc] = 'level' in this.sideConditions[sc]
+          ? {level: this.sideConditions[sc].level}
+          : {};
       }
       return {
         pokemon: this.pokemon.toState(),
-        sideConditions,
+        sideConditions: extend({}, this.sideConditions),
         active: this.active?.map(p => extend({}, p)),
         team: this.team?.map(p => extend({}, p)),
       };
@@ -288,7 +291,9 @@ export namespace Context {
     toState(): State.Pokemon {
       const volatiles: {[id: string]: {level?: number}} = {};
       for (const v in this.volatiles) {
-        volatiles[v] = extend(this.volatiles[v]);
+        volatiles[v] = 'level' in this.volatiles[v]
+          ? {level: this.volatiles[v].level}
+          : {};
       }
       return {
         species: this.species,
@@ -386,7 +391,10 @@ export namespace Context {
     basePowerModifier?: number;
     critModifier?: number;
     critRatio?: number;
-    defensiveCategory?: MoveCategory;
+    overrideOffensivePokemon?: 'target' | 'source';
+    overrideOffensiveStat?: Exclude<StatID, 'hp'>;
+    overrideDefensivePokemon?: 'target' | 'source';
+    overrideDefensiveStat?: Exclude<StatID, 'hp'>;
     forceSTAB?: boolean;
     ignoreAbility?: boolean;
     ignoreAccuracy?: boolean;
@@ -409,8 +417,6 @@ export namespace Context {
     smartTarget?: boolean;
     spreadModifier?: number;
     tracksTarget?: boolean;
-    useSourceDefensiveAsOffensive?: boolean;
-    useTargetOffensive?: boolean;
     willCrit?: boolean;
 
     hasCrashDamage?: boolean;
