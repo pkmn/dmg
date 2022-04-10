@@ -1,6 +1,7 @@
 # `@pkmn/dmg`
 
 ![Test Status](https://github.com/pkmn/dmg/workflows/Tests/badge.svg)
+![WIP](https://img.shields.io/badge/status-WIP-red.svg)
 ![License](https://img.shields.io/badge/License-MIT-blue.svg)
 [![npm version](https://img.shields.io/npm/v/@pkmn/dmg.svg)](https://www.npmjs.com/package/@pkmn/dmg)
 
