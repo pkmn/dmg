@@ -1,9 +1,16 @@
-# `@pkmn/dmg`
-
-![Test Status](https://github.com/pkmn/dmg/workflows/Tests/badge.svg)
-![WIP](https://img.shields.io/badge/status-WIP-red.svg)
-![License](https://img.shields.io/badge/License-MIT-blue.svg)
-[![npm version](https://img.shields.io/npm/v/@pkmn/dmg.svg)](https://www.npmjs.com/package/@pkmn/dmg)
+<p align="center">
+  <img alt="dmg" width="192" height="192" src="https://pkmn.cc/dmg.png" />
+  <br />
+  <br />
+  <a href="https://github.com/pkmn/dmg/actions/workflows/test.yml">
+    <img alt="Test Status" src="https://github.com/pkmn/dmg/workflows/Tests/badge.svg" />
+  </a>
+  <img alt="WIP" src="https://img.shields.io/badge/status-WIP-red.svg" />
+  <a href="https://github.com/pkmn/dmg/blob/master/LICENSE">
+    <img alt="License" src="https://img.shields.io/badge/License-MIT-blue.svg" />
+  </a>
+</p>
+<hr />
 
 The most accurate and complete multi-generational Pokémon damage calculator package.
 
