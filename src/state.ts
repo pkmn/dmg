@@ -61,99 +61,6 @@ export interface SideOptions {
   atks?: number[];
 }
 
-export namespace State {
-  export interface Field {
-    weather?: WeatherName;
-    terrain?: TerrainName;
-    pseudoWeather: {[id: string]: {level?: number}};
-  }
-
-  export interface Side {
-    pokemon: Pokemon;
-    sideConditions: {[id: string]: {level?: number}};
-    // Rarely useful, but required for ally-affecting abilities like Plus/Minus or Fairy Aura etc.
-    // Must be a subset of State.Pokemon so that a State.Pokemon object could be used in this array
-    active?: Array<{
-      ability?: ID;
-      // Used to differentiate the attacker/defender from their allies if they are also
-      // included in the active array
-      position?: number;
-      // Used to exclude allies which are fainted (alternatively they can just be left
-      // out of the active array)
-      fainted?: boolean;
-    } | null>;
-    // Similarly niche, Beat Up etc requires information about the entire team. Must be a subset
-    // of State.Pokemon so that a State.Pokemon object could be used in this array
-    team?: Array<{
-      // Fields required for Beat Up mechanics
-      species: {baseStats: {atk: number}};
-      // Fields used to exclude certain team members per the mechanics
-      status?: StatusName;
-      fainted?: boolean;
-      // Fields used to exclude the attacker/defender if they are included in the array
-      position?: number;
-    }>;
-  }
-
-  export interface Pokemon {
-    species: Specie;
-    level: number;
-    // Hectograms is stored instead of the more user-friendly and intuitive kilograms because the
-    // game considers weights down to hectogram precision when modified
-    weighthg: number;
-
-    item?: ID;
-    ability?: ID;
-    gender?: GenderName;
-    // Only relevant for submaximal happiness based move calculations - if excluded the move will be
-    // treated as max power (eg. 0 happiness for Frustration, 255 for Return etc)
-    happiness?: number;
-
-    status?: StatusName;
-    statusState?: {toxicTurns?: number};
-    // Level is used to track layers/stockpiles/etc
-    volatiles: {[id: string]: {level?: number}};
-
-    types: [TypeName] | [TypeName, TypeName];
-    // Type added by Trick-or-Treat/Forest's Curse etc
-    addedType?: TypeName;
-
-    // Base max HP is stats.hp, but max HP may change due to Dynamaxing or Power Contruct etc
-    maxhp: number;
-    hp: number;
-
-    nature?: NatureName;
-    evs?: Partial<StatsTable>;
-    ivs?: Partial<StatsTable>;
-
-    // Computed stats can be provided directly, but without spread information the result
-    // description will be limited. This option exists primarly as an optimization for @pkmn/gmd
-    // and other programmatic use cases.
-    stats?: StatsTable;
-
-    boosts: Partial<BoostsTable>;
-
-    // Use to disambiguate this Pokemon from its allies if included in the Side's active or party
-    position?: number;
-
-    // Required for certain moves which effect switches, the most obvious being Pursuit
-    switching?: 'in' | 'out';
-    // Required for Stomping Tantrum
-    moveLastTurnResult?: false | unknown;
-    // Required for Assurance
-    hurtThisTurn?: false | unknown;
-  }
-
-  export interface Move extends DMove {
-    crit?: boolean;
-    hits?: number;
-    magnitude?: number;
-    spread?: boolean;
-    consecutive?: number;
-    useZ?: boolean;
-  }
-}
-
 // Moves can include a base power override in their name, eg. "Present 80" or a "Z-" prefix
 export const MOVE_SUGAR = /^\s*(Z\s*-?\s*)?(\D*)(\d+)?\s*$/i;
 
@@ -597,6 +504,99 @@ export class State {
     pokemon.maxhp = maxhp;
 
     return validateStats(gen, pokemon);
+  }
+}
+
+export namespace State {
+  export interface Field {
+    weather?: WeatherName;
+    terrain?: TerrainName;
+    pseudoWeather: {[id: string]: {level?: number}};
+  }
+
+  export interface Side {
+    pokemon: Pokemon;
+    sideConditions: {[id: string]: {level?: number}};
+    // Rarely useful, but required for ally-affecting abilities like Plus/Minus or Fairy Aura etc.
+    // Must be a subset of State.Pokemon so that a State.Pokemon object could be used in this array
+    active?: Array<{
+      ability?: ID;
+      // Used to differentiate the attacker/defender from their allies if they are also
+      // included in the active array
+      position?: number;
+      // Used to exclude allies which are fainted (alternatively they can just be left
+      // out of the active array)
+      fainted?: boolean;
+    } | null>;
+    // Similarly niche, Beat Up etc requires information about the entire team. Must be a subset
+    // of State.Pokemon so that a State.Pokemon object could be used in this array
+    team?: Array<{
+      // Fields required for Beat Up mechanics
+      species: {baseStats: {atk: number}};
+      // Fields used to exclude certain team members per the mechanics
+      status?: StatusName;
+      fainted?: boolean;
+      // Fields used to exclude the attacker/defender if they are included in the array
+      position?: number;
+    }>;
+  }
+
+  export interface Pokemon {
+    species: Specie;
+    level: number;
+    // Hectograms is stored instead of the more user-friendly and intuitive kilograms because the
+    // game considers weights down to hectogram precision when modified
+    weighthg: number;
+
+    item?: ID;
+    ability?: ID;
+    gender?: GenderName;
+    // Only relevant for submaximal happiness based move calculations - if excluded the move will be
+    // treated as max power (eg. 0 happiness for Frustration, 255 for Return etc)
+    happiness?: number;
+
+    status?: StatusName;
+    statusState?: {toxicTurns?: number};
+    // Level is used to track layers/stockpiles/etc
+    volatiles: {[id: string]: {level?: number}};
+
+    types: [TypeName] | [TypeName, TypeName];
+    // Type added by Trick-or-Treat/Forest's Curse etc
+    addedType?: TypeName;
+
+    // Base max HP is stats.hp, but max HP may change due to Dynamaxing or Power Contruct etc
+    maxhp: number;
+    hp: number;
+
+    nature?: NatureName;
+    evs?: Partial<StatsTable>;
+    ivs?: Partial<StatsTable>;
+
+    // Computed stats can be provided directly, but without spread information the result
+    // description will be limited. This option exists primarly as an optimization for @pkmn/gmd
+    // and other programmatic use cases.
+    stats?: StatsTable;
+
+    boosts: Partial<BoostsTable>;
+
+    // Use to disambiguate this Pokemon from its allies if included in the Side's active or party
+    position?: number;
+
+    // Required for certain moves which effect switches, the most obvious being Pursuit
+    switching?: 'in' | 'out';
+    // Required for Stomping Tantrum
+    moveLastTurnResult?: false | unknown;
+    // Required for Assurance
+    hurtThisTurn?: false | unknown;
+  }
+
+  export interface Move extends DMove {
+    crit?: boolean;
+    hits?: number;
+    magnitude?: number;
+    spread?: boolean;
+    consecutive?: number;
+    useZ?: boolean;
   }
 }
 

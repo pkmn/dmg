@@ -1,7 +1,7 @@
-# Testing
+#s Testing
 
 Most logic, in particular damange calculation results, should be [incredibly easy to
-test](#generate-test) and thus **tests are expected to accompany all pull requests**. The `master`
+test](#generate-test) and thus **tests are expected to accompany all pull requests**. The `main`
 branch of `@pkmn/dmg` is [protected, may not be pushed to directly, and requires status checks to
 pass before merging](https://github.blog/2015-09-03-protected-branches-and-required-status-checks/).
 

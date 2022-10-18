@@ -13,30 +13,26 @@
   "publishConfig": {
     "access": "public"
   },
-  "files": [
-    "build",
-    "!build/test",
-    "src",
-    "!src/test"
-  ],
+  "files": ["build", "!build/test", "src", "!src/test"],
   "dependencies": {
-    "@pkmn/data": "^0.4.24"
+    "@pkmn/data": "^0.6.1"
   },
   "devDependencies": {
-    "@pkmn/eslint-config": "^2.0.0",
-    "@pkmn/sim": "^0.4.24",
+    "@babel/preset-env": "^7.19.4",
+    "@babel/preset-typescript": "^7.18.6",
+    "@pkmn/eslint-config": "^2.11.0",
+    "@pkmn/sim": "^0.6.1",
     "@smogon/calc": "^0.6.0",
-    "@types/jest": "^27.0.3",
-    "@types/node": "^16.11.10",
-    "@typescript-eslint/eslint-plugin": "^5.4.0",
-    "@typescript-eslint/parser": "^5.4.0",
-    "eslint": "^8.3.0",
-    "eslint-plugin-import": "^2.25.3",
-    "eslint-plugin-jest": "^25.3.0",
-    "jest": "^27.3.1",
-    "microbundle": "^0.14.2",
-    "ts-jest": "^27.0.7",
-    "typescript": "^4.5.2"
+    "@types/jest": "^29.2.0",
+    "@types/node": "^18.11.7",
+    "@typescript-eslint/eslint-plugin": "^5.41.0",
+    "@typescript-eslint/parser": "^5.41.0",
+    "eslint": "^8.26.0",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-jest": "^27.1.3",
+    "jest": "^29.2.2",
+    "microbundle": "^0.15.1",
+    "typescript": "^4.8.4"
   },
   "scripts": {
     "lint": "eslint --cache src --ext ts",
@@ -51,52 +47,47 @@
     "posttest": "npm run lint"
   },
   "jest": {
-    "preset": "ts-jest",
     "testEnvironment": "node",
-    "testPathIgnorePatterns": [
-      "node_modules/",
-      "build/"
-    ],
-    "coveragePathIgnorePatterns": [
-      "node_modules/",
-      "build/",
-      "src/test/helpers/"
-    ],
+    "testPathIgnorePatterns": ["node_modules/", "build/"],
+    "coveragePathIgnorePatterns": ["node_modules/", "build/", "src/test/helpers/"],
     "coverageDirectory": ".coverage"
+  },
+  "babel": {
+    "presets": [
+        "@babel/preset-typescript",
+        ["@babel/preset-env", {"targets": {"node": "current"}}]
+    ]
   },
   "eslintConfig": {
     "extends": "@pkmn",
     "overrides": [
       {
-        "files": [
-          "src/mechanics/*.ts",
-          "!src/test/mechanics/index.ts"
-        ],
+        "files": ["src/mechanics/*.ts","!src/test/mechanics/index.ts"],
         "rules": {
           "consistent-return": "off",
           "max-len": "off"
         }
       },
       {
-        "files": [
-          "src/test/mechanics/*.ts"
-        ],
+        "files": ["src/test/mechanics/*.ts"],
         "rules": {
           "max-len": "off"
         }
       },
       {
-        "files": [
-          "src/result.ts"
-        ],
+        "files": ["src/result.ts"],
         "rules": {
           "@typescript-eslint/prefer-for-of": "off"
         }
       },
       {
-        "files": [
-          "src/**/*.ts"
-        ],
+        "files": ["src/utils.ts"],
+        "rules": {
+          "@typescript-eslint/no-this-alias": "off"
+        }
+      },
+      {
+        "files": ["src/**/*.ts"],
         "rules": {
           "@typescript-eslint/restrict-template-expressions": 0,
           "@typescript-eslint/ban-types": [

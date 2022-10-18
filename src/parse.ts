@@ -633,7 +633,7 @@ function build(
     conflict,
     number<T>(k: string, a: T | undefined, b?: T | undefined, required?: boolean) {
       const n = conflict(k, a, b, required);
-      if (n === undefined) return undefined;
+      if (n === undefined || n === null) return undefined;
       // NOTE: regardless of whether we're strict or not we need a number here
       if (isNaN(+n)) throw new Error(`Expected number for ${k}, received '${n}'`);
       return +n;

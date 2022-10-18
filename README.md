@@ -6,7 +6,7 @@
     <img alt="Test Status" src="https://github.com/pkmn/dmg/workflows/Tests/badge.svg" />
   </a>
   <img alt="WIP" src="https://img.shields.io/badge/status-WIP-red.svg" />
-  <a href="https://github.com/pkmn/dmg/blob/master/LICENSE">
+  <a href="https://github.com/pkmn/dmg/tree/main/LICENSE">
     <img alt="License" src="https://img.shields.io/badge/License-MIT-blue.svg" />
   </a>
 </p>
@@ -54,9 +54,9 @@ convenient way to get started, simply depend on a transpiled and minified versio
 returns a [`Result`](src/result.ts).
 
 `@pkmn/dmg` is data-layer agnostic - thanks to its dependency on
-[`@pkmn/data`](https://github.com/pkmn/ps/blob/master/data) it simply requires a Pokémon Showdown
+[`@pkmn/data`](https://github.com/pkmn/ps/tree/master/data) it simply requires a Pokémon Showdown
 compatible `Dex`-type implementation to be provided to `@pkmn/data`'s `Generations` constructor
-([`@pkmn/dex`](https://github.com/pkmn/ps/blob/master/dex) is the recommended choice here, though
+([`@pkmn/dex`](https://github.com/pkmn/ps/tree/master/dex) is the recommended choice here, though
 note that as it is fully featured it is ~4x the size of `@smogon/calc/data` and certain applications
 may wish to preprocess the JSON files to trim unnecessary fields).
 

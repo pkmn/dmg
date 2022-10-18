@@ -29,7 +29,7 @@ Not satisfied with just one `Pokemon` class, `@pkmn/dmg` has *several* concepts 
   corresponding `@pkmn/client` types (so the client's `Pokemon` implements the calc's
   `State.Pokemon` etc) to allow for a zero-cost interoperability between `@pkmn` packages. This maps
   relatively closely the purpose of [`State` in
-  `@smogon/calc`](https://github.com/smogon/damage-calc/blob/master/calc/src/state.ts).
+  `@smogon/calc`](https://github.com/smogon/damage-calc/tree/master/calc/src/state.ts).
   - `State` also houses a number of convenience helper methods which can be used to **create** an
     object adhering to the `Pokemon` or `Move` interface. These methods assume sensible defaults and
     perform verification of the objects they build to assure that they are legal. This is the
@@ -46,7 +46,7 @@ Not satisfied with just one `Pokemon` class, `@pkmn/dmg` has *several* concepts 
   input `State` was relevant for the calculation (and thus should be included in the output
   description or be present in the canonical representation of the calculation state). This is
   analogous to [`RawDesc` in
-  `@smogon/calc`](https://github.com/smogon/damage-calc/blob/master/calc/src/desc.ts), only unlike
+  `@smogon/calc`](https://github.com/smogon/damage-calc/tree/master/calc/src/desc.ts), only unlike
   `RawDesc` it has the same 'shape' as the input `State`. Note that `Context`/`Result` actually
   contains **two** `Relevancy` fields - `relevant` tracking properties relevant to the damage rolls
   and `residual` which tracks properties related to tracking end of turn damage/recovery (which
