@@ -264,7 +264,9 @@ justification, core parts of the algorithm may be broken up and made moddable in
 - [Long Form Damage
   Calculator](https://docs.google.com/spreadsheets/d/14XBTYYRp1OK5epQzB3SF2ccdSkuA6Jv7UlRQi66pxkY/edit#gid=1621823916)
   \- SadisticMystic
+- [`@pkmn/engine`](https://github.com/pkmn/engine) - pkmn contributors
 - [sulcalc](https://github.com/sulcata/sulcalc/) - sulcata
+- [relicalc](https://github.com/Corvimae/relicalc) - Corvimae
 - [`@smogon/calc`](https://github.com/smogon/damage-calc) - Honko, Austin, and contributors
 
 ## License
