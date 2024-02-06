@@ -23,9 +23,9 @@ import {
   FieldOptions,
   MoveOptions,
   PokemonOptions,
-  setGender,
   SideOptions,
   State,
+  setGender,
 } from '../../state';
 import {is} from '../../utils';
 import * as math from '../../math';
@@ -160,7 +160,7 @@ function generatePokemon(gen: Generation, prng: PRNG) {
       : (prng.randomChance(1, 20) ? range(prng, 0, 252) : 252);
     total -= options.evs[stat]!;
     stats[stat] = gen.stats.calc(
-      stat, species.baseStats[stat]!, options.ivs[stat], options.evs[stat], options.level, nature
+      stat, species.baseStats[stat], options.ivs[stat], options.evs[stat], options.level, nature
     );
   }
 

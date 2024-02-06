@@ -3,7 +3,7 @@ import * as assert from 'assert';
 import {Generations} from '@pkmn/data';
 import {Dex, PRNG, PRNGSeed} from '@pkmn/sim';
 
-import {Result, encode, parse, State, ParseError} from '../../index';
+import {ParseError, Result, State, encode, parse} from '../../index';
 import {assertStateEqual} from './assert';
 import {generate} from './random';
 // import {verify} from './verifier';
@@ -50,8 +50,8 @@ export function run(seed: PRNGSeed = [1, 2, 3, 4], N = 10000) {
       if (simplified.state) {
         s += sep + `State (2): ${stringify(State.toJSON(simplified.state), null, 2)}\n`;
       }
-      if (original.result) s += sep + `Result (1): ${original.toString()}\n`;
-      if (simplified.result) s += sep + `Result (2): ${simplified.toString()}\n`;
+      if (original.result) s += sep + `Result (1): ${original.result.toString()}\n`;
+      if (simplified.result) s += sep + `Result (2): ${simplified.result.toString()}\n`;
       if (err instanceof ParseError) {
         s += sep + `Context: ${stringify(err.context, null, 2)}\n`;
       }

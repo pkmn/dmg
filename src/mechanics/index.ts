@@ -1,4 +1,4 @@
-import type {GameType, Generation, Generations, ID, MoveName, TypeName, StatsTable} from '@pkmn/data';
+import type {GameType, Generation, Generations, ID, MoveName, StatsTable, TypeName} from '@pkmn/data';
 
 import {State} from '../state';
 import {Context} from '../context';
@@ -11,7 +11,7 @@ import {Conditions} from './conditions';
 import {Items} from './items';
 import {Moves} from './moves';
 
-import {clamp, floor, trunc, max, min, chain, apply, abs} from '../math';
+import {abs, apply, chain, clamp, floor, max, min, trunc} from '../math';
 
 export interface Applier {
   apply(side: 'p1' | 'p2', state: State, guaranteed?: boolean): void;
@@ -54,32 +54,32 @@ export class Appliers {
     if (!id) return;
 
     switch (kind) {
-    case 'Abilities':
-    case 'Items':
-      return this.handlers[kind][id]?.apply?.(side, state, guaranteed);
-    case 'Moves': {
+      case 'Abilities':
+      case 'Items':
+        return this.handlers[kind][id]?.apply?.(side, state, guaranteed);
+      case 'Moves': {
       // If a Move handler is defined, use it, otherwise try to see if an 'apply' function can
       // can be inferred based purely on information from the data files
-      const handler = this.handlers.Moves[id];
-      if (handler?.apply) return handler.apply(side, state, guaranteed);
+        const handler = this.handlers.Moves[id];
+        if (handler?.apply) return handler.apply(side, state, guaranteed);
 
-      const move = state.gen.moves.get(id);
-      if (!move) return;
+        const move = state.gen.moves.get(id);
+        if (!move) return;
 
-      const secondaries = move.secondaries
-        ? move.secondaries
-        : move.secondary ? [move.secondary] : undefined;
-      if (!secondaries) return;
+        const secondaries = move.secondaries
+          ? move.secondaries
+          : move.secondary ? [move.secondary] : undefined;
+        if (!secondaries) return;
 
-      for (const secondary of secondaries) {
-        if (guaranteed && secondary.chance && secondary.chance < 100) continue;
+        for (const secondary of secondaries) {
+          if (guaranteed && secondary.chance && secondary.chance < 100) continue;
         // TODO apply secondary! need to take into account Simple etc for boosts, other affects
         // for slot conditions etc
+        }
+        return;
       }
-      return;
-    }
-    default:
-      throw new Error(`Invalid handler kind: '${kind}'`);
+      default:
+        throw new Error(`Invalid handler kind: '${kind}'`);
     }
   }
 }
@@ -196,7 +196,7 @@ export function computeModifiedWeight(pokemon: Context.Pokemon | State.Pokemon) 
   return weighthg;
 }
 
-const Z_MOVES: { [type in Exclude<TypeName, '???'>]: string } = {
+const Z_MOVES: { [type in Exclude<TypeName, '???' | 'Stellar'>]: string } = {
   Bug: 'Savage Spin-Out',
   Dark: 'Black Hole Eclipse',
   Dragon: 'Devastating Drake',
@@ -234,10 +234,10 @@ export function getZMoveName(
       item.zMoveFrom === move.name;
     if (matching) return item.zMove;
   }
-  return Z_MOVES[move.type as Exclude<TypeName, '???'>];
+  return Z_MOVES[move.type as Exclude<TypeName, '???'| 'Stellar'>];
 }
 
-const MAX_MOVES: { [type in Exclude<TypeName, '???'>]: string } = {
+const MAX_MOVES: { [type in Exclude<TypeName, '???' | 'Stellar'>]: string } = {
   Bug: 'Max Flutterby',
   Dark: 'Max Darkness',
   Dragon: 'Max Wyrmwind',
@@ -272,7 +272,7 @@ export function getMaxMovename(
     const gmaxMove = gen.moves.get(pokemon.species.isGigantamax)!;
     if (move.type === gmaxMove.type) return pokemon.species.isGigantamax;
   }
-  return MAX_MOVES[move.type as Exclude<TypeName, '???'>];
+  return MAX_MOVES[move.type as Exclude<TypeName, '???' | 'Stellar'>];
 }
 
 // function takeItem(pokemon: State.Pokemon | Context.Pokemon, boost: BoostID, amount: number) {
@@ -282,7 +282,6 @@ export function getMaxMovename(
 //   // mega item
 
 // }
-
 
 /*
 

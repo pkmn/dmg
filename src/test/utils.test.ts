@@ -1,4 +1,4 @@
-import {toID, extend, has, is, override} from '../utils';
+import {extend, has, is, override, toID} from '../utils';
 
 class Foo {
   x: number;

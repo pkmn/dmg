@@ -1,5 +1,5 @@
-import {Generation, PokemonSet, Specie, ID} from '@pkmn/data';
-import {Dex, Battle, PRNG, PRNGSeed} from '@pkmn/sim';
+import {Generation, ID, PokemonSet, Specie} from '@pkmn/data';
+import {Battle, Dex, PRNG, PRNGSeed} from '@pkmn/sim';
 
 import {Conditions} from '../../conditions';
 import {State} from '../../state';

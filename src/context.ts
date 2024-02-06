@@ -1,13 +1,13 @@
 import type {
   BoostsTable,
   ConditionData,
+  Move as DMove,
   GameType,
   GenderName,
   Generation,
   GenerationNum,
   HitEffect,
   ID,
-  Move as DMove,
   MoveCategory,
   MoveName,
   MoveTarget,
@@ -22,8 +22,8 @@ import type {
   TypeName,
 } from '@pkmn/data';
 
-import {WeatherName, TerrainName} from './conditions';
-import {Handlers, Handler, HANDLER_FNS, HANDLERS, HandlerKind} from './mechanics';
+import {TerrainName, WeatherName} from './conditions';
+import {HANDLERS, HANDLER_FNS, Handler, HandlerKind, Handlers} from './mechanics';
 import {Relevancy} from './result';
 import {DeepReadonly, extend, toID} from './utils';
 import {State} from './state';
@@ -205,8 +205,8 @@ export namespace Context {
     position?: number;
 
     switching?: 'in' | 'out';
-    moveLastTurnResult?: false | unknown;
-    hurtThisTurn?: false | unknown;
+    moveLastTurnResult?: unknown;
+    hurtThisTurn?: unknown;
 
     readonly relevant: Relevancy.Pokemon;
 
@@ -474,7 +474,7 @@ function reify<T>(
       if (fn && HANDLER_FNS.has(k) && typeof fn === 'function') {
         obj[k] = (c: Context) => {
           const r = (fn as any)(c);
-          if (typeof r !== undefined && cbfn) cbfn();
+          if (typeof r !== 'undefined' && cbfn) cbfn();
           return r;
         };
       }

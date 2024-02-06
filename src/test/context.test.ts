@@ -2,8 +2,8 @@ import {Generations, ID} from '@pkmn/data';
 import {Dex} from '@pkmn/sim';
 
 import {Context} from '../context';
-import {State} from '../state';
 import {Relevancy} from '../result';
+import {State} from '../state';
 import {DeepReadonly} from '../utils';
 
 describe('Context', () => {

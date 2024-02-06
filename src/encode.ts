@@ -1,7 +1,7 @@
-import type {Generation, BoostID, StatID, NatureName, StatsTable} from '@pkmn/data';
+import type {BoostID, Generation, NatureName, StatID, StatsTable} from '@pkmn/data';
 import {State} from './state';
-import {PseudoWeathers, SideConditions, Volatiles, Statuses} from './conditions';
-import {toID, has, is} from './utils';
+import {PseudoWeathers, SideConditions, Statuses, Volatiles} from './conditions';
+import {has, is, toID} from './utils';
 import {computeStats} from './mechanics';
 import * as math from './math';
 
@@ -336,21 +336,21 @@ function getStats(
 ): [{p1: Exclude<StatID, 'hp'>; p2: Exclude<StatID, 'hp'>} | undefined, boolean] {
   if (move.category === 'Status') return [undefined, true];
   switch (move.name) {
-  case 'Photon Geyser':
-  case 'Light That Burns The Sky': {
-    const {atk, spa} = computeStats(gen, p1);
-    return [atk > spa ? {p1: 'atk', p2: 'def'} : {p1: 'spa', p2: 'spd'}, false];
-  }
-  case 'Shell Side Arm': {
-    const {atk, spa} = computeStats(gen, p1);
-    const {def, spd} = computeStats(gen, p2);
-    return [(atk / def) > (spa / spd) ? {p1: 'atk', p2: 'def'} : {p1: 'spa', p2: 'spd'}, false];
-  }
-  default:
-    return [{
-      p1: move.overrideOffensiveStat || (move.category === 'Special' ? 'spa' : 'atk'),
-      p2: move.overrideDefensiveStat || (move.category === 'Special' ? 'spd' : 'def'),
-    }, move.name !== 'Body Press'];
+    case 'Photon Geyser':
+    case 'Light That Burns The Sky': {
+      const {atk, spa} = computeStats(gen, p1);
+      return [atk > spa ? {p1: 'atk', p2: 'def'} : {p1: 'spa', p2: 'spd'}, false];
+    }
+    case 'Shell Side Arm': {
+      const {atk, spa} = computeStats(gen, p1);
+      const {def, spd} = computeStats(gen, p2);
+      return [(atk / def) > (spa / spd) ? {p1: 'atk', p2: 'def'} : {p1: 'spa', p2: 'spd'}, false];
+    }
+    default:
+      return [{
+        p1: move.overrideOffensiveStat || (move.category === 'Special' ? 'spa' : 'atk'),
+        p2: move.overrideDefensiveStat || (move.category === 'Special' ? 'spd' : 'def'),
+      }, move.name !== 'Body Press'];
   }
 }
 

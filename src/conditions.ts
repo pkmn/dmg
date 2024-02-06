@@ -1,6 +1,6 @@
-import type {GenerationNum, ID, StatusName, Generation} from '@pkmn/data';
+import type {Generation, GenerationNum, ID, StatusName} from '@pkmn/data';
 
-import {toID, is} from './utils';
+import {is, toID} from './utils';
 
 export type Player = 'p1' | 'p2';
 

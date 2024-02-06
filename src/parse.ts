@@ -13,10 +13,10 @@ import type {
   TypeName,
 } from '@pkmn/data';
 
-import {Conditions, ConditionKind, Player} from './conditions';
-import {State, bounded, MOVE_SUGAR} from './state';
-import {decodeURL, getNature, ABILITIES, STAT_ORDER, RBY_STAT_ORDER} from './encode';
-import {is, toID, has} from './utils';
+import {ConditionKind, Conditions, Player} from './conditions';
+import {MOVE_SUGAR, State, bounded} from './state';
+import {ABILITIES, RBY_STAT_ORDER, STAT_ORDER, decodeURL, getNature} from './encode';
+import {has, is, toID} from './utils';
 
 // Flags can either be specified as key:value or as 'implicits'
 // eslint-disable-next-line max-len
@@ -86,6 +86,8 @@ const PHRASE = new RegExp([
   LEVEL, // 9
   EVS, // 10
   HP, // 11
+
+  // eslint-disable-next-line no-misleading-character-class
   new RegExp(`${POKEMON_AND_ITEM.source}$`), // 12 & 13
 ].map(r => r.source).join(''), 'i');
 

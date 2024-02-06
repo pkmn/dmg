@@ -1,24 +1,24 @@
 /* eslint-disable no-shadow */
 import type {
   BoostsTable,
+  Move as DMove,
   GameType,
   GenderName,
   Generation,
   ID,
-  Move as DMove,
   NatureName,
   PokemonSet,
   Specie,
+  StatID,
   StatsTable,
   StatusName,
-  TypeName,
-  StatID,
   Type,
+  TypeName,
 } from '@pkmn/data';
 
-import {WeatherName, TerrainName, Conditions, ConditionKind} from './conditions';
+import {ConditionKind, Conditions, TerrainName, WeatherName} from './conditions';
 import {floor, round} from './math';
-import {is, has, extend, DeepPartial, toID} from './utils';
+import {DeepPartial, extend, has, is, toID} from './utils';
 
 type OverriddenFields =
   'item' | 'ability' | 'nature' | 'status' | 'volatiles' | 'ivs' | 'evs' | 'boosts';
@@ -585,9 +585,9 @@ export namespace State {
     // Required for certain moves which effect switches, the most obvious being Pursuit
     switching?: 'in' | 'out';
     // Required for Stomping Tantrum
-    moveLastTurnResult?: false | unknown;
+    moveLastTurnResult?: unknown;
     // Required for Assurance
-    hurtThisTurn?: false | unknown;
+    hurtThisTurn?: unknown;
   }
 
   export interface Move extends DMove {
@@ -755,7 +755,7 @@ export function setGender(
 ) {
   const ivs = pokemon.ivs;
   const species = pokemon.species;
-  const atkDV = gen.stats.toDV(ivs.atk!);
+  const atkDV = gen.stats.toDV(ivs.atk);
   // AtkDV determing gender is only at thing in generation 2, but we can use it as the default
   const gender = gen.num === 1 ? undefined : atkDV >= species.genderRatio.F * 16 ? 'M' : 'F';
   if (name) {
@@ -780,7 +780,7 @@ function correctHPDV(
   setHPDV = false
 ) {
   const expectedHPDV = gen.stats.getHPDV(pokemon.ivs);
-  const actualHPDV = gen.stats.toDV(pokemon.ivs.hp!);
+  const actualHPDV = gen.stats.toDV(pokemon.ivs.hp);
   if (gen.num <= 2 && expectedHPDV !== actualHPDV) {
     if (setHPDV) {
       throw new Error(

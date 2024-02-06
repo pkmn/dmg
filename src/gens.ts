@@ -1,6 +1,6 @@
-import type {GenerationNum, Generations, Generation, Specie, GameType} from '@pkmn/data';
+import type {GameType, Generation, GenerationNum, Generations, Specie} from '@pkmn/data';
 
-import {PokemonOptions, MoveOptions, State} from './state';
+import {MoveOptions, PokemonOptions, State} from './state';
 import {Result} from './result';
 import {calculate} from './mechanics';
 

@@ -4,7 +4,7 @@ import {Generation, GenerationNum, Generations} from '@pkmn/data';
 import {Dex} from '@pkmn/sim';
 
 import {Scope, inGens} from '../../gens';
-import {Result, Notation, KOType} from '../../result';
+import {KOType, Notation, Result} from '../../result';
 
 const gens = new Generations(Dex as any);
 
@@ -114,7 +114,7 @@ expect.extend({
     }
 
     if (!(expected.range || expected.desc || expected.result)) {
-      throw new Error(`toMatch called with empty diff: ${diff}`);
+      throw new Error(`toMatch called with empty diff: ${JSON.stringify(diff)}`);
     }
 
     for (const key of ['range', 'recovery', 'recoil', 'crash'] as const) {
